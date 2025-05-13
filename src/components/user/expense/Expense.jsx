@@ -21,10 +21,12 @@ const Expense = () => {
             const { user } = useAppContext();
         
 
+            const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
         const fetchData = async()=>{
             setIsLoading(true);
             try{
-                const response = await axios.get("http://localhost:8787/expenses")
+                const response = await axios.get(`${BASE_URL}/expenses`)
                 if(response.status!==200){
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }

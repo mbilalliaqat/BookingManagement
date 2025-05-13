@@ -12,7 +12,7 @@ import Protector from '../user/protector/Protector'
 import Expense from '../user/expense/Expense'
 import Refunded from '../user/refundedCaseMCB/Refunded'
 import Vender from '../admin/vendor/Vender'
-import Employee from '../admin/employee/employee'
+import Employee from '../admin/employee/Employee'
 
 const AdminRoutes = () => {
   return (
