@@ -7,6 +7,8 @@ import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ;
+
 const GamcaToken = () => {
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
@@ -22,7 +24,7 @@ const GamcaToken = () => {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const response = await axios.get('http://localhost:8787/gamca-token');
+            const response = await axios.get(`${BASE_URL}/gamca-token`);
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
