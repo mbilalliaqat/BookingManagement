@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Custom scrollbar styling for WebKit browsers */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+
+/* index.css */
+.gradient-background {
+  /* min-height: 100vh;
+  width: 100%; */
+  background: linear-gradient(to bottom, #175d69, #330c43);
+}
+
+.app {
+  background-color: var(rgb(255 255 255 / 31%));
+  /* max-width: 1250px;
+  max-height: 860px; */
+  /* height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative; */
+  /* width: 100%; */
+  border-radius: 14px;
+  backdrop-filter: blur(200px);
+  -webkit-backdrop-filter: blur(20px);
+  font-size: 15px;
+  font-weight: 500;
+ }
+
+ 
