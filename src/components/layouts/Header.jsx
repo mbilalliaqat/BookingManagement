@@ -36,10 +36,12 @@ const Header = () => {
           <i className="fas fa-power-off text-xs md:text-sm"></i>
           <span className="text-xs md:text-sm font-medium hidden md:inline">Logout</span>
         </button>
-        
-        <div className="h-6 w-6 md:h-8 md:w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-xs md:text-base">
-          {user?.username ? user.username[0] : 'U'}
-        </div>
+         <button 
+                   className="flex items-center space-x-1 md:space-x-2 px-2 py-1 md:px-3 md:py-2 bg-gray-900 text-white rounded-lg "
+
+         >
+          {user?.username? user.username : 'U'}
+         </button>
       </div>
     </header>
   );
