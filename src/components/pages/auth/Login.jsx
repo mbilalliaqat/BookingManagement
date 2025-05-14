@@ -12,7 +12,8 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { setUser } = useAppContext();
   const navigate = useNavigate();
-  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL || 'https://bookingms.mubihussain-te.workers.dev';
+  console.log('BASE_URL:', BASE_URL);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -21,6 +22,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log('Sending POST to:', `${BASE_URL}/user/login`);
       const response = await axios.post(`${BASE_URL}/user/login`, {
         email,
         password,
