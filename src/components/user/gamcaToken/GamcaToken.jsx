@@ -75,7 +75,7 @@ const GamcaToken = () => {
         }] : [])
     ];
 
-    const filteredData = entries.filter((index) =>
+    const filteredData = entries?.filter((index) =>
         Object.values(index).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
         )
@@ -120,7 +120,7 @@ const GamcaToken = () => {
         try {
             const response = await axios.delete(`${BASE_URL}/gamca-token/${parsedId}`);
             if (response.status === 200) {
-                setEntries(entries.filter(entry => entry.id !== parsedId));
+                setEntries(entries?.filter(entry => entry.id !== parsedId));
                 console.log('GAMCA token deleted successfully');
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
