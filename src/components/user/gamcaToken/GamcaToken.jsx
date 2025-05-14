@@ -22,18 +22,52 @@ const GamcaToken = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
 
-    const fetchData = async () => {
+     const fetchData = async () => {
         setIsLoading(true);
+        setError(null); // Clear any previous errors
+        
         try {
-            const response = await axios.get(`${BASE_URL}/gamca-token`);
-            if (response.status !== 200) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            console.log('Fetching GAMCA token data from:', `${BASE_URL}/gamca-token`);
+            
+            const response = await axios.get(`${BASE_URL}/gamca-token`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('Raw API response:', response);
+            
+            // Check if we have data and the expected structure
+            if (!response.data || !response.data.gamcaTokens) {
+                console.error('Unexpected API response format:', response.data);
+                throw new Error('Invalid response format from server');
             }
-            const data = response.data;
-            setEntries(data.gamcaTokens);
+            
+            const data = response.data.gamcaTokens;
+            console.log('Parsed GAMCA tokens:', data);
+            
+            setEntries(Array.isArray(data) ? data : []);
+            
+            if (Array.isArray(data) && data.length === 0) {
+                console.log('No GAMCA tokens found in the response');
+            }
         } catch (error) {
-            console.error('Error fetching data:', error);
-            setError('Failed to load data. Please try again later.');
+            console.error('Error fetching GAMCA token data:', error);
+            
+            // Provide more detailed error information
+            if (error.response) {
+                // The server responded with a status code outside the 2xx range
+                console.error('Server response:', error.response);
+                setError(`Server error: ${error.response.status}. ${error.response.data?.message || 'Please try again later.'}`);
+            } else if (error.request) {
+                // The request was made but no response was received
+                console.error('No response received:', error.request);
+                setError('No response from server. Please check your network connection.');
+            } else {
+                // Something happened in setting up the request
+                setError(`Failed to load data: ${error.message}`);
+            }
         } finally {
             setIsLoading(false);
         }
