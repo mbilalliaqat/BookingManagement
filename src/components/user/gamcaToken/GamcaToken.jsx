@@ -26,10 +26,10 @@ const GamcaToken = () => {
 
      const fetchData = async () => {
         setIsLoading(true);
-        setError(null); // Clear any previous errors
+        setError(null); 
         
       try {
-            // Check if BASE_URL is defined before making the request
+           
             if (!BASE_URL) {
                 throw new Error('API base URL is not defined. Please check your environment configuration.');
             }
