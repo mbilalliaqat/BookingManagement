@@ -6,9 +6,8 @@ import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
-import { getApiBaseUrl } from '../../pages/auth/getApiBaseUrl';
 
-const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
 
 const GamcaToken = () => {
     const [search, setSearch] = useState('');
@@ -22,14 +21,23 @@ const GamcaToken = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
 
+     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL || 'https://bookingms.mubihussain-te.workers.dev';
+      console.log('BASE_URL:', BASE_URL);
+
      const fetchData = async () => {
         setIsLoading(true);
         setError(null); // Clear any previous errors
         
-        try {
-            console.log('Fetching GAMCA token data from:', `${BASE_URL}/gamca-token`);
+      try {
+            // Check if BASE_URL is defined before making the request
+            if (!BASE_URL) {
+                throw new Error('API base URL is not defined. Please check your environment configuration.');
+            }
             
-            const response = await axios.get(`${BASE_URL}/gamca-token`, {
+            const apiUrl = `${BASE_URL}/gamca-token`;
+            console.log('Fetching GAMCA token data from:', apiUrl);
+            
+            const response = await axios.get(apiUrl, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
@@ -39,9 +47,20 @@ const GamcaToken = () => {
             console.log('Raw API response:', response);
             
             // Check if we have data and the expected structure
-            if (!response.data || !response.data.gamcaTokens) {
-                console.error('Unexpected API response format:', response.data);
-                throw new Error('Invalid response format from server');
+            if (!response.data) {
+                console.error('Empty response data:', response);
+                throw new Error('Empty response received from server');
+            }
+            
+            // If the response is HTML instead of JSON (common error with incorrect URLs)
+            if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
+                console.error('Received HTML instead of JSON. API endpoint may be incorrect.');
+                throw new Error('Received HTML instead of JSON. API endpoint may be incorrect.');
+            }
+            
+            if (!response.data.gamcaTokens) {
+                console.error('Response missing gamcaTokens property:', response.data);
+                throw new Error('Invalid response format: missing gamcaTokens data');
             }
             
             const data = response.data.gamcaTokens;
