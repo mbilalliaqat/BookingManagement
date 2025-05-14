@@ -21,7 +21,7 @@ const GamcaToken = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
 
-     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL || 'https://bookingms.mubihussain-te.workers.dev';
+     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
       console.log('BASE_URL:', BASE_URL);
 
      const fetchData = async () => {

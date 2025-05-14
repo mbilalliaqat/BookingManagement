@@ -20,17 +20,19 @@ const Visa = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
 
-    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL || 'https://bookingms.mubihussain-te.workers.dev';
+          console.log('BASE_URL:', BASE_URL);
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const response = await axios.get(`${BASE_URL}/visa-processing`); // Adjust the endpoint as needed
+            const response = await axios.get(`${BASE_URL}/visa-processing`); 
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
+            console.log("Response Data",response)
             const data = response.data;
-            const formattedData = data.visa_processing.map((visa) => ({
+            console.log(" API Data",data)
+            const formattedData = data.visa_processing?.map((visa) => ({
                 ...visa,
                 embassy_send_date: visa.embassy_send_date
                     ? new Date(visa.embassy_send_date).toLocaleDateString()
@@ -45,7 +47,7 @@ const Visa = () => {
                     ? new Date(visa.passport_deliver_date).toLocaleDateString()
                     : 'N/A',
             }));
-            setEntries(formattedData.reverse());
+            setEntries(formattedData);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
