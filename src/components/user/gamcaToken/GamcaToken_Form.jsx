@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
 const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
+
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const [data, setData] = useState({
         employee_name: '',
         entry: '',
@@ -109,8 +111,8 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             try {
                 const url = editEntry
-                    ? `http://localhost:8787/gamca-token/${editEntry.id}`
-                    : 'http://localhost:8787/gamca-token';
+                    ? `${BASE_URL}/gamca-token/${editEntry.id}`
+                    : `${BASE_URL}/gamca-token`;
                 const method = editEntry ? 'PUT' : 'POST';
 
                 const response = await fetch(url, {

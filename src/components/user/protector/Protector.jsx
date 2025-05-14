@@ -19,10 +19,12 @@ const Protector = () => {
     const [isDeleting,setIsDeleting]=useState(false);
     const { user } = useAppContext();
 
+        const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const response = await axios.get("http://localhost:8787/protector");
+            const response = await axios.get(`${BASE_URL}/protector`);
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -126,7 +128,7 @@ const Protector = () => {
         }
         setIsDeleting(true);
         try {
-            const response = await axios.delete(`http://localhost:8787/protector/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/protector/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
                 console.log('Protector deleted successfully');

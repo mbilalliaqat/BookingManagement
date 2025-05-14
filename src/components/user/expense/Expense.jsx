@@ -129,7 +129,7 @@ const Expense = () => {
             setIsDeleting(true);
             
             try {
-                const response = await axios.delete(`http://localhost:8787/expenses/${parsedId}`);
+                const response = await axios.delete(`${BASE_URL}/expenses/${parsedId}`);
                 if (response.status === 200) {
                     setEntries(entries.filter(entry => entry.id !== parsedId));
                     console.log('Expense deleted successfully');

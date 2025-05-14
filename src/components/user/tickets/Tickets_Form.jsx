@@ -4,6 +4,8 @@ import ButtonSpinner from '../../ui/ButtonSpinner';
 const Tickets_Form = ({onCancel,onSubmitSuccess }) => {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL
+
     const [data,setData]=useState({
       employee_name: '',
       entry: '',
@@ -140,7 +142,7 @@ const Tickets_Form = ({onCancel,onSubmitSuccess }) => {
         console.log('Request Data:', requestData);
 
         try {
-            const response = await fetch('http://localhost:8787/ticket', {
+            const response = await fetch(`${BASE_URL}/ticket`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -19,10 +19,12 @@ const Umrah = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
 
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
     const fetchUmrah = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:8787/umrah');
+            const response = await fetch(`${BASE_URL}/umrah`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -125,7 +127,7 @@ const Umrah = () => {
             return;
         }
         try {
-            const response = await axios.delete(`http://localhost:8787/umrah/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/umrah/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
                 console.log('Expense deleted successfully');

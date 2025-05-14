@@ -12,6 +12,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { setUser } = useAppContext();
   const navigate = useNavigate();
+  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -20,7 +21,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const response = await axios.post('http://localhost:8787/user/login', {
+      const response = await axios.post(`${BASE_URL}/user/login`, {
         email,
         password,
       });

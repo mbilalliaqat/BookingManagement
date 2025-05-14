@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
 const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
+
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const [data, setData] = useState({
         userName: '',
         entry: '',
@@ -146,8 +148,8 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             try {
                 const url = editEntry
-                    ? `http://localhost:8787/umrah/${editEntry.id}`
-                    : 'http://localhost:8787/umrah';
+                    ? `${BASE_URL}/umrah/${editEntry.id}`
+                    : `${BASE_URL}/umrah`;
                 const method = editEntry ? 'PUT' : 'POST';
 
                 const response = await fetch(url, {

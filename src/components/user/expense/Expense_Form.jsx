@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+
+
 const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [data, setData] = useState({
@@ -20,6 +22,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         selection: '',
         general: ''
     });
+
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     useEffect(() => {
         if (editEntry) {
@@ -96,8 +100,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             try {
                 const url = editEntry
-                    ? `http://localhost:8787/expenses/${editEntry.id}`
-                    : 'http://localhost:8787/expenses';
+                    ? `${BASE_URL}/expenses/${editEntry.id}`
+                    : `${BASE_URL}/expenses`;
                 const method = editEntry ? 'PUT' : 'POST';
 
                 const response = await fetch(url, {

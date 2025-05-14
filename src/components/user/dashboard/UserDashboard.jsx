@@ -4,7 +4,7 @@ import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8787'
+  baseURL: import.meta.env.VITE_LIVE_API_BASE_URL
 });
 
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
 const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
+
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const [data, setData] = useState({
         date: '',
         name: '',
@@ -81,8 +83,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             try {
                 const url = editEntry
-                    ? `http://localhost:8787/refunded/${editEntry.id}`
-                    : 'http://localhost:8787/refunded';
+                    ? `${BASE_URL}/refunded/${editEntry.id}`
+                    : `${BASE_URL}/refunded`;
                 const method = editEntry ? 'PUT' : 'POST';
 
                 const response = await fetch(url, {

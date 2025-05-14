@@ -10,6 +10,8 @@ const Employee = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'approved'
 
+   const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
   useEffect(() => {
     // Fetch users when component mounts
     fetchUsers();
@@ -28,7 +30,7 @@ const Employee = () => {
       }
 
       // Fetch pending users
-      const pendingResponse = await axios.get('http://localhost:8787/admin/pending-users', {
+      const pendingResponse = await axios.get(`${BASE_URL}/admin/pending-users`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -37,7 +39,7 @@ const Employee = () => {
       setPendingUsers(pendingResponse.data.users || []);
       
       // Fetch all approved employees (you'll need to create this endpoint)
-      const approvedResponse = await axios.get('http://localhost:8787/admin/employees', {
+      const approvedResponse = await axios.get(`${BASE_URL}/admin/employees`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -62,7 +64,7 @@ const Employee = () => {
       }
 
       const response = await axios.post(
-        'http://localhost:8787/admin/approve-user',
+        `${BASE_URL}/admin/approve-user`,
         { userId, approved },
         {
           headers: {

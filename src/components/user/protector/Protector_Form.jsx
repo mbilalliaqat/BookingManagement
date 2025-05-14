@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
 const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
+
+            const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const [data, setData] = useState({
         name: '',
         passport: '',
@@ -142,8 +144,8 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             try {
                 const url = editEntry
-                    ? `http://localhost:8787/protector/${editEntry.id}`
-                    : 'http://localhost:8787/protector';
+                    ? `${BASE_URL}/protector/${editEntry.id}`
+                    : `${BASE_URL}/protector`;
                 const method = editEntry ? 'PUT' : 'POST';
 
                 const response = await fetch(url, {

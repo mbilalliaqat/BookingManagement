@@ -6,8 +6,9 @@ import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import { getApiBaseUrl } from '../../pages/auth/getApiBaseUrl';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ;
+const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
 const GamcaToken = () => {
     const [search, setSearch] = useState('');
@@ -117,7 +118,7 @@ const GamcaToken = () => {
             return;
         }
         try {
-            const response = await axios.delete(`http://localhost:8787/gamca-token/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/gamca-token/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
                 console.log('GAMCA token deleted successfully');

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner'; // Import the spinner component
 
 const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
+
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const [data, setData] = useState({
         bank_name: '',
         date: '',
@@ -125,7 +127,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             let response;
             if (isEditing) {
                 // Update existing entry
-                response = await fetch(`http://localhost:8787/accounts/${data.id}`, {
+                response = await fetch(`${BASE_URL}/accounts/${data.id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -134,7 +136,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                 });
             } else {
                 // Create new entry
-                response = await fetch('http://localhost:8787/accounts', {
+                response = await fetch(`${BASE_URL}/accounts`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

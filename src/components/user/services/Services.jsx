@@ -19,10 +19,12 @@ const Services = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
 
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const response = await axios.get("http://localhost:8787/services");
+            const response = await axios.get(`${BASE_URL}/services`);
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -127,7 +129,7 @@ const Services = () => {
             return;
         }
         try {
-            const response = await axios.delete(`http://localhost:8787/services/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/services/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
                 console.log('Service deleted successfully');

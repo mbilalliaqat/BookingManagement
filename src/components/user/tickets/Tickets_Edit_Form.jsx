@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 
 const Tickets_Edit_Form = ({ ticket, onCancel, onSubmitSuccess }) => {
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
     const [data, setData] = useState({
         employee_name: '',
         entry: '',
@@ -127,7 +129,7 @@ const Tickets_Edit_Form = ({ ticket, onCancel, onSubmitSuccess }) => {
             console.log('Request Data:', requestData);
 
             try {
-                const response = await fetch(`http://localhost:8787/ticket/${ticket.id}`, {
+                const response = await fetch(`${BASE_URL}/ticket/${ticket.id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

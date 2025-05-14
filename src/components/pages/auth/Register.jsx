@@ -10,6 +10,8 @@ const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
   
   // Validation states
   const [usernameError, setUsernameError] = useState('');
@@ -115,7 +117,7 @@ const Register = () => {
     console.log('Sending registration data:', userData);
     
     try {
-      const response = await axios.post('http://localhost:8787/user/signup', userData, {
+      const response = await axios.post(`${BASE_URL}/user/signup`, userData, {
         headers: {
           'Content-Type': 'application/json'
         }

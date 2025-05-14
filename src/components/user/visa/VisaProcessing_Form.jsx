@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
 const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
+ 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
   const [data, setData] = useState({
       employee_name: '',
       entry: '',
@@ -127,8 +130,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
       try {
           const url = editEntry
-              ? `http://localhost:8787/visa-processing/${editEntry.id}`
-              : 'http://localhost:8787/visa-processing';
+              ? `${BASE_URL}/visa-processing/${editEntry.id}`
+              : `${BASE_URL}/visa-processing`;
           const method = editEntry ? 'PUT' : 'POST';
 
           const response = await fetch(url, {

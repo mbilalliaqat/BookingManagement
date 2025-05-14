@@ -23,6 +23,8 @@ const OfficeAccounts = () => {
     const [isDeleting, setIsDeleting] = useState(false); // New state for delete loading
     const [loadingActionId, setLoadingActionId] = useState(null); // Track which row is being acted upon
 
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
     // Memoize date formatting functions to avoid recreating on each render
     const formatDate = useCallback((dateString) => {
         if (!dateString) return '';
@@ -72,7 +74,7 @@ const OfficeAccounts = () => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:8787/accounts/${selectedBank}`);
+            const response = await fetch(`${BASE_URL}/accounts/${selectedBank}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch entries');
             }
@@ -199,7 +201,7 @@ const OfficeAccounts = () => {
         setLoadingActionId(parsedId);
         
         try {
-            const response = await axios.delete(`http://localhost:8787/accounts/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/accounts/${parsedId}`);
             if (response.status === 200) {
                 // Invalidate cache on successful delete
                 entriesCache.delete(selectedBank);
