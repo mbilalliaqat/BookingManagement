@@ -30,7 +30,7 @@ const GamcaToken = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = response.data;
-            setEntries(data.gamcaTokens.reverse());
+            setEntries(data.gamcaTokens);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
