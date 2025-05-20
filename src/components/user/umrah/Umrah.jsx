@@ -32,6 +32,7 @@ const Umrah = () => {
             const formattedData = data.umrahBookings.map((booking) => ({
                 ...booking,
                 travelDate: new Date(booking.travelDate).toLocaleDateString(),
+                createdAt: new Date(booking.createdAt).toLocaleDateString(),
             }));
             setEntries(formattedData.reverse());
         } catch (error) {
@@ -47,6 +48,7 @@ const Umrah = () => {
     }, []);
 
     const columns = [
+        { header: 'BOOKING DATE', accessor: 'createdAt' },
         { header: 'USER NAME', accessor: 'userName' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customerAdd' },

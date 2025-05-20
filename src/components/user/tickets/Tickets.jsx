@@ -35,6 +35,7 @@ const Tickets = () => {
             const formattedData = data.ticket.map((ticket) => ({
                 ...ticket,
                 travel_date: new Date(ticket.travel_date).toLocaleDateString(), // or .toISOString().split('T')[0]
+                created_at:new Date(ticket.created_at).toLocaleDateString('en-US'),
             }));
             setEntries(formattedData.reverse());
         } catch (error) {
@@ -50,6 +51,7 @@ const Tickets = () => {
     }, []);
 
     const columns = [
+        { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'USER NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },

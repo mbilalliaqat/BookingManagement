@@ -22,7 +22,6 @@ const GamcaToken = () => {
     const { user } = useAppContext();
 
      const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-      console.log('BASE_URL:', BASE_URL);
 
      const fetchData = async () => {
         setIsLoading(true);
@@ -66,9 +65,9 @@ const GamcaToken = () => {
             const data = response.data.gamcaTokens;
             console.log('Parsed GAMCA tokens:', data);
             
-            setEntries(Array.isArray(data) ? data : []);
+            setEntries(data);
             
-            if (Array.isArray(data) && data.length === 0) {
+            if ( data.length === 0) {
                 console.log('No GAMCA tokens found in the response');
             }
         } catch (error) {
@@ -97,6 +96,7 @@ const GamcaToken = () => {
     }, []);
 
     const columns = [
+        { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'USER NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },

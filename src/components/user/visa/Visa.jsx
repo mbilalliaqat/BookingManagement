@@ -34,6 +34,7 @@ const Visa = () => {
             console.log(" API Data",data)
             const formattedData = data.visa_processing?.map((visa) => ({
                 ...visa,
+                created_at: new Date(visa.created_at).toLocaleDateString(),  
                 embassy_send_date: visa.embassy_send_date
                     ? new Date(visa.embassy_send_date).toLocaleDateString()
                     : 'N/A', // Handle null/undefined
@@ -61,6 +62,7 @@ const Visa = () => {
     }, []);
 
     const columns = [
+        { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'USER NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'FILE NO.', accessor: 'file_number' },
