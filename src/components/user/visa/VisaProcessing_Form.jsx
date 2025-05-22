@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import { useAppContext } from '../../contexts/AppContext';
 
 const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
+  const {user}=useAppContext();
 
   const [data, setData] = useState({
       employee_name: '',
@@ -31,6 +34,15 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
       profit: '',
       remaining_amount: ''
   });
+
+   useEffect(() => {
+         if(user&& user.username){
+          setData(prevData=>({
+              ...prevData,
+              employee_name:user.username
+          }))
+         } 
+      },[user])
 
   const [prevError, setPrevError] = useState({
       employee_name: '',
@@ -151,7 +163,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
           // Reset form data
           setData({
-              employee_name: '',
+              employee_name: user?.username||'',
               entry: '',
               file_number: '',
               reference: '',
@@ -199,10 +211,11 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             
           <div className="flex flex-wrap justify-between gap-4">
           <div  className="w-full sm:w-[calc(50%-10px)]">
-                <label className="block font-medium mb-1">User Name</label>
+                <label className="block font-medium mb-1">Employee Name</label>
                 <input  type="text"   placeholder='Enter User Name' value={data.employee_name}
                 name='employee_name' onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                readOnly
                 />
                 {prevError.employee_name && <span className="text-red-500">{prevError.employee_name}</span>}
               </div>

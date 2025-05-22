@@ -29,11 +29,36 @@ const Umrah = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            const formattedData = data.umrahBookings.map((booking) => ({
-                ...booking,
-                travelDate: new Date(booking.travelDate).toLocaleDateString(),
-                createdAt: new Date(booking.createdAt).toLocaleDateString(),
-            }));
+            const formattedData = data.umrahBookings.map((booking) => {
+                 let passportDetails = {};
+                try {
+                    if (typeof booking.passportDetail === 'string') {
+                        passportDetails = JSON.parse(booking.passportDetail);
+                    } else if (typeof booking.passportDetail === 'object' && booking.passportDetail !== null) {
+                        passportDetails = booking.passportDetail;
+                    }
+                } catch (e) {
+                    console.error("Error parsing passport details:", e);
+                }
+                return {
+                     ...booking,
+                    travelDate: new Date(booking.travelDate).toLocaleDateString(),
+                    createdAt: new Date(booking.createdAt).toLocaleDateString(),
+                    // Add formatted passport details for display
+                    passengerTitle: passportDetails.title || '',
+                    passengerFirstName: passportDetails.firstName || '',
+                    passengerLastName: passportDetails.lastName || '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerNationality: passportDetails.nationality || '',
+                    documentType: passportDetails.documentType || '',
+                    documentNo: passportDetails.documentNo || '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentIssueCountry: passportDetails.issueCountry || '',
+                    // Keep the original passport detail for editing
+                    passportDetail: booking.passportDetail
+                }
+            }
+        );
             setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -49,7 +74,7 @@ const Umrah = () => {
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'createdAt' },
-        { header: 'USER NAME', accessor: 'userName' },
+        { header: 'EMPLOYEE NAME', accessor: 'userName' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customerAdd' },
         { header: 'REFERENCE', accessor: 'reference' },
@@ -57,14 +82,25 @@ const Umrah = () => {
         { header: 'TRAVEL DATE', accessor: 'travelDate' },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
-        { header: 'PASSPORT DETAIL', accessor: 'passportDetail' },
+         { header: 'TITLE', accessor: 'passengerTitle' },
+         
+        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
+        { header: 'LAST NAME', accessor: 'passengerLastName' },
+        { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
+        { header: 'NATIONALITY', accessor: 'passengerNationality' },
+        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
+        { header: 'DOCUMENT NO', accessor: 'documentNo' },
+        { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
+        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
+         
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivableAmount' },
         { header: 'PAID CASH', accessor: 'paidCash' },
         { header: 'PAID IN BANK', accessor: 'paidInBank' },
+         { header: 'REMAINING AMOUNT', accessor: 'remainingAmount' },
+         { header: 'VENDOR NAME', accessor: 'vendorName' },
         { header: 'PAYABLE TO VENDOR', accessor: 'payableToVendor' },
-        { header: 'VENDOR NAME', accessor: 'vendorName' },
         { header: 'PROFIT', accessor: 'profit' },
-        { header: 'REMAINING AMOUNT', accessor: 'remainingAmount' },
+       
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>

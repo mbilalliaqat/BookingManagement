@@ -4,39 +4,60 @@ import { useAppContext } from '../../contexts/AppContext';
 import Tickets_Form from './Tickets_Form';
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
-import Tickets_Edit_Form from './Tickets_Edit_Form';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
 const Tickets = () => {
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
-    const [showEditForm,setShowEditForm]= useState(false);
-    const [selectedTicket,setSelectedTicket]=useState(null);
+    const [editEntry, setEditEntry] = useState(null);
     const [entries, setEntries] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null)
+    const [error, setError] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
 
-     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const fetchTickets = async () => {
         setIsLoading(true);
-
         try {
-            const response = await axios.get(`${BASE_URL}/ticket`); // Adjust the endpoint as needed
+            const response = await axios.get(`${BASE_URL}/ticket`);
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = response.data;
-            console.log("Fetched data:", data); // Log the fetched data
-            const formattedData = data.ticket.map((ticket) => ({
-                ...ticket,
-                travel_date: new Date(ticket.travel_date).toLocaleDateString(), // or .toISOString().split('T')[0]
-                created_at:new Date(ticket.created_at).toLocaleDateString('en-US'),
-            }));
+            console.log("Fetched data:", data);
+            const formattedData = data.ticket.map((ticket) => {
+                let passportDetails = {};
+                try {
+                    if (typeof ticket.passport_detail === 'string') {
+                        passportDetails = JSON.parse(ticket.passport_detail);
+                    } else if (typeof ticket.passport_detail === 'object' && ticket.passport_detail !== null) {
+                        passportDetails = ticket.passport_detail;
+                    }
+                } catch (e) {
+                    console.error("Error parsing passport details:", e);
+                }
+                return {
+                    ...ticket,
+                    travel_date: new Date(ticket.travel_date).toLocaleDateString(),
+                    created_at: new Date(ticket.created_at).toLocaleDateString('en-US'),
+                    // Add formatted passport details for display
+                    passengerTitle: passportDetails.title || '',
+                    passengerFirstName: passportDetails.firstName || '',
+                    passengerLastName: passportDetails.lastName || '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerNationality: passportDetails.nationality || '',
+                    documentType: passportDetails.documentType || '',
+                    documentNo: passportDetails.documentNo || '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentIssueCountry: passportDetails.issueCountry || '',
+                    // Keep the original passport detail for editing
+                    passport_detail: ticket.passport_detail
+                };
+            });
             setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -52,14 +73,22 @@ const Tickets = () => {
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
-        { header: 'USER NAME', accessor: 'employee_name' },
+        { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'TRAVEL DATE', accessor: 'travel_date' },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
-        { header: 'PASSPORT DETAIL', accessor: 'passport_detail' },
+        { header: 'TITLE', accessor: 'passengerTitle' },
+        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
+        { header: 'LAST NAME', accessor: 'passengerLastName' },
+        { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
+        { header: 'NATIONALITY', accessor: 'passengerNationality' },
+        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
+        { header: 'DOCUMENT NO', accessor: 'documentNo' },
+        { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
+        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
@@ -74,13 +103,13 @@ const Tickets = () => {
                         className="text-blue-500 hover:text-blue-700 mr-3"
                         onClick={() => handleUpdate(index)}
                     >
-                        <i className="fas fa-edit"></i> 
+                        <i className="fas fa-edit"></i>
                     </button>
                     <button
                         className="text-red-500 hover:text-red-700"
                         onClick={() => openDeleteModal(index)}
                     >
-                        <i className="fas fa-trash"></i> 
+                        <i className="fas fa-trash"></i>
                     </button>
                 </>
             )
@@ -95,17 +124,18 @@ const Tickets = () => {
 
     const handleCancel = () => {
         setShowForm(false);
-        setShowEditForm(false);
-    };
-    const handleFormSubmit = () => {
-        fetchTickets(); // Refresh the table data
-        setShowForm(false); // Hide the form
-        setShowEditForm(false);
+        setEditEntry(null);
     };
 
-    const handleUpdate = (ticket) => {
-        setSelectedTicket(ticket);
-        setShowEditForm(true);
+    const handleFormSubmit = () => {
+        fetchTickets();
+        setShowForm(false);
+        setEditEntry(null);
+    };
+
+    const handleUpdate = (entry) => {
+        setEditEntry(entry);
+        setShowForm(true);
     };
 
     const openDeleteModal = (id) => {
@@ -117,38 +147,37 @@ const Tickets = () => {
         setShowDeleteModal(false);
         setDeleteId(null);
     };
-    
+
     const handleDelete = async (id) => {
-        console.log('Attempting to delete expense with id:', id); // Debug log
+        console.log('Attempting to delete ticket with id:', id);
         setIsDeleting(true);
-        // Handle case where id is an object (temporary safeguard)
         const parsedId = typeof id === 'object' && id !== null ? id.id : id;
         if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
-             console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-             setError('Invalid expense ID. Cannot delete.');
-             setIsDeleting(false);
-             return;
+            console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
+            setError('Invalid ticket ID. Cannot delete.');
+            setIsDeleting(false);
+            return;
         }
         try {
             const response = await axios.delete(`${BASE_URL}/ticket/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
-                console.log('Expense deleted successfully');
+                console.log('Ticket deleted successfully');
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error deleting expense:', error);
-            setError('Failed to delete expense. Please try again later.');
+            console.error('Error deleting ticket:', error);
+            setError('Failed to delete ticket. Please try again later.');
         }
         setIsDeleting(false);
         closeDeleteModal();
     };
-   
+
     // Confirmation modal component
     const DeleteConfirmationModal = () => {
         if (!showDeleteModal) return null;
-        
+
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto bg-black bg-opacity-50">
                 <div className="relative w-full max-w-md mx-auto bg-[#161925] rounded-lg shadow-lg">
@@ -172,7 +201,7 @@ const Tickets = () => {
                             </button>
                             <button
                                 onClick={() => handleDelete(deleteId)}
-                                className="px-4 py-2 text-sm font-medium text-white bg-[#161925] border  rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
+                                className="px-4 py-2 text-sm font-medium text-white bg-[#161925] border rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
                                 disabled={isDeleting}
                             >
                                 {isDeleting ? (
@@ -192,24 +221,24 @@ const Tickets = () => {
     };
 
     return (
-      <div className='h-full flex flex-col'>
-        {
-            showForm ? (
-                <Tickets_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit}/>
-            ): showEditForm ?(
-                <Tickets_Edit_Form  ticket={selectedTicket} onCancel={handleCancel} onSubmitSuccess={handleFormSubmit}/>
-            ):(
+        <div className='h-full flex flex-col'>
+            {showForm ? (
+                <Tickets_Form
+                    onCancel={handleCancel}
+                    onSubmitSuccess={handleFormSubmit}
+                    editEntry={editEntry}
+                />
+            ) : (
                 <div className='flex flex-col h-full'>
-                     <div className="flex justify-between items-center mb-4 relative">
+                    <div className="flex justify-between items-center mb-4 relative">
                         <input
                             type="text"
-                            placeholder="Search "
+                            placeholder="Search"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
                         />
                         <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
-
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
                             onClick={() => setShowForm(true)}
@@ -218,26 +247,23 @@ const Tickets = () => {
                         </button>
                     </div>
                     <div>
-                    {
-                            isLoading ? (
-                                <TableSpinner />
-                            ) : error ? (
-                                <div className="flex items-center justify-center w-full h-64">
-                                    <div className="text-red-500">
-                                        <i className="fas fa-exclamation-circle mr-2"></i>
-                                        {error}
-                                    </div>
+                        {isLoading ? (
+                            <TableSpinner />
+                        ) : error ? (
+                            <div className="flex items-center justify-center w-full h-64">
+                                <div className="text-red-500">
+                                    <i className="fas fa-exclamation-circle mr-2"></i>
+                                    {error}
                                 </div>
-                            ) : (
-                                <Table data={filteredData} columns={columns} />
-                            )
-                        }
+                            </div>
+                        ) : (
+                            <Table data={filteredData} columns={columns} />
+                        )}
                     </div>
                     <DeleteConfirmationModal />
                 </div>
-            )
-        }
-      </div>
+            )}
+        </div>
     );
 };
 

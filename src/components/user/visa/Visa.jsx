@@ -63,7 +63,7 @@ const Visa = () => {
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
-        { header: 'USER NAME', accessor: 'employee_name' },
+        { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'FILE NO.', accessor: 'file_number' },
         { header: 'REFERENCE', accessor: 'reference' },

@@ -97,7 +97,7 @@ const GamcaToken = () => {
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
-        { header: 'USER NAME', accessor: 'employee_name' },
+        { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },

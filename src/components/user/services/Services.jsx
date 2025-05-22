@@ -51,7 +51,7 @@ const Services = () => {
     const columns = [
         { header: 'VISA TYPE', accessor: 'visa_type' },
         { header: 'BOOKING DATE', accessor: 'booking_date' },
-        { header: 'USER NAME', accessor: 'user_name' },
+        { header: 'EMPLOYEE NAME', accessor: 'user_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'SPECIAL DETAIL', accessor: 'specific_detail' },
