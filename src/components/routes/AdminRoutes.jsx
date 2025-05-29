@@ -13,6 +13,7 @@ import Expense from '../user/expense/Expense'
 import Refunded from '../user/refundedCaseMCB/Refunded'
 import Vender from '../admin/vendor/Vender'
 import Employee from '../admin/employee/Employee'
+import Agent from '../user/agent/Agent'
 
 const AdminRoutes = () => {
   return (
@@ -31,6 +32,7 @@ const AdminRoutes = () => {
           <Route path="/officeAccount" element={<OfficeAccounts />} />
           <Route path="/vender" element={<Vender />} />
           <Route path="/employee" element={<Employee />} />
+          <Route path="/agent" element={<Agent />} />
 
 
           </Routes>

@@ -10,9 +10,9 @@ import { useAppContext } from '../../contexts/AppContext';
 
 const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
-    
     const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
     
@@ -279,6 +279,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     // Updated section2 with new passport fields
     const section2Fields = [
+        {name:'passengers',label:'Passengers',type:'custom-passenger',placeholder:'Select Passenger',icon:'users'},
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },

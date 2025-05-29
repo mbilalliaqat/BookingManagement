@@ -11,6 +11,7 @@ import Protector from '../user/protector/Protector';
 import Expense from '../user/expense/Expense';
 import Refunded from '../user/refundedCaseMCB/Refunded';
 import Services from '../user/services/Services';
+import Agent from '../user/agent/Agent';
 
 const UserRoutes = () => {
   return (
@@ -27,6 +28,7 @@ const UserRoutes = () => {
           <Route path="/protector" element={<Protector />} />
           <Route path="/expense" element={<Expense />} />
           <Route path="/refunded" element={<Refunded />} />
+          <Route path='/agent' element={<Agent/>}/>
         </Routes>
       </UserLayout>
     </div>

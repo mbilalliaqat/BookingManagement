@@ -37,6 +37,7 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/admin/officeAccount', icon: 'fa-building', label: 'Office Accounts' },
     { path: '/admin/vender', icon: 'fa-store', label: 'Vender' },
     { path: '/admin/employee', icon: 'fa-user-check', label: 'Employees' },
+    { path: '/admin/agent', icon: 'fa-user-tie', label: 'Agent' },
   ];
 
   const userLinks = [
@@ -49,6 +50,7 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/protector', icon: 'fa-shield-alt', label: 'Protector' },
     { path: '/expense', icon: 'fa-money-bill-wave', label: 'Expense' },
     { path: '/refunded', icon: 'fa-undo', label: 'Refunded' },
+    { path: '/agent', icon: 'fa-user-tie', label: 'Agent' },
   ];
 
   // If mobile and sidebar is closed, hide it completely
