@@ -14,6 +14,8 @@ import Refunded from '../user/refundedCaseMCB/Refunded'
 import Vender from '../admin/vendor/Vender'
 import Employee from '../admin/employee/Employee'
 import Agent from '../user/agent/Agent'
+import RefundCustomer from '../user/refundCustomer/RefundCustomer'
+import Navtcc from '../user/navtcc/Navtcc'
 
 const AdminRoutes = () => {
   return (
@@ -25,10 +27,12 @@ const AdminRoutes = () => {
           <Route path="/umrah" element={<Umrah />} />
           <Route path="/visa" element={<Visa />} />
           <Route path="/gamcaToken" element={<GamcaToken />} />
+          <Route path="/navtcc" element={<Navtcc />} />
           <Route path="/services" element={<Services />} />
           <Route path="/protector" element={<Protector />} />
           <Route path="/expense" element={<Expense />} />
           <Route path="/refunded" element={<Refunded />} />
+          <Route path="/refundCustomer" element={<RefundCustomer />} />
           <Route path="/officeAccount" element={<OfficeAccounts />} />
           <Route path="/vender" element={<Vender />} />
           <Route path="/employee" element={<Employee />} />

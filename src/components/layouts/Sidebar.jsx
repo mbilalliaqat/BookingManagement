@@ -30,10 +30,12 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/admin/umrah', icon: 'fa-mosque', label: 'Umrah' },
     { path: '/admin/visa', icon: 'fa-passport', label: 'Visa' },
     { path: '/admin/gamcaToken', icon: 'fa-medkit', label: 'Gamca Token' },
+    {path:'/admin/navtcc',icon:'fa-graduation-cap',label:'Navtcc'},
     { path: '/admin/services', icon: 'fa-cogs', label: 'Services' },
     { path: '/admin/protector', icon: 'fa-shield-alt', label: 'Protector' },
     { path: '/admin/expense', icon: 'fa-money-bill-wave', label: 'Expense' },
     { path: '/admin/refunded', icon: 'fa-undo', label: 'Refunded' },
+    { path: '/admin/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/admin/officeAccount', icon: 'fa-building', label: 'Office Accounts' },
     { path: '/admin/vender', icon: 'fa-store', label: 'Vender' },
     { path: '/admin/employee', icon: 'fa-user-check', label: 'Employees' },
@@ -46,10 +48,12 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/umrah', icon: 'fa-mosque', label: 'Umrah' },
     { path: '/visa', icon: 'fa-passport', label: 'Visa' },
     { path: '/gamcaToken', icon: 'fa-medkit', label: 'Gamca Token' },
+    {path:'/navtcc',icon:'fa-graduation-cap',label:'Navtcc'},
     { path: '/services', icon: 'fa-cogs', label: 'Services' },
     { path: '/protector', icon: 'fa-shield-alt', label: 'Protector' },
     { path: '/expense', icon: 'fa-money-bill-wave', label: 'Expense' },
     { path: '/refunded', icon: 'fa-undo', label: 'Refunded' },
+    { path: '/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/agent', icon: 'fa-user-tie', label: 'Agent' },
   ];
 
@@ -103,7 +107,7 @@ const Sidebar = ({ isAdmin }) => {
                 onMouseEnter={() => !isSidebarOpen && !isMobile  && setHoveredItem(index)}
                 onMouseLeave={() => setHoveredItem(null)}
               >
-                <i className={`fas ${link.icon} text-lg`}></i>
+                <i className={`fas ${link.icon} text-md`}></i>
                 {isSidebarOpen && <span className="ml-3">{link.label}</span>}
                 
                 {/* Tooltip for collapsed sidebar */}

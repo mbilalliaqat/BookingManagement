@@ -30,15 +30,16 @@ const Protector = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
-            const formattedData = data.protectors.map(protector => ({
+            const formattedData = data.protectors.map((protector,index) => ({
                 ...protector,
+                serialNo: index + 1,
                 mcb_fee_6000_date: formatDate(protector.mcb_fee_6000_date),
                 ncb_fee_6700_date: formatDate(protector.ncb_fee_6700_date),
                 ncb_fee_500_date: formatDate(protector.ncb_fee_500_date),
                 protector_date: formatDate(protector.protector_date)
             }));
 
-            setEntries(formattedData.reverse());
+            setEntries(formattedData);
         } catch (error) {
             console.log("Error Fetching data", error);
             setError('Failed to load data. Please try again later.');
@@ -52,7 +53,10 @@ const Protector = () => {
     },[]);
 
     const columns = [
+        { header: 'Entry', accessor: 'serialNo' },
+        {header:'EMPLOYEE',accessor:'employee'},
         { header: 'NAME', accessor: 'name' },
+        {header:'FILE_NO',accessor:'file_no'},
         { header: 'PASSPORT', accessor: 'passport' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'MCB FEE / 6000 DATE', accessor: 'mcb_fee_6000_date' },
@@ -60,6 +64,7 @@ const Protector = () => {
         { header: 'NCB FEE / 500 DATE', accessor: 'ncb_fee_500_date' },
         { header: 'Protector DATE', accessor: 'protector_date' },
         { header: 'ADDITIONAL CHARGES', accessor: 'additional_charges' },
+        
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>

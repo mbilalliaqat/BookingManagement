@@ -12,6 +12,8 @@ import Expense from '../user/expense/Expense';
 import Refunded from '../user/refundedCaseMCB/Refunded';
 import Services from '../user/services/Services';
 import Agent from '../user/agent/Agent';
+import RefundCustomer from '../user/refundCustomer/RefundCustomer';
+import Navtcc from '../user/navtcc/Navtcc';
 
 const UserRoutes = () => {
   return (
@@ -24,10 +26,12 @@ const UserRoutes = () => {
           <Route path="/umrah" element={<Umrah />} />
           <Route path="/visa" element={<Visa />} />
           <Route path="/gamcaToken" element={<GamcaToken />} />
+          <Route path="/navtcc" element={<Navtcc />} />
           <Route path="/services" element={<Services />} />
           <Route path="/protector" element={<Protector />} />
           <Route path="/expense" element={<Expense />} />
           <Route path="/refunded" element={<Refunded />} />
+          <Route path='/refundCustomer' element={<RefundCustomer/>}/>
           <Route path='/agent' element={<Agent/>}/>
         </Routes>
       </UserLayout>

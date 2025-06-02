@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import { useAppContext } from '../../contexts/AppContext';
 
 const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
-            const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    const { user } = useAppContext();
+    
     const [data, setData] = useState({
         name: '',
         passport: '',
         reference: '',
+        file_no: '',
+        employee: user?.username || '',
         mcb_fee_6000_date: '',
         ncb_fee_6700_date: '',
         ncb_fee_500_date: '',
@@ -19,6 +24,8 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         name: '',
         passport: '',
         reference: '',
+        file_no: '',
+        employee: '',
         mcb_fee_6000_date: '',
         ncb_fee_6700_date: '',
         ncb_fee_500_date: '',
@@ -47,9 +54,11 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             };
 
             setData({
-                name: editEntry.name || '',
+                name: editEntry.name || '', // ✅ Fixed: was editEntry.username
                 passport: editEntry.passport || '',
                 reference: editEntry.reference || '',
+                file_no: editEntry.file_no || '',
+                employee: editEntry.employee || user?.username || '',
                 mcb_fee_6000_date: formatDateForInput(editEntry.mcb_fee_6000_date),
                 ncb_fee_6700_date: formatDateForInput(editEntry.ncb_fee_6700_date),
                 ncb_fee_500_date: formatDateForInput(editEntry.ncb_fee_500_date),
@@ -57,7 +66,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 additional_charges: editEntry.additional_charges || ''
             });
         }
-    }, [editEntry]);
+    }, [editEntry, user?.username]);
 
     const handleChange = (e) => {
         setData({ ...data, [e.target.name]: e.target.value });
@@ -79,6 +88,14 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
         if (!data.reference) {
             newErrors.reference = 'Enter Reference';
+            isValid = false;
+        }
+        if (!data.file_no) {
+            newErrors.file_no = 'Enter File No';
+            isValid = false;
+        }
+        if (!data.employee) {
+            newErrors.employee = 'Enter Employee';
             isValid = false;
         }
         if (!data.mcb_fee_6000_date) {
@@ -135,12 +152,17 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 name: data.name,
                 passport: data.passport,
                 reference: data.reference,
+                file_no: data.file_no, // ✅ This should now work correctly
+                employee: data.employee, // ✅ Fixed: was data.user?.username
                 mcb_fee_6000_date: data.mcb_fee_6000_date,
                 ncb_fee_6700_date: data.ncb_fee_6700_date,
                 ncb_fee_500_date: data.ncb_fee_500_date,
                 protector_date: data.protector_date,
-                additional_charges: parseInt(data.additional_charges)
+                additional_charges: parseInt(data.additional_charges),
             };
+
+            // Debug: Log the request data to verify file_no is included
+            console.log('Request Data:', requestData);
 
             try {
                 const url = editEntry
@@ -168,6 +190,8 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     name: '',
                     passport: '',
                     reference: '',
+                    file_no: '',
+                    employee: user?.username || '',
                     mcb_fee_6000_date: '',
                     ncb_fee_6700_date: '',
                     ncb_fee_500_date: '',
@@ -232,6 +256,28 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
                             {prevError.reference && <span className="text-red-500">{prevError.reference}</span>}
+                        </div>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">File No</label>
+                            <input
+                                type="text"
+                                name="file_no"
+                                value={data.file_no}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            />
+                            {prevError.file_no && <span className="text-red-500">{prevError.file_no}</span>}
+                        </div>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Employee</label>
+                            <input
+                                type="text"
+                                name="employee"
+                                value={data.employee}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            />
+                            {prevError.employee && <span className="text-red-500">{prevError.employee}</span>}
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">MCB FEE / 6000 DATE</label>
@@ -314,4 +360,4 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     );
 };
 
-export default Protector_Form
+export default Protector_Form;

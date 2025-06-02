@@ -32,11 +32,13 @@ const Refunded = () => {
                 const data=response.data;
                 console.log("Fetched data:", data);
                 
-                const formattedData = data.refunded.map((entry) => ({
+                const formattedData = data.refunded.map((entry,index) => ({
                     ...entry,
+                     serialNo: index + 1,
                     date: new Date(entry.date).toLocaleDateString(),
+                    
                 }));
-                setEntries(formattedData.reverse());
+                setEntries(formattedData);
                 
             }
             catch(error){
@@ -55,10 +57,12 @@ const Refunded = () => {
 
 
     const columns = [
+      { header: 'Entry', accessor: 'serialNo' },
         { header: 'NAME', accessor: 'name' },
         { header: 'DATE', accessor: 'date' },
         { header: 'PASSPORT', accessor: 'passport' },
         { header: 'REFERENCE', accessor: 'reference' },
+        
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
