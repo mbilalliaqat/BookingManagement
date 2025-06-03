@@ -12,6 +12,7 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [isLoadingNames, setIsLoadingNames] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const isEditing = !!editingEntry;
 
@@ -41,7 +42,7 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const fetchAgentNames = async () => {
         try {
             setIsLoadingNames(true);
-            const response = await axios.get('http://localhost:8787/agent-names/existing');
+            const response = await axios.get(`${BASE_URL}/agent-names/existing`);
             if (response.data.status === 'success') {
                 setAgentNames(response.data.agentNames || []);
             }
@@ -82,10 +83,10 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             let response;
             if (isEditing) {
                 // Update existing entry
-                response = await axios.put(`http://localhost:8787/agent/${editingEntry.id}`, submitData);
+                response = await axios.put(`${BASE_URL}/agent/${editingEntry.id}`, submitData);
             } else {
                 // Create new entry
-                response = await axios.post('http://localhost:8787/agent', submitData);
+                response = await axios.post(`${BASE_URL}/agent`, submitData);
             }
 
             if (response.data.status === 'success') {

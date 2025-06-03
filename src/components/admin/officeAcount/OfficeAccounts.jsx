@@ -83,8 +83,9 @@ const OfficeAccounts = () => {
             
             // Process data with Promise.all for potential performance improvement
             const formattedData = await Promise.all(
-                data.map(async (entry) => ({
+                data.map(async (entry,index) => ({
                     ...entry,
+                    serialNo: index + 1,
                     date: formatDate(entry.date),
                 }))
             );
@@ -109,6 +110,8 @@ const OfficeAccounts = () => {
     // Memoize columns to prevent unnecessary re-renders
     const columns = useMemo(() => [
         { header: 'DATE', accessor: 'date' },
+        {header:'EMPLOYEE',accessor:'employee_name'},
+        { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'DETAIL', accessor: 'detail' },
         { header: 'CREDIT', accessor: 'credit' },
         { header: 'DEBIT', accessor: 'debit' },
@@ -224,9 +227,12 @@ const OfficeAccounts = () => {
     // Memoize bank options to avoid recreating on each render
     const bankOptions = useMemo(() => [
         { value: "", label: "Select Bank" },
-        { value: "UNITED BANK (ubl)", label: "UNITED BANK (ubl)" },
-        { value: "HABIB BANK (HBL)", label: "HABIB BANK (HBL)" },
-        { value: "JAZZCASH", label: "JAZZCASH" }
+        { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
+        { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
+        { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
+        { value: "MCB", label: "MCB (FIT MANPOWER)" }
     ], []);
 
     return (

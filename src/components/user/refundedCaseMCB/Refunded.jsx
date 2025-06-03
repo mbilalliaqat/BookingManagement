@@ -36,6 +36,9 @@ const Refunded = () => {
                     ...entry,
                      serialNo: index + 1,
                     date: new Date(entry.date).toLocaleDateString(),
+                    paid_fee_date: new Date(entry.paid_fee_date).toLocaleDateString(),
+                    paid_refund_date: new Date(entry.paid_refund_date).toLocaleDateString(),
+                    
                     
                 }));
                 setEntries(formattedData);
@@ -57,11 +60,15 @@ const Refunded = () => {
 
 
     const columns = [
-      { header: 'Entry', accessor: 'serialNo' },
+        { header: 'EMPLOYEE', accessor: 'employee'},
+        { header: 'Entry', accessor: 'serialNo' },
         { header: 'NAME', accessor: 'name' },
         { header: 'DATE', accessor: 'date' },
         { header: 'PASSPORT', accessor: 'passport' },
         { header: 'REFERENCE', accessor: 'reference' },
+        { header: 'PAID FEE DATE', accessor: 'paid_fee_date' },
+        { header: 'PAID REFUND DATE', accessor: 'paid_refund_date' },
+        { header: 'TOTAL BALANCE', accessor: 'total_balance' },
         
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (

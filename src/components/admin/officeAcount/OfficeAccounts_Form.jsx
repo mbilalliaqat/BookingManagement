@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner'; // Import the spinner component
+import { useAppContext } from '../../contexts/AppContext';
 
 const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
 
+    const { user } = useAppContext();
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const [data, setData] = useState({
         bank_name: '',
+        employee_name:user?.username || '',
         date: '',
         detail: '',
         credit: '',
@@ -30,6 +33,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         if (editingEntry) {
             setData({
                 id: editingEntry.id,
+                employee_name: editingEntry.employee_name || '',
                 bank_name: editingEntry.bank_name || '',
                 date: editingEntry.date || '',
                 detail: editingEntry.detail || '',
@@ -106,6 +110,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         try {
             const submitData = {
                 bank_name: data.bank_name,
+                employee_name: data.employee_name,
                 date: data.date || new Date().toISOString().split('T')[0],
                 detail: data.detail,
             };
@@ -153,6 +158,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             // Reset form
             setData({
                 bank_name: '',
+                employee_name:user?.username || '',
                 date: new Date().toISOString().split('T')[0],
                 detail: '',
                 credit: '',
@@ -205,12 +211,28 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                     className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                                 >
                                     <option value="">Select a Bank</option>
-                                    <option value="UNITED BANK (ubl)">UNITED BANK (ubl)</option>
-                                    <option value="HABIB BANK (HBL)">HABIB BANK (HBL)</option>
-                                    <option value="JAZZCASH">JAZZCASH</option>
+                                    <option value="UNITED BANK (ubl1)">UNITED BANK (M ALI RAZA)</option>
+                                    <option value="UNITED BANK (ubl2)">UNITED BANK (FAIZAN E RAZA TRAVEL)</option>
+                                    <option value="HABIB BANK (HBL1)">HABIB BANK (M ALI RAZA)</option>
+                                    <option value="HABIB BANK (HBL2)">HABIB BANK (FAIZAN E RAZA TRAVEL)</option>
+                                    <option value="JAZZCASH">JAZZCASH (M ALI RAZA)</option>
+                                     <option value="MCB">MCB (FIT MANPOWER) (FIT MANPOWER)</option>
                                 </select>
                                 {prevError.bank_name && <span className="text-red-500">{prevError.bank_name}</span>}
                             </div>
+
+                            
+                              <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Employee</label>
+                            <input
+                                type="text"
+                                name="employee_name"
+                                value={data.employee_name}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            />
+                            
+                        </div>
 
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Detail</label>

@@ -34,7 +34,7 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/admin/services', icon: 'fa-cogs', label: 'Services' },
     { path: '/admin/protector', icon: 'fa-shield-alt', label: 'Protector' },
     { path: '/admin/expense', icon: 'fa-money-bill-wave', label: 'Expense' },
-    { path: '/admin/refunded', icon: 'fa-undo', label: 'Refunded' },
+    { path: '/admin/refunded', icon: 'fa-undo', label: 'Refunded MCB' },
     { path: '/admin/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/admin/officeAccount', icon: 'fa-building', label: 'Office Accounts' },
     { path: '/admin/vender', icon: 'fa-store', label: 'Vender' },
@@ -52,7 +52,7 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/services', icon: 'fa-cogs', label: 'Services' },
     { path: '/protector', icon: 'fa-shield-alt', label: 'Protector' },
     { path: '/expense', icon: 'fa-money-bill-wave', label: 'Expense' },
-    { path: '/refunded', icon: 'fa-undo', label: 'Refunded' },
+    { path: '/refunded', icon: 'fa-undo', label: 'Refunded MCB' },
     { path: '/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/agent', icon: 'fa-user-tie', label: 'Agent' },
   ];

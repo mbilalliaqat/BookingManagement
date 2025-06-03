@@ -22,6 +22,8 @@ const Agent = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [loadingActionId, setLoadingActionId] = useState(null);
 
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
     // Date formatting function - same as Services component
     const formatDate = (dateString) => {
         if (!dateString) return '';
@@ -32,7 +34,7 @@ const Agent = () => {
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            const response = await axios.get('http://localhost:8787/agent')
+            const response = await axios.get(`${BASE_URL}/agent`)
             
             // Format dates for display - same as Services component
             const formattedData = response.data.agents.map((entry) => ({
@@ -51,7 +53,7 @@ const Agent = () => {
 
     const fetchAgentNames = async () => {
         try {
-            const response = await axios.get('http://localhost:8787/agent-names/existing');
+            const response = await axios.get(`${BASE_URL}/agent-names/existing`);
             if (response.data.status === 'success') {
                 setAgentNames(response.data.agentNames || []);
             }
@@ -152,7 +154,7 @@ const Agent = () => {
         setLoadingActionId(parsedId);
         
         try {
-            const response = await axios.delete(`http://localhost:8787/agent/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/agent/${parsedId}`);
             if (response.status === 200) {
                 setData(data.filter(entry => entry.id !== parsedId));
                 console.log('Agent entry deleted successfully');
