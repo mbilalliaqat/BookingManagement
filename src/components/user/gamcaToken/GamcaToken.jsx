@@ -7,8 +7,6 @@ import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 
-
-
 const GamcaToken = () => {
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
@@ -45,13 +43,12 @@ const GamcaToken = () => {
             
             console.log('Raw API response:', response);
             
-            // Check if we have data and the expected structure
+            
             if (!response.data) {
                 console.error('Empty response data:', response);
                 throw new Error('Empty response received from server');
             }
             
-            // If the response is HTML instead of JSON (common error with incorrect URLs)
             if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
                 console.error('Received HTML instead of JSON. API endpoint may be incorrect.');
                 throw new Error('Received HTML instead of JSON. API endpoint may be incorrect.');
@@ -65,25 +62,49 @@ const GamcaToken = () => {
             const data = response.data.gamcaTokens;
             console.log('Parsed GAMCA tokens:', data);
             
-            setEntries(data);
+            const formattedData = data.map((token,index) => {
+                let passportDetails = {};
+                try {
+                    if (typeof token.passport_detail === 'string') {
+                        passportDetails = JSON.parse(token.passport_detail);
+                    } else if (typeof token.passport_detail === 'object' && token.passport_detail !== null) {
+                        passportDetails = token.passport_detail;
+                    }
+                } catch (e) {
+                    console.error("Error parsing passport details:", e);
+                }
+                return {
+                    ...token,
+                    serialNo: index + 1,
+                    created_at: new Date(token.created_at).toLocaleDateString('en-US'),
+                    passengerTitle: passportDetails.title || '',
+                    passengerFirstName: passportDetails.firstName || '',
+                    passengerLastName: passportDetails.lastName || '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerNationality: passportDetails.nationality || '',
+                    documentType: passportDetails.documentType || '',
+                    documentNo: passportDetails.documentNo || '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentIssueCountry: passportDetails.issueCountry || '',
+                    passport_detail: token.passport_detail
+                };
+            });
             
-            if ( data.length === 0) {
+            setEntries(formattedData);
+            
+            if (formattedData.length === 0) {
                 console.log('No GAMCA tokens found in the response');
             }
         } catch (error) {
             console.error('Error fetching GAMCA token data:', error);
             
-            // Provide more detailed error information
             if (error.response) {
-                // The server responded with a status code outside the 2xx range
                 console.error('Server response:', error.response);
                 setError(`Server error: ${error.response.status}. ${error.response.data?.message || 'Please try again later.'}`);
             } else if (error.request) {
-                // The request was made but no response was received
                 console.error('No response received:', error.request);
                 setError('No response from server. Please check your network connection.');
             } else {
-                // Something happened in setting up the request
                 setError(`Failed to load data: ${error.message}`);
             }
         } finally {
@@ -98,13 +119,22 @@ const GamcaToken = () => {
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'entry' },
+        { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'COUNTRY', accessor: 'country' },
-        { header: 'PASSPORT DETAIL', accessor: 'passport_detail' },
+        { header: 'TITLE', accessor: 'passengerTitle' },
+        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
+        { header: 'LAST NAME', accessor: 'passengerLastName' },
+        { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
+        { header: 'NATIONALITY', accessor: 'passengerNationality' },
+        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
+        { header: 'DOCUMENT NO', accessor: 'documentNo' },
+        { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
+        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
+        { header: 'PAID FROM BANK', accessor: 'paid_from_bank' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },

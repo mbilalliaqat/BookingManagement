@@ -46,10 +46,10 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
-        entry: '',
         customer_add: '',
         reference: '',
-        travel_date: '',
+        depart_date: '',
+        return_date:'',
         sector: '',
         airline: '',
         // Structured passport fields
@@ -64,6 +64,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         documentIssueCountry: '',
         receivable_amount: '',
         paid_cash: '',
+        bank_title:'',
         paid_in_bank: '',
         payable_to_vendor: '',
         vendor_name: '',
@@ -73,10 +74,10 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
-        entry: Yup.number().required('Entry is required').typeError('Entry must be a number'),
         customer_add: Yup.string().required('Customer Address is required'),
         reference: Yup.string().required('Reference is required'),
-        travel_date: Yup.date().required('Travel Date is required').typeError('Invalid date'),
+        depart_date: Yup.date().required('Travel Date is required').typeError('Invalid date'),
+        return_date: Yup.date().required('Return Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
         airline: Yup.string().required('Airline is required'),
         // Validation for passport fields
@@ -91,6 +92,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         documentIssueCountry: Yup.string().required('Issue Country is required'),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
         paid_cash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
+        bank_title: Yup.string().required('Bank Title is required'),
         paid_in_bank: Yup.string().required('Paid In Bank is required'),
         payable_to_vendor: Yup.number().required('Payable To Vendor is required').typeError('Payable To Vendor must be a number'),
         vendor_name: Yup.string().required('Vendor Name is required'),
@@ -127,10 +129,10 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
-                entry: editEntry.entry || '',
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
-                travel_date: formatDate(editEntry.travel_date),
+                depart_date: formatDate(editEntry.depart_date),
+                return_date: formatDate(editEntry.return_date),
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
                 
@@ -147,6 +149,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 
                 receivable_amount: editEntry.receivable_amount || '',
                 paid_cash: editEntry.paid_cash || '',
+                bank_title: editEntry.bank_title || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
                 payable_to_vendor: editEntry.payable_to_vendor || '',
                 vendor_name: editEntry.vendor_name || '',
@@ -175,15 +178,16 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
         const requestData = {
             employee_name: values.employee_name,
-            entry: parseInt(values.entry),
             customer_add: values.customer_add,
             reference: values.reference,
-            travel_date: values.travel_date,
+            depart_date: values.depart_date,
+            return_date: values.return_date,
             sector: values.sector,
             airline: values.airline,
             passport_detail: passportDetail,
             receivable_amount: parseInt(values.receivable_amount),
             paid_cash: parseInt(values.paid_cash),
+            bank_title: values.bank_title,
             paid_in_bank: values.paid_in_bank,
             payable_to_vendor: parseInt(values.payable_to_vendor),
             vendor_name: values.vendor_name,
@@ -266,10 +270,10 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
-        { name: 'entry', label: 'Entry', type: 'number', placeholder: 'Enter entry number', icon: 'clipboard-list' },
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
-        { name: 'travel_date', label: 'Travel Date', type: 'date', placeholder: 'Enter travel date', icon: 'calendar-alt' },
+        { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
+        { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter return date', icon: 'calendar-alt' },
         { name: 'sector', label: 'Sector', type: 'text', placeholder: 'Enter sector', icon: 'map-marker-alt' },
         { name: 'airline', label: 'Airline', type: 'text', placeholder: 'Enter airline', icon: 'plane' },
     ];
@@ -290,6 +294,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section3Fields = [
         { name: 'receivable_amount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
+        { name: 'bank_title', label: 'Bank Title', type: 'text', placeholder: 'Enter Bank Title', icon: 'store' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'payable_to_vendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
         { name: 'vendor_name', label: 'Vendor Name', type: 'text', placeholder: 'Enter vendor name', icon: 'store' },
@@ -486,7 +491,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     ) : (
                                         <motion.button
                                             type="submit"
-                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center shadow-md hover:shadow-lg transition-all"
+                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition-all"
                                             whileHover={{ scale: 1.03 }}
                                             whileTap={{ scale: 0.97 }}
                                             disabled={isSubmitting}

@@ -21,7 +21,8 @@ const Visa = () => {
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL || 'https://bookingms.mubihussain-te.workers.dev';
-          console.log('BASE_URL:', BASE_URL);
+    console.log('BASE_URL:', BASE_URL);
+    
     const fetchData = async () => {
         setIsLoading(true);
         try {
@@ -29,25 +30,55 @@ const Visa = () => {
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            console.log("Response Data",response)
+            console.log("Response Data", response)
             const data = response.data;
-            console.log(" API Data",data)
-            const formattedData = data.visa_processing?.map((visa) => ({
-                ...visa,
-                created_at: new Date(visa.created_at).toLocaleDateString(),  
-                embassy_send_date: visa.embassy_send_date
-                    ? new Date(visa.embassy_send_date).toLocaleDateString()
-                    : 'N/A', // Handle null/undefined
-                embassy_return_date: visa.embassy_return_date
-                    ? new Date(visa.embassy_return_date).toLocaleDateString()
-                    : 'N/A',
-                protector_date: visa.protector_date
-                    ? new Date(visa.protector_date).toLocaleDateString()
-                    : 'N/A',
-                passport_deliver_date: visa.passport_deliver_date
-                    ? new Date(visa.passport_deliver_date).toLocaleDateString()
-                    : 'N/A',
-            }));
+            console.log("API Data", data)
+            const formattedData = data.visa_processing?.map((visa,index) => {
+                // Parse passport details similar to Tickets component
+                let passportDetails = {};
+                try {
+                    if (typeof visa.passport_detail === 'string') {
+                        passportDetails = JSON.parse(visa.passport_detail);
+                    } else if (typeof visa.passport_detail === 'object' && visa.passport_detail !== null) {
+                        passportDetails = visa.passport_detail;
+                    }
+                } catch (e) {
+                    console.error("Error parsing passport details:", e);
+                }
+
+                return {
+                    ...visa,
+                    serialNo: index + 1,
+                    created_at: new Date(visa.created_at).toLocaleDateString(),  
+                    embassy_send_date: visa.embassy_send_date
+                        ? new Date(visa.embassy_send_date).toLocaleDateString()
+                        : 'N/A',
+                    embassy_return_date: visa.embassy_return_date
+                        ? new Date(visa.embassy_return_date).toLocaleDateString()
+                        : 'N/A',
+                    protector_date: visa.protector_date
+                        ? new Date(visa.protector_date).toLocaleDateString()
+                        : 'N/A',
+                         expiry_medical_date: visa.expiry_medical_date
+                        ? new Date(visa.expiry_medical_date).toLocaleDateString()
+                        : 'N/A',
+                    passport_deliver_date: visa.passport_deliver_date
+                        ? new Date(visa.passport_deliver_date).toLocaleDateString()
+                        : 'N/A',
+                    // Add formatted passport details for display
+                    passengerTitle: passportDetails.title || '',
+                    passengerFirstName: passportDetails.firstName || '',
+                    passengerLastName: passportDetails.lastName || '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerNationality: passportDetails.nationality || '',
+                    documentType: passportDetails.documentType || '',
+                    documentNo: passportDetails.documentNo || '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentIssueCountry: passportDetails.issueCountry || '',
+                    // Keep the original passport detail for editing
+                    passport_detail: visa.passport_detail
+                };
+            });
             setEntries(formattedData);
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -64,20 +95,29 @@ const Visa = () => {
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'entry' },
+        { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'FILE NO.', accessor: 'file_number' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'SPONSOR NAME', accessor: 'sponsor_name' },
         { header: 'VISA NO.', accessor: 'visa_number' },
         { header: 'ID NO.', accessor: 'id_number' },
         { header: 'EMBASSY', accessor: 'embassy' },
-        { header: 'PASSPORT DETAIL', accessor: 'passport_detail' },
+        { header: 'TITLE', accessor: 'passengerTitle' },
+        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
+        { header: 'LAST NAME', accessor: 'passengerLastName' },
+        { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
+        { header: 'NATIONALITY', accessor: 'passengerNationality' },
+        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
+        { header: 'DOCUMENT NO', accessor: 'documentNo' },
+        { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
+        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'E-NUMBER', accessor: 'e_number' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'PTN/PERMISSION', accessor: 'ptn_permission' },
         { header: 'EMBASSY SEND DATE', accessor: 'embassy_send_date' },
         { header: 'EMBASSY RETURN DATE', accessor: 'embassy_return_date' },
         { header: 'PROTECTOR DATE', accessor: 'protector_date' },
+        { header: 'EXPIRY MEDICAL DATE', accessor: 'expiry_medical_date' },
         { header: 'PASSPORT DELIVER DATE', accessor: 'passport_deliver_date' },
         { header: 'RECEIVE ABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'ADDITIONAL CHARGES', accessor: 'additional_charges' },
@@ -116,6 +156,7 @@ const Visa = () => {
         setShowForm(false);
         setEditEntry(null);
     };
+    
     const handleFormSubmit = () => {
         fetchData();
         setShowForm(false);
@@ -123,7 +164,7 @@ const Visa = () => {
     };
 
     const handleUpdate = (entry) => {
-        setEditEntry(entry); // Set the entry to edit
+        setEditEntry(entry);
         setShowForm(true);
     };
 
@@ -139,12 +180,11 @@ const Visa = () => {
 
     const handleDelete = async (id) => {
         setIsDeleting(true);
-        console.log('Attempting to delete expense with id:', id); // Debug log
-        // Handle case where id is an object (temporary safeguard)
+        console.log('Attempting to delete visa processing with id:', id);
         const parsedId = typeof id === 'object' && id !== null ? id.id : id;
         if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
              console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-             setError('Invalid expense ID. Cannot delete.');
+             setError('Invalid visa processing ID. Cannot delete.');
              setIsDeleting(false);
              return;
         }
@@ -152,13 +192,13 @@ const Visa = () => {
             const response = await axios.delete(`${BASE_URL}/visa-processing/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
-                console.log('Expense deleted successfully');
+                console.log('Visa processing deleted successfully');
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error deleting expense:', error);
-            setError('Failed to delete expense. Please try again later.');
+            console.error('Error deleting visa processing:', error);
+            setError('Failed to delete visa processing. Please try again later.');
         } finally {
             setIsDeleting(false);
             closeDeleteModal();
@@ -167,46 +207,46 @@ const Visa = () => {
 
     return (
         <div className="h-full flex flex-col">
-    {showForm ? (
-        <VisaProcessing_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry}/>
-    ) : (
-        <div className="flex flex-col h-full ">
-            <div className="flex justify-between items-center mb-4 relative">
-                <input
-                    type="text"
-                    placeholder="Search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
-                />
-                                     <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
+            {showForm ? (
+                <VisaProcessing_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry}/>
+            ) : (
+                <div className="flex flex-col h-full ">
+                    <div className="flex justify-between items-center mb-4 relative">
+                        <input
+                            type="text"
+                            placeholder="Search"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
+                        />
+                        <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
 
-                <button
-                    className="font-semibold text-sm bg-white  rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
-                    onClick={() => setShowForm(true)}
-                >
-                    <i className="fas fa-plus mr-1"></i> Add New
-                </button>
-            </div>
-            <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
-            {
-                    isLoading ?(
-                        <TableSpinner />
-                    ) : error ?(
-                        <div className="flex items-center justify-center w-full h-64">
-                        <div className="text-red-500">
-                            <i className="fas fa-exclamation-circle mr-2"></i>
-                            {error}
-                        </div>
-                    </div> 
-                    ):(
-                        <Table data={filteredData} columns={columns} />
-                    )
-                }
-            </div>
-        </div>
-    )}
-    <Modal
+                        <button
+                            className="font-semibold text-sm bg-white  rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+                            onClick={() => setShowForm(true)}
+                        >
+                            <i className="fas fa-plus mr-1"></i> Add New
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
+                        {
+                            isLoading ? (
+                                <TableSpinner />
+                            ) : error ? (
+                                <div className="flex items-center justify-center w-full h-64">
+                                    <div className="text-red-500">
+                                        <i className="fas fa-exclamation-circle mr-2"></i>
+                                        {error}
+                                    </div>
+                                </div> 
+                            ) : (
+                                <Table data={filteredData} columns={columns} />
+                            )
+                        }
+                    </div>
+                </div>
+            )}
+            <Modal
                 isOpen={showDeleteModal}
                 onClose={closeDeleteModal}
                 title="Delete Confirmation"
@@ -215,7 +255,7 @@ const Visa = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this umrah booking? 
+                    Are you sure you want to delete this visa processing record? 
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button
@@ -241,7 +281,7 @@ const Visa = () => {
                     </button>
                 </div>
             </Modal>
-</div>
+        </div>
     );
 };
 

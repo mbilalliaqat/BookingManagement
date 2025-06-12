@@ -12,6 +12,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         passport: '',
         reference: '',
         file_no: '',
+        withdraw:'',
         employee: user?.username || '',
         mcb_fee_6000_date: '',
         ncb_fee_6700_date: '',
@@ -25,6 +26,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         passport: '',
         reference: '',
         file_no: '',
+        withdraw:'',
         employee: '',
         mcb_fee_6000_date: '',
         ncb_fee_6700_date: '',
@@ -58,6 +60,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 passport: editEntry.passport || '',
                 reference: editEntry.reference || '',
                 file_no: editEntry.file_no || '',
+                withdraw:editEntry.withdraw || '',
                 employee: editEntry.employee || user?.username || '',
                 mcb_fee_6000_date: formatDateForInput(editEntry.mcb_fee_6000_date),
                 ncb_fee_6700_date: formatDateForInput(editEntry.ncb_fee_6700_date),
@@ -152,8 +155,9 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 name: data.name,
                 passport: data.passport,
                 reference: data.reference,
-                file_no: data.file_no, // ✅ This should now work correctly
-                employee: data.employee, // ✅ Fixed: was data.user?.username
+                file_no: data.file_no, 
+                withdraw:data.withdraw,
+                employee: data.employee, 
                 mcb_fee_6000_date: data.mcb_fee_6000_date,
                 ncb_fee_6700_date: data.ncb_fee_6700_date,
                 ncb_fee_500_date: data.ncb_fee_500_date,
@@ -191,6 +195,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     passport: '',
                     reference: '',
                     file_no: '',
+                    withdraw:'',
                     employee: user?.username || '',
                     mcb_fee_6000_date: '',
                     ncb_fee_6700_date: '',
@@ -224,6 +229,17 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
                 <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
                     <div className="flex flex-wrap justify-between gap-4">
+                       <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Employee</label>
+                            <input
+                                type="text"
+                                name="employee"
+                                value={data.employee}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            />
+                            {prevError.employee && <span className="text-red-500">{prevError.employee}</span>}
+                        </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Name</label>
                             <input
@@ -268,16 +284,16 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.file_no && <span className="text-red-500">{prevError.file_no}</span>}
                         </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Employee</label>
+                                                <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Withdraw</label>
                             <input
                                 type="text"
-                                name="employee"
-                                value={data.employee}
+                                name="withdraw"
+                                value={data.withdraw}
                                 onChange={handleChange}
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
-                            {prevError.employee && <span className="text-red-500">{prevError.employee}</span>}
+                            
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">MCB FEE / 6000 DATE</label>

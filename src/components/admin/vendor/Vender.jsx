@@ -31,11 +31,15 @@ const Vender = () => {
                 const data=response.data;
                 console.log("Fetched data:", data);
                 
-                const formattedData = data.vender?.map((entry) => ({
+                const formattedData = data.vender?.map((entry,index) => ({
                     ...entry,
+                    serialNo: index + 1,
                     date: new Date(entry.date).toLocaleDateString(),
+                    debit: entry.debit || 0,
+                    credit: entry.credit || 0, 
+                    file_path: entry.file_path // <--- ADD THIS LINE
                 }));
-                setEntries(formattedData.reverse());
+                setEntries(formattedData);
                 
             }
             catch(error){
@@ -52,9 +56,53 @@ const Vender = () => {
     const columns = [
         {header:'USERNAME', accessor:'user_name'},
         { header: 'DATE', accessor: 'date' },
-        {header:'ENTRY', accessor:'entry'},
-        { header: 'AMOUNT', accessor: 'amount' },
+        { header: 'ENTRY', accessor: 'serialNo' },
+        {header:'DETAIL', accessor:'entry'},
         { header: 'BANK TITLE', accessor: 'bank_title' },
+        { header: 'DEBIT', accessor: 'debit' },                    
+        { header: 'CREDIT', accessor: 'credit' },                  
+       { header: 'AMOUNT', accessor: 'amount' },
+       { header: 'WITHDRAW', accessor: 'withdraw' },
+
+// Enhanced file display with error handling
+{ 
+    header: 'ATTACHMENT', 
+    accessor: 'file_path', 
+    render: (filePathValue, row) => {
+        if (!row || !row.file_path) {
+            return <span className="text-gray-400">No file</span>;
+        }
+        
+        const fileUrl = `${BASE_URL}/uploads/${row.file_path}`; 
+        
+        const handleFileClick = async (e) => {
+            e.preventDefault();
+            
+            try {
+                // First check if file exists
+                const response = await fetch(fileUrl, { method: 'HEAD' });
+                
+                if (response.ok) {
+                    window.open(fileUrl, '_blank');
+                } else {
+                    alert('File not found or cannot be accessed');
+                }
+            } catch (error) {
+                console.error('Error accessing file:', error);
+                alert('Error accessing file. Please try again later.');
+            }
+        };
+        
+        return (
+            <button
+                onClick={handleFileClick}
+                className="text-blue-500 hover:text-blue-700 bg-none border-none cursor-pointer"
+            >
+                <i className="fas fa-file"></i> View
+            </button>
+        );
+    }
+},
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>

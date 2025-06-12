@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, Users, Plane, MapPin, FileText, CreditCard } from 'lucide-react';
+import { CheckCircle, Users, Plane, MapPin, FileText, CreditCard, Wallet, Landmark } from 'lucide-react'; // Added Wallet and Landmark icons
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 
@@ -20,7 +20,13 @@ export default function Dashboard() {
     combinedBookings: [],
     totalBookings: 0,
     bookingsByType: [],
-    totalRevenue: 0
+    totalRevenue: 0,
+    totalProtectorWithdraw: 0,
+    totalExpenseWithdraw:0,
+    totalRefundedWithdraw:0,
+    totalVendorWithdraw:0,
+    TotalWithdraw:0,
+    cashInOffice: 0, // State to hold cash in office calculation
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +35,12 @@ export default function Dashboard() {
     umrah: null,
     tickets: null,
     visa: null,
-    gamcaToken: null
+    gamcaToken: null,
+    services:null,
+    protector: null,
+    expenses:null,
+    refunded:null,
+    vendor:null,
   });
 
   // Cached data fetching function
@@ -61,7 +72,18 @@ export default function Dashboard() {
       
       try {
         // Fetch all data in parallel using Promise.all
-        const [dashboardStats, umrahData, ticketsData, visaData, gamcaTokenData] = await Promise.all([
+        const [
+          dashboardStats,
+          umrahData,
+          ticketsData,
+          visaData,
+          gamcaTokenData,
+          servicesData,
+          protectorData, 
+          expensesData,
+          refundedData,
+          venderData,
+        ] = await Promise.all([
           fetchWithCache('/dashboard').catch(err => {
             setErrors(prev => ({...prev, dashboard: 'Failed to load dashboard summary'}));
             console.error('Dashboard fetch error:', err);
@@ -86,7 +108,32 @@ export default function Dashboard() {
             setErrors(prev => ({...prev, gamcaToken: 'Failed to load Gamca Token data'}));
             console.error('Gamca Token fetch error:', err);
             return { gamcaTokens: [] };
-          })
+          }),
+           fetchWithCache('/services').catch(err => {
+            setErrors(prev => ({...prev, services: 'Failed to load Services data'}));
+            console.error('Services fetch error:', err);
+            return { services: [] };
+          }),
+          fetchWithCache('/protector').catch(err => { // New fetch for Protector data
+            setErrors(prev => ({...prev, protector: 'Failed to load Protector data'}));
+            console.error('Protector fetch error:', err);
+            return { protectors: [] };
+          }),
+          fetchWithCache('/expenses').catch(err => {
+            setErrors(prev => ({...prev, expenses: 'Failed to load Expenses data'}));
+            console.error('Expenses fetch error:', err);
+            return { expenses: [] };
+          }),
+          fetchWithCache('/refunded').catch(err => {
+            setErrors(prev => ({...prev, refunded: 'Failed to load Refunded data'}));
+            console.error('Refunded fetch error:', err);
+            return { refunded: [] };
+          }),
+          fetchWithCache('/vender').catch(err => {
+            setErrors(prev => ({...prev, vender: 'Failed to load Vender data'}));
+            console.error('Vendor fetch error:', err);
+            return { vender: [] };
+          }),
         ]);
 
         // Process Umrah data
@@ -97,7 +144,8 @@ export default function Dashboard() {
           paid_cash: booking.paidCash,
           paid_in_bank: booking.paidInBank,
           remaining_amount: booking.remainingAmount,
-          booking_date: new Date(booking.createdAt).toLocaleDateString()
+          booking_date: new Date(booking.createdAt).toLocaleDateString(),
+          withdraw: 0, // Initialize withdraw for non-protector types
         }));
 
         // Process Tickets data
@@ -108,7 +156,8 @@ export default function Dashboard() {
           paid_cash: ticket.paid_cash,
           paid_in_bank: ticket.paid_in_bank,
           remaining_amount: ticket.remaining_amount,
-          booking_date: new Date(ticket.created_at).toLocaleDateString()
+          booking_date: new Date(ticket.created_at).toLocaleDateString(),
+          withdraw: 0, // Initialize withdraw for non-protector types
         }));
 
         // Process Visa data
@@ -119,7 +168,8 @@ export default function Dashboard() {
           paid_cash: visa.paid_cash,
           paid_in_bank: visa.paid_in_bank,
           remaining_amount: visa.remaining_amount,
-          booking_date: new Date(visa.created_at).toLocaleDateString()
+          booking_date: new Date(visa.created_at).toLocaleDateString(),
+          withdraw: 0, // Initialize withdraw for non-protector types
         }));
 
         // Process Gamca Token data
@@ -130,7 +180,62 @@ export default function Dashboard() {
           paid_cash: token.paid_cash,
           paid_in_bank: token.paid_in_bank,
           remaining_amount: token.remaining_amount,
-          booking_date: new Date(token.created_at).toLocaleDateString()
+          booking_date: new Date(token.created_at).toLocaleDateString(),
+          withdraw: 0, // Initialize withdraw for non-protector types
+        }));
+
+        // Process Services data
+        const servicesBookings = servicesData.services.map(services => ({
+          type: 'Services',
+          employee_name: services.user_name,
+          receivable_amount: services.receivable_amount,
+          paid_cash: services.paid_cash,
+          paid_in_bank: services.paid_in_bank,
+          remaining_amount: services.remaining_amount,
+          booking_date: new Date(services.booking_date).toLocaleDateString(),
+          withdraw: 0, // Initialize withdraw for non-protector types
+        }));
+
+        // Process Protector data (NEW)
+        const protectorBookings = protectorData.protectors.map(protector => ({
+          type: 'Protector',
+          employee_name: protector.employee,
+          receivable_amount: 0, 
+          paid_cash: 0, 
+          paid_in_bank: 0, 
+          remaining_amount: 0, 
+          booking_date: new Date(protector.protector_date).toLocaleDateString(),
+          withdraw: parseFloat(protector.withdraw || 0), // Use the withdraw field from protector
+        }));
+        const expensesBookings = expensesData.expenses.map(expenses => ({
+          type: 'Expenses',
+          employee_name: expenses.user_name,
+          receivable_amount: 0, 
+          paid_cash: 0, 
+          paid_in_bank: 0, 
+          remaining_amount: 0, 
+          booking_date: new Date(expenses.date).toLocaleDateString(),
+          withdraw: parseFloat(expenses.withdraw || 0), // Use the withdraw field from expenses
+        }));
+        const refundedBookings = (refundedData.refunded || []).map(refund => ({
+          type: 'Refunded',
+          employee_name: refund.employee,
+          receivable_amount: 0, 
+          paid_cash: 0, 
+          paid_in_bank: 0, 
+          remaining_amount: 0, 
+          booking_date: new Date(refund.date).toLocaleDateString(), // Changed from refund.refunded_date
+          withdraw: parseFloat(refund.withdraw || 0),
+        }));
+          const venderBookings = (venderData.vender || []).map(vender => ({
+          type: 'Vender',
+          employee_name: vender.user_name, // Changed from vender.employee
+          receivable_amount: 0, 
+          paid_cash: 0, 
+          paid_in_bank: 0, 
+          remaining_amount: 0, 
+          booking_date: new Date(vender.date).toLocaleDateString(), // Changed from vender.vender_date
+          withdraw: parseFloat(vender.withdraw || 0),
         }));
 
         // Combine and sort by booking date (most recent first)
@@ -138,15 +243,51 @@ export default function Dashboard() {
           ...umrahBookings,
           ...ticketBookings,
           ...visaBookings,
-          ...gamcaTokenBookings
+          ...gamcaTokenBookings,
+          ...servicesBookings,
+          ...protectorBookings,
+          ...expensesBookings,
+          ...refundedBookings,
+          ...venderBookings, 
         ].sort((a, b) => new Date(b.booking_date) - new Date(a.booking_date));
+
+        // Calculate total protector withdraw
+        const totalProtectorWithdraw = protectorBookings.reduce((sum, entry) => {
+          return sum + entry.withdraw;
+        }, 0);
+        
+        const totalExpensesWithdraw = expensesBookings.reduce((sum, entry) => {
+          return sum + entry.withdraw;
+        }, 0);
+        const totalRefundedWithdraw = refundedBookings.reduce((sum, entry) => {
+          return sum + entry.withdraw;
+        }, 0);
+        const totalVendorWithdraw = venderBookings.reduce((sum, entry) => {
+          return sum + entry.withdraw;
+        }, 0);
+
+        // Calculate total paid cash from all combined bookings
+        const totalPaidCash = combinedBookings.reduce((sum, booking) => {
+          return sum + parseFloat(booking.paid_cash || 0);
+        }, 0);
+
+        // Calculate Cash in Office (NEW: withdraw - Total cash in office)
+        const cashInOffice =  totalPaidCash - totalProtectorWithdraw - totalExpensesWithdraw - totalRefundedWithdraw - totalVendorWithdraw;
+        const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw
+
 
         // Update state with both dashboard stats and combined bookings
         setDashboardData({
           combinedBookings,
           totalBookings: dashboardStats.data.totalBookings,
           bookingsByType: dashboardStats.data.bookingsByType,
-          totalRevenue: dashboardStats.data.totalRevenue
+          totalRevenue: dashboardStats.data.totalRevenue,
+          totalProtectorWithdraw, 
+          totalExpensesWithdraw,
+          totalRefundedWithdraw,
+          totalVendorWithdraw,
+          cashInOffice, 
+          TotalWithdraw,
         });
         
         console.log("Dashboard data loaded successfully");
@@ -171,24 +312,47 @@ export default function Dashboard() {
   const umrahCount = booking.find(item => item.type === 'Umrah')?.count || 0;
   const visaCount = booking.find(item => item.type === 'Visa Processing')?.count || 0;
   const gamcaTokenCount = booking.find(item => item.type === 'GAMCA Token')?.count || 0;
+  const serviceCount = booking.find(item => item.type === 'Services')?.count || 0;
+
+  // Calculate total receivable amount
+  const totalReceivableAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
+    return sum + parseFloat(booking.receivable_amount || 0); // Convert to number
+  }, 0);
+
+  // Calculate total paid cash (already derived above for cashInOffice calculation, but keeping this for consistency with existing code)
+  const totalPaidCash = dashboardData.combinedBookings.reduce((sum, booking) => {
+    return sum + parseFloat(booking.paid_cash || 0); // Convert to number
+  }, 0);
+
+  // Calculate total paid in bank
+  const totalPaidInBank = dashboardData.combinedBookings.reduce((sum, booking) => {
+    return sum + parseFloat(booking.paid_in_bank || 0); // Convert to number
+  }, 0);
+
+  // Calculate total remaining amount
+  const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
+    return sum + parseFloat(booking.remaining_amount || 0); // Convert to number
+  }, 0);
 
   const showPartialData = !isLoading && dashboardData.combinedBookings.length > 0;
 
-  // Define table columns
+  // Define table columns (Add new columns)
   const columns = [
-    { header: 'TYPE', accessor: 'type' },
-    { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
     { header: 'DATE', accessor: 'booking_date' },
+    { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
+    { header: 'TYPE', accessor: 'type' },
     { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
     { header: 'PAID CASH', accessor: 'paid_cash' },
     { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
     { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
+    { header: 'WITHDRAW', accessor: 'withdraw' }, // New column for withdraw
+    { header: 'CASH IN OFFICE', accessor: 'cash_in_office_display' }, // New column for calculated cash in office
   ];
 
   return (
-    <div className="bg-gray-50 p-2 rounded-lg max-h-screen overflow-hidden">
+    <div className="bg-gray-50 p-2 rounded-lg  overflow-hidden">
       {/* Stats Cards Section */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
         {/* Total Bookings Card */}
         <div className="bg-white p-4 rounded-lg border-l-4 border-purple-500 shadow">
           <div className="flex justify-between items-center">
@@ -278,6 +442,131 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+         <div className="bg-white p-4 rounded-lg border-l-4 border-red-500 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium">Service</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ? 
+                  <span className="text-gray-300">--</span> : 
+                  serviceCount
+                }
+              </p>
+            </div>
+            <div className="bg-red-100 p-1 sm:p-3 rounded-full">
+              <CreditCard size={18} className="text-red-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Receivable Amount Card */}
+        <div className="bg-white p-4 rounded-lg border-l-4 border-teal-500 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium">Total Receivable</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ?
+                  <span className="text-gray-300">--</span> :
+                  totalReceivableAmount.toLocaleString() 
+                }
+              </p>
+            </div>
+            <div className="bg-teal-100 p-1 sm:p-3 rounded-full">
+              <CreditCard size={18} className="text-teal-500" /> 
+            </div>
+          </div>
+        </div>
+
+        {/* Total Paid Cash Card */}
+        <div className="bg-white p-4 rounded-lg border-l-4 border-indigo-500 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium">Total Paid Cash</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ?
+                  <span className="text-gray-300">--</span> :
+                  totalPaidCash.toLocaleString() 
+                }
+              </p>
+            </div>
+            <div className="bg-indigo-100 p-1 sm:p-3 rounded-full">
+              <CreditCard size={18} className="text-indigo-500" /> 
+            </div>
+          </div>
+        </div>
+
+        {/* Total Paid In Bank Card */}
+        <div className="bg-white p-4 rounded-lg border-l-4 border-orange-500 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium">Total Paid In Bank</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ?
+                  <span className="text-gray-300">--</span> :
+                  totalPaidInBank.toLocaleString() 
+                }
+              </p>
+            </div>
+            <div className="bg-orange-100 p-1 sm:p-3 rounded-full">
+              <CreditCard size={18} className="text-orange-500" /> 
+            </div>
+          </div>
+        </div>
+
+        {/* Total Remaining Amount Card */}
+        <div className="bg-white p-4 rounded-lg border-l-4 border-pink-500 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium">Total Remaining Amount</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ?
+                  <span className="text-gray-300">--</span> :
+                  totalRemainingAmount.toLocaleString() 
+                }
+              </p>
+            </div>
+            <div className="bg-pink-100 p-1 sm:p-3 rounded-full">
+              <CreditCard size={18} className="text-pink-500" /> 
+            </div>
+          </div>
+        </div>
+
+        {/* Total Protector Withdraw Card (NEW) */}
+        <div className="bg-white p-4 rounded-lg border-l-4 border-purple-700 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium"> Withdraw</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ?
+                  <span className="text-gray-300">--</span> :
+                  dashboardData.TotalWithdraw.toLocaleString()
+                }
+              </p>
+            </div>
+            <div className="bg-purple-200 p-1 sm:p-3 rounded-full">
+              <Wallet size={18} className="text-purple-700" />
+            </div>
+          </div>
+        </div>
+
+        {/* Cash in Office Card (NEW) */}
+        <div className="bg-white p-4 rounded-lg border-l-4 border-cyan-500 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium">Cash in Office</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ?
+                  <span className="text-gray-300">--</span> :
+                  dashboardData.cashInOffice.toLocaleString()
+                }
+              </p>
+            </div>
+            <div className="bg-cyan-100 p-1 sm:p-3 rounded-full">
+              <Landmark size={18} className="text-cyan-500" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Table Section */}
@@ -289,7 +578,7 @@ export default function Dashboard() {
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold text-gray-700">All Bookings</h2>
-            {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken) && (
+            {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken || errors.services || errors.protector) && ( 
               <span className="text-xs text-red-500">
                 {Object.values(errors).filter(e => e).join(', ')}
               </span>
@@ -313,18 +602,22 @@ export default function Dashboard() {
                 {dashboardData.combinedBookings.length > 0 ? (
                   dashboardData.combinedBookings.map((booking, index) => (
                     <tr key={index}>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{booking.type}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm  text-gray-700">{booking.employee_name}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.booking_date}</td>
+                       <td className="px-3 py-2 whitespace-nowrap text-sm  text-gray-700">{booking.employee_name}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{booking.type}</td>   
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.receivable_amount}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.paid_cash}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.paid_in_bank}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.remaining_amount}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.withdraw}</td> 
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
+                        {booking.type === 'Protector' ? dashboardData.cashInOffice.toLocaleString() : '--'} 
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-3 py-4 text-center text-sm text-gray-500">
+                    <td colSpan="9" className="px-3 py-4 text-center text-sm text-gray-500"> 
                       No recent bookings found
                     </td>
                   </tr>

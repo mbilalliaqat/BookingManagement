@@ -29,7 +29,7 @@ const Tickets = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
-            const formattedData = data.ticket.map((ticket) => {
+            const formattedData = data.ticket.map((ticket,index) => {
                 let passportDetails = {};
                 try {
                     if (typeof ticket.passport_detail === 'string') {
@@ -42,7 +42,9 @@ const Tickets = () => {
                 }
                 return {
                     ...ticket,
-                    travel_date: new Date(ticket.travel_date).toLocaleDateString(),
+                    serialNo: index + 1,
+                    depart_date: new Date(ticket.depart_date).toLocaleDateString(),
+                    return_date: new Date(ticket.return_date).toLocaleDateString(),
                     created_at: new Date(ticket.created_at).toLocaleDateString('en-US'),
                     // Add formatted passport details for display
                     passengerTitle: passportDetails.title || '',
@@ -58,7 +60,7 @@ const Tickets = () => {
                     passport_detail: ticket.passport_detail
                 };
             });
-            setEntries(formattedData.reverse());
+            setEntries(formattedData);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
@@ -74,10 +76,11 @@ const Tickets = () => {
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'entry' },
+        { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
-        { header: 'TRAVEL DATE', accessor: 'travel_date' },
+        { header: 'DEPART DATE', accessor: 'depart_date' },
+        { header: 'RETURN DATE', accessor: 'return_date' },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
         { header: 'TITLE', accessor: 'passengerTitle' },
@@ -91,6 +94,7 @@ const Tickets = () => {
         { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
+        { header: 'BANK TITLE', accessor: 'bank_title' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
         { header: 'PAYABLE TO VENDOR', accessor: 'payable_to_vendor' },
         { header: 'VENDOR NAME', accessor: 'vendor_name' },

@@ -29,7 +29,7 @@ const Umrah = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            const formattedData = data.umrahBookings.map((booking) => {
+            const formattedData = data.umrahBookings.map((booking,index) => {
                  let passportDetails = {};
                 try {
                     if (typeof booking.passportDetail === 'string') {
@@ -42,7 +42,9 @@ const Umrah = () => {
                 }
                 return {
                      ...booking,
-                    travelDate: new Date(booking.travelDate).toLocaleDateString(),
+                     serialNo: index + 1,
+                    depart_date: new Date(booking.depart_date).toLocaleDateString(),
+                    return_date: new Date(booking.return_date).toLocaleDateString(),
                     createdAt: new Date(booking.createdAt).toLocaleDateString(),
                     // Add formatted passport details for display
                     passengerTitle: passportDetails.title || '',
@@ -59,7 +61,7 @@ const Umrah = () => {
                 }
             }
         );
-            setEntries(formattedData.reverse());
+            setEntries(formattedData);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
@@ -75,11 +77,12 @@ const Umrah = () => {
     const columns = [
         { header: 'BOOKING DATE', accessor: 'createdAt' },
         { header: 'EMPLOYEE NAME', accessor: 'userName' },
-        { header: 'ENTRY', accessor: 'entry' },
+        { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'CUSTOMER ADD', accessor: 'customerAdd' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'PACKAGE DETAIL', accessor: 'packageDetail' },
-        { header: 'TRAVEL DATE', accessor: 'travelDate' },
+        { header: 'DEPART DATE', accessor: 'depart_date' },
+        { header: 'RETURN DATE', accessor: 'return_date' },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
          { header: 'TITLE', accessor: 'passengerTitle' },
@@ -95,6 +98,7 @@ const Umrah = () => {
          
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivableAmount' },
         { header: 'PAID CASH', accessor: 'paidCash' },
+        { header: 'BANK TITLE', accessor: 'bank_title' },
         { header: 'PAID IN BANK', accessor: 'paidInBank' },
          { header: 'REMAINING AMOUNT', accessor: 'remainingAmount' },
          { header: 'VENDOR NAME', accessor: 'vendorName' },

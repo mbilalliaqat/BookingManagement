@@ -16,7 +16,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         reference: '',
         paid_fee_date: '',
         paid_refund_date: '',
-        total_balance: ''
+        total_balance: '',
+        withdraw:''
     });
 
     const [prevError, setPrevError] = useState({
@@ -43,7 +44,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 reference: editEntry.reference || '',
                 paid_fee_date: editEntry.paid_fee_date ? new Date(editEntry.paid_fee_date).toISOString().split('T')[0] : '',
                 paid_refund_date: editEntry.paid_refund_date ? new Date(editEntry.paid_refund_date).toISOString().split('T')[0] : '',
-                total_balance: editEntry.total_balance || ''
+                total_balance: editEntry.total_balance || '',
+                withdraw: editEntry.withdraw || ''
             });
         }
     }, [editEntry]);
@@ -135,7 +137,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 reference: data.reference,
                 paid_fee_date: data.paid_fee_date || null,
                 paid_refund_date: data.paid_refund_date || null,
-                total_balance: parseFloat(data.total_balance) || 0
+                total_balance: parseFloat(data.total_balance) || 0,
+                withdraw: parseFloat(data.withdraw) || 0
             };
 
             try {
@@ -168,7 +171,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     reference: '',
                     paid_fee_date: '',
                     paid_refund_date: '',
-                    total_balance: ''
+                    total_balance: '',
+                    withdraw:''
                 });
 
                 if (onSubmitSuccess) {
@@ -273,6 +277,17 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
                             {prevError.paid_refund_date && <span className="text-red-500 text-sm">{prevError.paid_refund_date}</span>}
+                        </div>
+                          <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">WITHDRAW </label>
+                            <input
+                                type="number"
+                                name="withdraw"
+                                value={data.withdraw}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                placeholder="0.00"
+                            />
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Total Balance </label>

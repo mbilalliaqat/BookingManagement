@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useAppContext } from '../../contexts/AppContext';
 
 
 
 const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
+
+     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    const { user } = useAppContext();
     const [isLoading, setIsLoading] = useState(false);
     const [data, setData] = useState({
-        user_name: '',
+        user_name: user?.username || '',
         entry: '',
         date: '',
         detail: '',
         total_amount: '',
-        selection: ''
+        selection: '',
+        withdraw:''
     });
 
     const [prevError, setPrevError] = useState({
@@ -23,17 +28,16 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         general: ''
     });
 
-    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-
     useEffect(() => {
         if (editEntry) {
             setData({
-                user_name: editEntry.user_name || '',
+                user_name: editEntry.user_name    || '',
                 entry: editEntry.entry || '',
                 date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
                 detail: editEntry.detail || '',
                 total_amount: editEntry.total_amount || '',
-                selection: editEntry.selection || ''
+                selection: editEntry.selection || '',
+                withdraw: editEntry.withdraw || ''
             });
         }
     }, [editEntry]);
@@ -95,7 +99,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 date: data.date,
                 detail: data.detail,
                 total_amount: parseInt(data.total_amount),
-                selection: data.selection
+                selection: data.selection,
+                withdraw:data.withdraw
             };
 
             try {
@@ -121,12 +126,13 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 console.log('Success:', result);
 
                 setData({
-                    user_name: '',
+                    user_name: user?.username || '',
                     entry: '',
                     date: '',
                     detail: '',
                     total_amount: '',
-                    selection: ''
+                    selection: '',
+                    withdraw:''
                 });
 
                 if (onSubmitSuccess) {
@@ -163,7 +169,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
                     <div className="flex flex-wrap justify-between gap-4">
                         <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">User Name</label>
+                            <label className="block font-medium mb-1">EMPLOYEE NAME</label>
                             <input
                                 type="text"
                                 name="user_name"
@@ -194,6 +200,16 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
                             {prevError.entry && <span className="text-red-500">{prevError.entry}</span>}
+                        </div>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Withdraw</label>
+                            <input
+                                type="number"
+                                name="withdraw"
+                                value={data.withdraw}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            />
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Detail</label>

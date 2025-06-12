@@ -9,7 +9,11 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         entry: '',
         date: '',
         amount: '',
-        bank_title: ''
+        bank_title: '',
+        debit: '',       
+        credit: '',      
+        file: null,
+        withdraw:''
     });
 
     const [prevError, setPrevError] = useState({
@@ -18,6 +22,8 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         date: '',
         amount: '',
         bank_title: '',
+        debit: '',        
+        credit: '',       
         general: ''
     });
     
@@ -30,13 +36,21 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 entry: editEntry.entry || '',
                 date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
                 amount: editEntry.amount || '',
-                bank_title: editEntry.bank_title || ''
+                bank_title: editEntry.bank_title || '',
+                debit: editEntry.debit || '',      
+                credit: editEntry.credit || '',    
+                file: null,
+                withdraw: editEntry.withdraw || ''
             });
         }
     }, [editEntry]);
 
     const handleChange = (e) => {
+         if (e.target.type === 'file') {
+        setData({ ...data, file: e.target.files[0] });  
+    } else {
         setData({ ...data, [e.target.name]: e.target.value });
+    }
         setPrevError({ ...prevError, [e.target.name]: '' });
     };
 
@@ -81,27 +95,31 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
         if (isValid) {
             setIsSubmitting(true);
-            const requestData = {
-                user_name: data.user_name,
-                entry: data.entry,
-                date: data.date,
-                amount: parseInt(data.amount),
-                bank_title: data.bank_title
-            };
+            const formData = new FormData();
+            formData.append('user_name', data.user_name);
+            formData.append('entry', data.entry);
+            formData.append('date', data.date);
+            formData.append('amount', data.amount);
+            formData.append('bank_title', data.bank_title);
+            formData.append('debit', data.debit || '0');
+            formData.append('credit', data.credit || '0');
+            formData.append('withdraw', data.withdraw || '0'); // ✅ FIXED: Added withdraw field
+            
+            // Only append file if it exists
+            if (data.file) {
+                formData.append('file', data.file);
+            }
 
             try {
-                const url = editEntry
+                   const url = editEntry
                     ? `${BASE_URL}/vender/${editEntry.id}`
                     : `${BASE_URL}/vender`;
                 const method = editEntry ? 'PUT' : 'POST';
 
                 const response = await fetch(url, {
                     method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData),
-                });
+                    body: formData, 
+        });
 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -116,7 +134,11 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     entry: '',
                     date: '',
                     amount: '',
-                    bank_title: ''
+                    bank_title: '',
+                    debit: '',
+                    credit: '',
+                    file: null,
+                    withdraw: ''
                 });
 
                 if (onSubmitSuccess) {
@@ -169,7 +191,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             {prevError.date && <span className="text-red-500">{prevError.date}</span>}
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Entry</label>
+                            <label className="block font-medium mb-1">Detail</label>
                             <input
                                 type="text"
                                 name="entry"
@@ -180,18 +202,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.entry && <span className="text-red-500">{prevError.entry}</span>}
                         </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Amount</label>
-                            <input
-                                type="number"
-                                name="amount"
-                                value={data.amount}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                            />
-                            {prevError.amount && <span className="text-red-500">{prevError.amount}</span>}
-                        </div>
+                      
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Bank Title</label>
                             <input
@@ -204,7 +215,65 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.bank_title && <span className="text-red-500">{prevError.bank_title}</span>}
                         </div>
-                    </div>
+                          <div className="w-full sm:w-[calc(50%-10px)]">
+                              <label className="block font-medium mb-1">Debit</label>
+                               <input
+                               type="number"
+                               name="debit"
+                               value={data.debit}
+                               onChange={handleChange}
+                               className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                               disabled={isSubmitting}
+                           />
+                              {prevError.debit && <span className="text-red-500">{prevError.debit}</span>}
+                        </div>
+                          <div className="w-full sm:w-[calc(50%-10px)]">
+                              <label className="block font-medium mb-1">Credit</label>
+                                <input
+                                type="number"
+                                name="credit"
+                                value={data.credit}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                disabled={isSubmitting}
+                           />
+                                 {prevError.credit && <span className="text-red-500">{prevError.credit}</span>}
+                            </div>
+                              <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Withdraw</label>
+                            <input
+                                type="number"
+                                name="withdraw"
+                                value={data.withdraw}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                disabled={isSubmitting}
+                            />
+                        </div>
+                              <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Amount</label>
+                            <input
+                                type="number"
+                                name="amount"
+                                value={data.amount}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                disabled={isSubmitting}
+                            />
+                            {prevError.amount && <span className="text-red-500">{prevError.amount}</span>}
+                        </div>
+                         <div className="w-full sm:w-[calc(50%-10px)]">
+                             <label className="block font-medium mb-1">Attachment</label>
+                             <input
+                            type="file"
+                            name="file"
+                            onChange={handleChange}
+                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                             disabled={isSubmitting}
+                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            />
+                            </div>
+                     </div>
                     {prevError.general && <div className="text-red-500 mt-4">{prevError.general}</div>}
                     <div className="mt-10 flex justify-center">
                         <button

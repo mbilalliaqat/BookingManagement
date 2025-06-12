@@ -30,12 +30,14 @@ const Services = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
-            
-            const formattedData = data.services.map((entry) => ({
+
+            // Assign serialNo based on the fetched order
+            const formattedData = data.services.map((entry, index) => ({
                 ...entry,
+                serialNo: index + 1,
                 booking_date: formatDate(entry.booking_date),
             }));
-            setEntries(formattedData.reverse());
+            setEntries(formattedData);
         } catch (error) {
             console.log("Error Fetching data", error);
             setError('Failed to load data. Please try again later.');
@@ -46,13 +48,13 @@ const Services = () => {
 
     useEffect(() => {
         fetchData();
-    },[]);
+    }, []);
 
     const columns = [
         { header: 'VISA TYPE', accessor: 'visa_type' },
         { header: 'BOOKING DATE', accessor: 'booking_date' },
         { header: 'EMPLOYEE NAME', accessor: 'user_name' },
-        { header: 'ENTRY', accessor: 'entry' },
+        { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'SPECIAL DETAIL', accessor: 'specific_detail' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
@@ -65,13 +67,15 @@ const Services = () => {
                 <>
                     <button
                         className="text-blue-500 hover:text-blue-700 mr-3"
+                        // Pass the entire row object to handleUpdate
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i>
                     </button>
                     <button
                         className="text-red-500 hover:text-red-700"
-                        onClick={() => openDeleteModal(index)}
+                        // Pass the row id to openDeleteModal
+                        onClick={() => openDeleteModal(index.id)}
                     >
                         <i className="fas fa-trash"></i>
                     </button>
@@ -80,8 +84,8 @@ const Services = () => {
         }] : [])
     ];
 
-    const filteredData = entries.filter((index) =>
-        Object.values(index).some((value) =>
+    const filteredData = entries.filter((entry) => // Changed index to entry for clarity
+        Object.values(entry).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
         )
     );
@@ -97,8 +101,28 @@ const Services = () => {
         setEditEntry(null);
     };
 
-    const handleFormSubmit = () => {
-        fetchData();
+    const handleFormSubmit = (submittedEntry) => {
+        if (editEntry) { // If it was an edit operation
+            setEntries(prevEntries =>
+                prevEntries.map(entry =>
+                    entry.id === submittedEntry.id
+                        ? { ...submittedEntry, booking_date: formatDate(submittedEntry.booking_date), serialNo: entry.serialNo }
+                        : entry
+                )
+            );
+        } else { // If it was a new entry
+            setEntries(prevEntries => {
+                const newSerialNo = prevEntries.length > 0 ? Math.max(...prevEntries.map(e => e.serialNo)) + 1 : 1;
+                return [
+                    ...prevEntries,
+                    {
+                        ...submittedEntry,
+                        serialNo: newSerialNo,
+                        booking_date: formatDate(submittedEntry.booking_date)
+                    }
+                ];
+            });
+        }
         setShowForm(false);
         setEditEntry(null);
     };
@@ -121,8 +145,9 @@ const Services = () => {
     const handleDelete = async (id) => {
         setIsDeleting(true);
         console.log('Attempting to delete service with id:', id);
-        const parsedId = typeof id === 'object' && id !== null ? id.id : id;
-        if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
+        // The id passed here should already be a number from openDeleteModal
+        const parsedId = typeof id === 'object' && id !== null ? id.id : id; // This line might not be needed if id is always correct
+        if (!parsedId || typeof parsedId !== 'number') { // Simplified check
             console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
             setError('Invalid service ID. Cannot delete.');
             setIsDeleting(false);
@@ -196,7 +221,7 @@ const Services = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this service entry? 
+                    Are you sure you want to delete this service entry?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button

@@ -16,8 +16,8 @@ const Expense = () => {
         const [isLoading, setIsLoading] = useState(true);
         const [isDeleting, setIsDeleting] = useState(false);
         const [editEntry, setEditEntry] = useState(null);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteId, setDeleteId] = useState(null);
+        const [showDeleteModal, setShowDeleteModal] = useState(false);
+        const [deleteId, setDeleteId] = useState(null);
             const { user } = useAppContext();
         
 
@@ -37,7 +37,7 @@ const Expense = () => {
                     ...entry,
                     date: new Date(entry.date).toLocaleDateString(),
                 }));
-                setEntries(formattedData.reverse());
+                setEntries(formattedData);
                 
             }
             catch(error){
@@ -57,6 +57,7 @@ const Expense = () => {
         { header: 'DATE', accessor: 'date' },
         {header:'ENTRY', accessor:'entry'},
         { header: 'DETAIL', accessor: 'detail' },
+          { header: 'WITHDRAW', accessor: 'withdraw' },
         { header: 'TOTAL AMOUNT', accessor: 'total_amount' },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (

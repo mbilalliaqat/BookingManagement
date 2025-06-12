@@ -49,11 +49,11 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const [formInitialValues, setFormInitialValues] = useState({
         userName: user?.username || '',
-        entry: '',
         customerAdd: '',
         reference: '',
         packageDetail: '',
-        travelDate: '',
+        depart_date: '',
+        return_date:'',
         sector: '',
         airline: '',
         // Replace passportDetail with structured passport information
@@ -68,6 +68,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         documentIssueCountry: '',
         receivableAmount: '',
         paidCash: '',
+        bank_title:'',
         paidInBank: '',
         payableToVendor: '',
         vendorName: '',
@@ -77,11 +78,11 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const validationSchema = Yup.object({
         userName: Yup.string().required('Employee Name is required'),
-        entry: Yup.number().required('Entry is required').typeError('Entry must be a number'),
         customerAdd: Yup.string().required('Customer Address is required'),
         reference: Yup.string().required('Reference is required'),
         packageDetail: Yup.string().required('Package Detail is required'),
-        travelDate: Yup.date().required('Travel Date is required').typeError('Invalid date'),
+        depart_date: Yup.date().required('Depart Date is required').typeError('Invalid date'),
+        return_date: Yup.date().required('Return Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
         airline: Yup.string().required('Airline is required'),
         // Validation for new passport fields
@@ -96,6 +97,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         documentIssueCountry: Yup.string().required('Issue Country is required'),
         receivableAmount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
         paidCash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
+        bank_title: Yup.string().required('Bank Title is required'),
         paidInBank: Yup.string().required('Paid In Bank is required'),
         payableToVendor: Yup.number().required('Payable To Vendor is required').typeError('Payable To Vendor must be a number'),
         vendorName: Yup.string().required('Vendor Name is required'),
@@ -127,11 +129,11 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const newValues = {
                 userName: editEntry.userName || user?.username || '',
-                entry: editEntry.entry || '',
                 customerAdd: editEntry.customerAdd || '',
                 reference: editEntry.reference || '',
                 packageDetail: editEntry.packageDetail || '',
-                travelDate: formatDate(editEntry.travelDate),
+                depart_date: formatDate(editEntry.depart_date),
+                return_date: formatDate(editEntry.return_date),
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
                 
@@ -148,6 +150,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 
                 receivableAmount: editEntry.receivableAmount || '',
                 paidCash: editEntry.paidCash || '',
+                bank_title:editEntry.bank_title || '',
                 paidInBank: editEntry.paidInBank || '',
                 payableToVendor: editEntry.payableToVendor || '',
                 vendorName: editEntry.vendorName || '',
@@ -176,16 +179,17 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
         const requestData = {
             userName: values.userName,
-            entry: parseInt(values.entry),
             customerAdd: values.customerAdd,
             reference: values.reference,
             packageDetail: values.packageDetail || null,
-            travelDate: new Date(values.travelDate),
+            depart_date: new Date(values.depart_date),
+            return_date: new Date(values.return_date),
             sector: values.sector,
             airline: values.airline,
             passportDetail: passportDetail, // Send as JSON string
             receivableAmount: parseInt(values.receivableAmount),
             paidCash: parseInt(values.paidCash),
+            bank_title: values.bank_title,
             paidInBank: values.paidInBank,
             payableToVendor: parseInt(values.payableToVendor),
             vendorName: values.vendorName,
@@ -268,18 +272,18 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'userName', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
-        { name: 'entry', label: 'Entry', type: 'number', placeholder: 'Enter entry number', icon: 'clipboard-list' },
         { name: 'customerAdd', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'packageDetail', label: 'Package Detail', type: 'text', placeholder: 'Enter package detail', icon: 'suitcase' },
-        { name: 'travelDate', label: 'Travel Date', type: 'date', placeholder: 'Enter travel date', icon: 'calendar-alt' },
+        { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
+        { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter Return date', icon: 'calendar-alt' },
         { name: 'sector', label: 'Sector', type: 'text', placeholder: 'Enter sector', icon: 'map-marker-alt' },
         { name: 'airline', label: 'Airline', type: 'text', placeholder: 'Enter airline', icon: 'plane' },
     ];
 
     // Updated section2 with new passport fields
     const section2Fields = [
-        {name:'passengers',label:'Passengers',type:'custom-passenger',placeholder:'Select Passenger',icon:'users'},
+        
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
@@ -294,6 +298,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section3Fields = [
         { name: 'receivableAmount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
         { name: 'paidCash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
+        { name: 'bank_title', label: 'Bank Title', type: 'text', placeholder: 'Enter Bank title', icon: 'store' },
         { name: 'paidInBank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'payableToVendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
         { name: 'vendorName', label: 'Vendor Name', type: 'text', placeholder: 'Enter vendor name', icon: 'store' },
@@ -499,7 +504,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     ) : (
                                         <motion.button
                                             type="submit"
-                                            className="px-5 py-2 border border-gray-300 text-black rounded-lg flex items-center shadow-md hover:shadow-lg transition-all"
+                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition-all"
                                             whileHover={{ scale: 1.03 }}
                                             whileTap={{ scale: 0.97 }}
                                             disabled={isSubmitting}
