@@ -16,6 +16,7 @@ const Tickets = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showPassportFields, setShowPassportFields] = useState(false);
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -73,8 +74,8 @@ const Tickets = () => {
         fetchTickets();
     }, []);
 
-    const columns = [
-        { header: 'BOOKING DATE', accessor: 'created_at' },
+    const baseColumns=[
+         { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
@@ -83,15 +84,30 @@ const Tickets = () => {
         { header: 'RETURN DATE', accessor: 'return_date' },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
+         {
+            header: 'PASSENGERS',
+            accessor: 'passengerCount',
+            render: (row,index) => {
+                // Ensure default values are used if properties are undefined
+                const adults = index.adults === undefined ? 0 : index.adults;
+                const children = index.children === undefined ? 0 : index.children;
+                const infants = index.infants === undefined ? 0 : index.infants;
+                return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
+            }
+        },
         { header: 'TITLE', accessor: 'passengerTitle' },
         { header: 'FIRST NAME', accessor: 'passengerFirstName' },
         { header: 'LAST NAME', accessor: 'passengerLastName' },
-        { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
+    ];
+    const passportColumns=[
+         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
         { header: 'NATIONALITY', accessor: 'passengerNationality' },
         { header: 'DOCUMENT TYPE', accessor: 'documentType' },
         { header: 'DOCUMENT NO', accessor: 'documentNo' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
         { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
+    ];
+    const financialColumns=[
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'BANK TITLE', accessor: 'bank_title' },
@@ -100,25 +116,36 @@ const Tickets = () => {
         { header: 'VENDOR NAME', accessor: 'vendor_name' },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
-        ...(user.role === 'admin' ? [{
-            header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
-                <>
-                    <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
-                        onClick={() => handleUpdate(index)}
-                    >
-                        <i className="fas fa-edit"></i>
-                    </button>
-                    <button
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => openDeleteModal(index)}
-                    >
-                        <i className="fas fa-trash"></i>
-                    </button>
-                </>
-            )
-        }] : [])
     ];
+    const actionColumns = user.role === 'admin' ? [{
+        header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
+            <>
+                <button
+                    className="text-blue-500 hover:text-blue-700 mr-3"
+                    onClick={() => handleUpdate(index)}
+                >
+                    <i className="fas fa-edit"></i>
+                </button>
+                <button
+                    className="text-red-500 hover:text-red-700"
+                    onClick={() => openDeleteModal(index)}
+                >
+                    <i className="fas fa-trash"></i>
+                </button>
+            </>
+        )
+    }] : [];
+     const columns = [
+        ...baseColumns,
+        ...(showPassportFields ? passportColumns : []),
+        ...financialColumns,
+        ...actionColumns
+    ];
+   
+     
+       
+        
+       
 
     const filteredData = entries.filter((index) =>
         Object.values(index).some((value) =>
@@ -235,14 +262,31 @@ const Tickets = () => {
             ) : (
                 <div className='flex flex-col h-full'>
                     <div className="flex justify-between items-center mb-4 relative">
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
-                        />
-                        <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
+                       <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
+                                />
+                                <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                            
+                            {/* Toggle button for passport fields */}
+                            <button
+                                className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
+                                    showPassportFields 
+                                        ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                        : 'bg-white text-gray-700 hover:bg-gray-100'
+                                }`}
+                                onClick={() => setShowPassportFields(!showPassportFields)}
+                            >
+                                <i className={`fas ${showPassportFields ? 'fa-eye-slash' : 'fa-eye'} mr-1`}></i>
+                                {showPassportFields ? 'Hide' : 'Show'} Passport Details
+                            </button>
+                        </div>
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
                             onClick={() => setShowForm(true)}

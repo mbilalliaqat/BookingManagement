@@ -7,15 +7,21 @@ import { useAppContext } from '../../contexts/AppContext';
 
 // Create a component to handle automatic calculation of remaining amount
 
+const FormikConsumer = ({ children }) => {
+    const formik = useFormikContext();
+    return children(formik);
+};
 
 const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
+    const [showPassengerSlider,setShowPassengerSlider]=useState(false);
+
     const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
-    
+
     useEffect(() => {
         // Get values as numbers (defaulting to 0 if empty or NaN)
         const receivable = parseInt(values.receivableAmount) || 0;
@@ -56,6 +62,9 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         return_date:'',
         sector: '',
         airline: '',
+        adults:(editEntry && editEntry.adults) || 0,
+        children:(editEntry && editEntry.children) || 0,
+        infants:(editEntry && editEntry.infants) || 0,
         // Replace passportDetail with structured passport information
         passengerTitle: '',
         passengerFirstName: '',
@@ -85,6 +94,11 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         return_date: Yup.date().required('Return Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
         airline: Yup.string().required('Airline is required'),
+
+        adults:Yup.number().required('Adults is required'),
+        children:Yup.number().required('children is required'),
+        infants:Yup.number().required('Infants is required'),
+
         // Validation for new passport fields
         passengerTitle: Yup.string().required('Title is required'),
         passengerFirstName: Yup.string().required('First Name is required'),
@@ -136,6 +150,10 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 return_date: formatDate(editEntry.return_date),
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
+
+                adults:editEntry.adults || 0,
+                children:editEntry.children || 0,
+                infants:editEntry.infants || 0,
                 
                 // Map passport details from parsed object
                 passengerTitle: parsedPassportDetails.title || '',
@@ -163,6 +181,10 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     }, [editEntry, user]);
 
+    const handlePassengerChange=(type,delta,currentValues,setFieldValue)=>{
+        setFieldValue(type,Math.max(0,(currentValues[type] ||0)+delta)) ;
+    }
+
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         // Create a structured passport details object
         const passportDetail = JSON.stringify({
@@ -186,6 +208,9 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             return_date: new Date(values.return_date),
             sector: values.sector,
             airline: values.airline,
+            adults: values.adults,
+            children: values.children,
+            infants: values.infants,
             passportDetail: passportDetail, // Send as JSON string
             receivableAmount: parseInt(values.receivableAmount),
             paidCash: parseInt(values.paidCash),
@@ -284,6 +309,12 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Updated section2 with new passport fields
     const section2Fields = [
         
+        {
+            name: 'passengerCount',
+            label: 'Passenger',
+            type: 'custom_passenger', // Custom type for the passenger slider
+            icon: 'users'
+        },
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
@@ -341,7 +372,19 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             {field.label}
                         </label>
                     </div>
-                ) : (
+                ) :field.type === 'custom_passenger' ? (
+                    <Field name={field.name}>
+                        {({ field: formikField, form: { values, setFieldValue } }) => (
+                            <div
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
+                                onClick={() => setShowPassengerSlider(!showPassengerSlider)}
+                            >
+                                <span>{`${values.adults} Adults, ${values.children} Children, ${values.infants} Infants`}</span>
+                                <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
+                            </div>
+                        )}
+                    </Field>
+                ): (
                     <Field
                         id={field.name}
                         type={field.type}
@@ -352,6 +395,95 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         readOnly={field.readOnly}
                     />
                 )}
+
+                    {/* Passenger Slider */}
+                 {field.name === 'passengerCount' && showPassengerSlider && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute z-10 bg-white border border-gray-300 rounded-md shadow-lg p-4 mt-1 w-64 right-0"
+                    >
+                        {/* Access formik context directly here to update values */}
+                        <FormikConsumer>
+                            {({ values, setFieldValue }) => (
+                                <>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-gray-700">Adults (12+ yrs)</span>
+                                        <div className="flex items-center">
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('adults', -1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-minus"></i>
+                                            </button>
+                                            <span className="mx-3 font-semibold">{values.adults}</span>
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('adults', 1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-gray-700">Children (2-12 yrs)</span>
+                                        <div className="flex items-center">
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('children', -1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-minus"></i>
+                                            </button>
+                                            <span className="mx-3 font-semibold">{values.children}</span>
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('children', 1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-gray-700">Infant (Under 2 yrs)</span>
+                                        <div className="flex items-center">
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('infants', -1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-minus"></i>
+                                            </button>
+                                            <span className="mx-3 font-semibold">{values.infants}</span>
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('infants', 1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="text-right mt-4">
+                                        <button
+                                            type="button"
+                                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                            onClick={() => setShowPassengerSlider(false)}
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </FormikConsumer>
+                    </motion.div>
+                )}
+
                 <ErrorMessage 
                     name={field.name} 
                     component="p" 

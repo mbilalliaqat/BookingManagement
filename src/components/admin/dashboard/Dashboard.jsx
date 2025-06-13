@@ -26,7 +26,7 @@ export default function Dashboard() {
     totalRefundedWithdraw:0,
     totalVendorWithdraw:0,
     TotalWithdraw:0,
-    cashInOffice: 0, // State to hold cash in office calculation
+    cashInOffice: 0, // State to hold global cash in office calculation
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -137,52 +137,104 @@ export default function Dashboard() {
         ]);
 
         // Process Umrah data
-        const umrahBookings = umrahData.umrahBookings.map(booking => ({
-          type: 'Umrah',
-          employee_name: booking.userName || booking.reference,
-          receivable_amount: booking.receivableAmount,
-          paid_cash: booking.paidCash,
-          paid_in_bank: booking.paidInBank,
-          remaining_amount: booking.remainingAmount,
-          booking_date: new Date(booking.createdAt).toLocaleDateString(),
-          withdraw: 0, // Initialize withdraw for non-protector types
-        }));
+        const umrahBookings = umrahData.umrahBookings.map(booking => {
+          let passportDetails = {};
+          try {
+              if (typeof booking.passportDetail === 'string') {
+                  passportDetails = JSON.parse(booking.passportDetail);
+              } else if (typeof booking.passportDetail === 'object' && booking.passportDetail !== null) {
+                  passportDetails = booking.passportDetail;
+              }
+          } catch (e) {
+              console.error("Error parsing passport details for Umrah booking:", e);
+          }
+          return {
+              type: 'Umrah',
+              employee_name: booking.userName || booking.reference,
+              receivable_amount: booking.receivableAmount,
+              paid_cash: booking.paidCash,
+              paid_in_bank: booking.paidInBank,
+              remaining_amount: booking.remainingAmount,
+              booking_date: new Date(booking.createdAt).toLocaleDateString(),
+              withdraw: 0, 
+              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
+          };
+        });
 
         // Process Tickets data
-        const ticketBookings = ticketsData.ticket.map(ticket => ({
-          type: 'Ticket',
-          employee_name: ticket.employee_name || ticket.reference,
-          receivable_amount: ticket.receivable_amount,
-          paid_cash: ticket.paid_cash,
-          paid_in_bank: ticket.paid_in_bank,
-          remaining_amount: ticket.remaining_amount,
-          booking_date: new Date(ticket.created_at).toLocaleDateString(),
-          withdraw: 0, // Initialize withdraw for non-protector types
-        }));
+        const ticketBookings = ticketsData.ticket.map(ticket => {
+          let passportDetails = {};
+          try {
+              if (typeof ticket.passport_detail === 'string') {
+                  passportDetails = JSON.parse(ticket.passport_detail);
+              } else if (typeof ticket.passport_detail === 'object' && ticket.passport_detail !== null) {
+                  passportDetails = ticket.passport_detail;
+              }
+          } catch (e) {
+              console.error("Error parsing passport details for Ticket:", e);
+          }
+          return {
+              type: 'Ticket',
+              employee_name: ticket.employee_name || ticket.reference,
+              receivable_amount: ticket.receivable_amount,
+              paid_cash: ticket.paid_cash,
+              paid_in_bank: ticket.paid_in_bank,
+              remaining_amount: ticket.remaining_amount,
+              booking_date: new Date(ticket.created_at).toLocaleDateString(),
+              withdraw: 0,
+              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
+          };
+        });
 
         // Process Visa data
-        const visaBookings = visaData.visa_processing.map(visa => ({
-          type: 'Visa',
-          employee_name: visa.employee_name || visa.reference,
-          receivable_amount: visa.receivable_amount,
-          paid_cash: visa.paid_cash,
-          paid_in_bank: visa.paid_in_bank,
-          remaining_amount: visa.remaining_amount,
-          booking_date: new Date(visa.created_at).toLocaleDateString(),
-          withdraw: 0, // Initialize withdraw for non-protector types
-        }));
+        const visaBookings = visaData.visa_processing.map(visa => {
+          let passportDetails = {};
+          try {
+              if (typeof visa.passport_detail === 'string') {
+                  passportDetails = JSON.parse(visa.passport_detail);
+              } else if (typeof visa.passport_detail === 'object' && visa.passport_detail !== null) {
+                  passportDetails = visa.passport_detail;
+              }
+          } catch (e) {
+              console.error("Error parsing passport details for Visa:", e);
+          }
+          return {
+              type: 'Visa',
+              employee_name: visa.employee_name || visa.reference,
+              receivable_amount: visa.receivable_amount,
+              paid_cash: visa.paid_cash,
+              paid_in_bank: visa.paid_in_bank,
+              remaining_amount: visa.remaining_amount,
+              booking_date: new Date(visa.created_at).toLocaleDateString(),
+              withdraw: 0,
+              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
+          };
+        });
 
         // Process Gamca Token data
-        const gamcaTokenBookings = gamcaTokenData.gamcaTokens.map(token => ({
-          type: 'Gamca Token',
-          employee_name: token.employee_name || token.reference,
-          receivable_amount: token.receivable_amount,
-          paid_cash: token.paid_cash,
-          paid_in_bank: token.paid_in_bank,
-          remaining_amount: token.remaining_amount,
-          booking_date: new Date(token.created_at).toLocaleDateString(),
-          withdraw: 0, // Initialize withdraw for non-protector types
-        }));
+        const gamcaTokenBookings = gamcaTokenData.gamcaTokens.map(token => {
+          let passportDetails = {};
+          try {
+              if (typeof token.passport_detail === 'string') {
+                  passportDetails = JSON.parse(token.passport_detail);
+              } else if (typeof token.passport_detail === 'object' && token.passport_detail !== null) {
+                  passportDetails = token.passport_detail;
+              }
+          } catch (e) {
+              console.error("Error parsing passport details for GAMCA token:", e);
+          }
+          return {
+              type: 'Gamca Token',
+              employee_name: token.employee_name || token.reference,
+              receivable_amount: token.receivable_amount,
+              paid_cash: token.paid_cash,
+              paid_in_bank: token.paid_in_bank,
+              remaining_amount: token.remaining_amount,
+              booking_date: new Date(token.created_at).toLocaleDateString(),
+              withdraw: 0, // Initialize withdraw for non-protector types
+              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(),
+          };
+        });
 
         // Process Services data
         const servicesBookings = servicesData.services.map(services => ({
@@ -194,6 +246,7 @@ export default function Dashboard() {
           remaining_amount: services.remaining_amount,
           booking_date: new Date(services.booking_date).toLocaleDateString(),
           withdraw: 0, // Initialize withdraw for non-protector types
+          passengerName: null, // No passport detail for this type
         }));
 
         // Process Protector data (NEW)
@@ -206,6 +259,7 @@ export default function Dashboard() {
           remaining_amount: 0, 
           booking_date: new Date(protector.protector_date).toLocaleDateString(),
           withdraw: parseFloat(protector.withdraw || 0), // Use the withdraw field from protector
+          passengerName: null, // No passport detail for this type
         }));
         const expensesBookings = expensesData.expenses.map(expenses => ({
           type: 'Expenses',
@@ -216,6 +270,7 @@ export default function Dashboard() {
           remaining_amount: 0, 
           booking_date: new Date(expenses.date).toLocaleDateString(),
           withdraw: parseFloat(expenses.withdraw || 0), // Use the withdraw field from expenses
+          passengerName: null, // No passport detail for this type
         }));
         const refundedBookings = (refundedData.refunded || []).map(refund => ({
           type: 'Refunded',
@@ -226,6 +281,7 @@ export default function Dashboard() {
           remaining_amount: 0, 
           booking_date: new Date(refund.date).toLocaleDateString(), // Changed from refund.refunded_date
           withdraw: parseFloat(refund.withdraw || 0),
+          passengerName: null, // No passport detail for this type
         }));
           const venderBookings = (venderData.vender || []).map(vender => ({
           type: 'Vender',
@@ -236,10 +292,11 @@ export default function Dashboard() {
           remaining_amount: 0, 
           booking_date: new Date(vender.date).toLocaleDateString(), // Changed from vender.vender_date
           withdraw: parseFloat(vender.withdraw || 0),
+          passengerName: null, // No passport detail for this type
         }));
 
-        // Combine and sort by booking date (most recent first)
-        const combinedBookings = [
+        // Combine all bookings
+        const combinedBookingsRaw = [
           ...umrahBookings,
           ...ticketBookings,
           ...visaBookings,
@@ -249,7 +306,30 @@ export default function Dashboard() {
           ...expensesBookings,
           ...refundedBookings,
           ...venderBookings, 
-        ].sort((a, b) => new Date(b.booking_date) - new Date(a.booking_date));
+        ];
+
+        // Sort bookings by date (oldest first) to calculate running cash in office
+        const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => 
+          new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()
+        );
+
+        let runningCashInOffice = 0;
+        // Calculate running cash in office for each booking
+        const bookingsWithCashInOffice = sortedForRunningTotal.map(booking => {
+          // Add paid_cash if it's a type that generates cash
+          runningCashInOffice += parseFloat(booking.paid_cash || 0);
+          // Subtract withdraw if it's a type that involves withdrawal
+          runningCashInOffice -= parseFloat(booking.withdraw || 0);
+          
+          return {
+            ...booking,
+            cash_in_office_running: runningCashInOffice, // Store the running balance
+          };
+        });
+
+        // No re-sorting by date (most recent first) for display,
+        // so the table will display in chronological order (oldest to newest)
+        const finalCombinedBookings = bookingsWithCashInOffice; 
 
         // Calculate total protector withdraw
         const totalProtectorWithdraw = protectorBookings.reduce((sum, entry) => {
@@ -266,19 +346,19 @@ export default function Dashboard() {
           return sum + entry.withdraw;
         }, 0);
 
-        // Calculate total paid cash from all combined bookings
-        const totalPaidCash = combinedBookings.reduce((sum, booking) => {
+        // Calculate total paid cash from all combined bookings (global total)
+        const totalPaidCash = finalCombinedBookings.reduce((sum, booking) => {
           return sum + parseFloat(booking.paid_cash || 0);
         }, 0);
 
-        // Calculate Cash in Office (NEW: withdraw - Total cash in office)
+        // Calculate global Cash in Office (NEW: total paid cash - total withdraws)
         const cashInOffice =  totalPaidCash - totalProtectorWithdraw - totalExpensesWithdraw - totalRefundedWithdraw - totalVendorWithdraw;
         const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw
 
 
         // Update state with both dashboard stats and combined bookings
         setDashboardData({
-          combinedBookings,
+          combinedBookings: finalCombinedBookings, // Use the processed array
           totalBookings: dashboardStats.data.totalBookings,
           bookingsByType: dashboardStats.data.bookingsByType,
           totalRevenue: dashboardStats.data.totalRevenue,
@@ -286,7 +366,7 @@ export default function Dashboard() {
           totalExpensesWithdraw,
           totalRefundedWithdraw,
           totalVendorWithdraw,
-          cashInOffice, 
+          cashInOffice, // This remains the global calculated value
           TotalWithdraw,
         });
         
@@ -341,6 +421,7 @@ export default function Dashboard() {
     { header: 'DATE', accessor: 'booking_date' },
     { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
     { header: 'TYPE', accessor: 'type' },
+    { header: 'NAME', accessor: 'passengerName' }, // New NAME column
     { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
     { header: 'PAID CASH', accessor: 'paid_cash' },
     { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
@@ -532,7 +613,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Total Protector Withdraw Card (NEW) */}
+        {/* Total Withdraw Card (NEW) */}
         <div className="bg-white p-4 rounded-lg border-l-4 border-purple-700 shadow">
           <div className="flex justify-between items-center">
             <div>
@@ -605,19 +686,23 @@ export default function Dashboard() {
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.booking_date}</td>
                        <td className="px-3 py-2 whitespace-nowrap text-sm  text-gray-700">{booking.employee_name}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{booking.type}</td>   
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
+                        {booking.passengerName ? booking.passengerName : '--'}
+                      </td> {/* Updated to show '--' for empty names */}
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.receivable_amount}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.paid_cash}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.paid_in_bank}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.remaining_amount}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.withdraw}</td> 
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                        {booking.type === 'Protector' ? dashboardData.cashInOffice.toLocaleString() : '--'} 
+                        {/* Display the running cash in office for each row */}
+                        {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : '--'} 
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="9" className="px-3 py-4 text-center text-sm text-gray-500"> 
+                    <td colSpan="10" className="px-3 py-4 text-center text-sm text-gray-500"> {/* Updated colspan */}
                       No recent bookings found
                     </td>
                   </tr>
