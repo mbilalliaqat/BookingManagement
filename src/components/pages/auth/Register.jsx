@@ -11,8 +11,8 @@ const Register = () => {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-  
+  const BASE_URL = 'https://bookingsms.mbilalliaqat01.workers.dev/';
+
   // Validation states
   const [usernameError, setUsernameError] = useState('');
   const [emailError, setEmailError] = useState('');

@@ -13,7 +13,7 @@ const Login = () => {
   const { setUser } = useAppContext();
   const navigate = useNavigate();
   
-  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+  const BASE_URL = 'https://bookingsms.mbilalliaqat01.workers.dev';
   console.log('BASE_URL:', BASE_URL);
 
   const handleLogin = async (e) => {
