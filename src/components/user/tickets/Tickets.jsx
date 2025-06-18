@@ -30,7 +30,11 @@ const Tickets = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
-            const formattedData = data.ticket.map((ticket,index) => {
+            
+            // Sort by ID to maintain consistent order
+            const sortedTickets = data.ticket.sort((a, b) => a.id - b.id);
+            
+            const formattedData = sortedTickets.map((ticket, index) => {
                 let passportDetails = {};
                 try {
                     if (typeof ticket.passport_detail === 'string') {
@@ -70,6 +74,54 @@ const Tickets = () => {
         }
     };
 
+    // Alternative: Update single entry without full refetch
+    const updateSingleEntry = async (updatedTicket) => {
+        try {
+            // Find the index of the updated entry
+            const entryIndex = entries.findIndex(entry => entry.id === updatedTicket.id);
+            if (entryIndex === -1) return;
+
+            // Format the updated ticket data
+            let passportDetails = {};
+            try {
+                if (typeof updatedTicket.passport_detail === 'string') {
+                    passportDetails = JSON.parse(updatedTicket.passport_detail);
+                } else if (typeof updatedTicket.passport_detail === 'object' && updatedTicket.passport_detail !== null) {
+                    passportDetails = updatedTicket.passport_detail;
+                }
+            } catch (e) {
+                console.error("Error parsing passport details:", e);
+            }
+
+            const formattedTicket = {
+                ...updatedTicket,
+                serialNo: entries[entryIndex].serialNo, // Keep original serial number
+                depart_date: new Date(updatedTicket.depart_date).toLocaleDateString(),
+                return_date: new Date(updatedTicket.return_date).toLocaleDateString(),
+                created_at: new Date(updatedTicket.created_at).toLocaleDateString('en-US'),
+                passengerTitle: passportDetails.title || '',
+                passengerFirstName: passportDetails.firstName || '',
+                passengerLastName: passportDetails.lastName || '',
+                passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                passengerNationality: passportDetails.nationality || '',
+                documentType: passportDetails.documentType || '',
+                documentNo: passportDetails.documentNo || '',
+                documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                documentIssueCountry: passportDetails.issueCountry || '',
+                passport_detail: updatedTicket.passport_detail
+            };
+
+            // Update the specific entry in place
+            const updatedEntries = [...entries];
+            updatedEntries[entryIndex] = formattedTicket;
+            setEntries(updatedEntries);
+        } catch (error) {
+            console.error('Error updating single entry:', error);
+            // Fallback to full refetch if single update fails
+            fetchTickets();
+        }
+    };
+
     useEffect(() => {
         fetchTickets();
     }, []);
@@ -77,7 +129,7 @@ const Tickets = () => {
     const baseColumns=[
          { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'serialNo' },
+        { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'DEPART DATE', accessor: 'depart_date' },
@@ -142,11 +194,6 @@ const Tickets = () => {
         ...actionColumns
     ];
    
-     
-       
-        
-       
-
     const filteredData = entries.filter((index) =>
         Object.values(index).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
@@ -158,8 +205,15 @@ const Tickets = () => {
         setEditEntry(null);
     };
 
-    const handleFormSubmit = () => {
-        fetchTickets();
+    // Modified to accept updated ticket data and preserve position
+    const handleFormSubmit = (updatedTicket = null) => {
+        if (updatedTicket && editEntry) {
+            // If we have the updated ticket data, update in place
+            updateSingleEntry(updatedTicket);
+        } else {
+            // For new entries, refetch all data
+            fetchTickets();
+        }
         setShowForm(false);
         setEditEntry(null);
     };

@@ -1,31 +1,30 @@
+// frontend/src/components/Tickets_Form.jsx
+
 import React, { useEffect, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage, useFormikContext } from 'formik';
 import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts, incrementFormEntry } from '../../ui/api';
 
 // Auto-calculation component for ticket form
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
     
     useEffect(() => {
-        // Get values as numbers (defaulting to 0 if empty or NaN)
         const receivable = parseInt(values.receivable_amount) || 0;
         const cashPaid = parseInt(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
         const payableToVendor = parseInt(values.payable_to_vendor) || 0;
         
-        // Calculate remaining amount
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining);
         
-        // Calculate profit only if payableToVendor is provided
         if (payableToVendor > 0) {
             const profit = receivable - payableToVendor;
             setFieldValue('profit', profit);
         } else {
-            // Clear profit if payableToVendor is not provided
             setFieldValue('profit', '');
         }
     }, [
@@ -48,20 +47,22 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
-    const [showPassengerSlider,setShowPassengerSlider]=useState(false);
+    const [showPassengerSlider, setShowPassengerSlider] = useState(false);
+    const [entryNumber, setEntryNumber] = useState(0); // Initialize as number
+    const [totalEntries, setTotalEntries] = useState(0); // Initialize as number
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
         customer_add: '',
         reference: '',
+        entry: '0/0', // Default, will be updated by useEffect
         depart_date: '',
-        return_date:'',
+        return_date: '',
         sector: '',
         airline: '',
-        adults:(editEntry && editEntry.adults) || 0,
-        children:(editEntry && editEntry.children) || 0,
-        infants:(editEntry && editEntry.infants) || 0,
-        // Structured passport fields
+        adults: 0,
+        children: 0,
+        infants: 0,
         passengerTitle: '',
         passengerFirstName: '',
         passengerLastName: '',
@@ -73,7 +74,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         documentIssueCountry: '',
         receivable_amount: '',
         paid_cash: '',
-        bank_title:'',
+        bank_title: '',
         paid_in_bank: '',
         payable_to_vendor: '',
         vendor_name: '',
@@ -89,10 +90,9 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         return_date: Yup.date().required('Return Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
         airline: Yup.string().required('Airline is required'),
-        adults:Yup.number().required('Adults is required'),
-        children:Yup.number().required('children is required'),
-        infants:Yup.number().required('Infants is required'),
-        // Validation for passport fields
+        adults: Yup.number().required('Adults is required').min(0, 'Adults cannot be negative'),
+        children: Yup.number().required('Children is required').min(0, 'Children cannot be negative'),
+        infants: Yup.number().required('Infants is required').min(0, 'Infants cannot be negative'),
         passengerTitle: Yup.string().required('Title is required'),
         passengerFirstName: Yup.string().required('First Name is required'),
         passengerLastName: Yup.string().required('Last Name is required'),
@@ -113,17 +113,20 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     });
 
     useEffect(() => {
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
+        };
+
         if (editEntry) {
-            // Parse passport details if it's stored as a JSON string or structured object
             let parsedPassportDetails = {};
             try {
                 if (typeof editEntry.passport_detail === 'string') {
-                    // Try to parse as JSON first
                     try {
                         parsedPassportDetails = JSON.parse(editEntry.passport_detail);
                     } catch {
-                        // If not JSON, it's probably a simple string, so leave passport fields empty
-                        // and put the string in a legacy field if needed
+                        parsedPassportDetails = {};
                     }
                 } else if (typeof editEntry.passport_detail === 'object' && editEntry.passport_detail !== null) {
                     parsedPassportDetails = editEntry.passport_detail;
@@ -132,26 +135,22 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 console.error("Error parsing passport details:", e);
             }
 
-            // Format dates properly for the form fields
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '';
-                const date = new Date(dateStr);
-                return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
-            };
+            const [current, total] = editEntry.entry ? editEntry.entry.split('/').map(Number) : [0, 0];
+            setEntryNumber(current);
+            setTotalEntries(total);
 
-            const newValues = {
+            setFormInitialValues({
                 employee_name: editEntry.employee_name || user?.username || '',
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
+                entry: editEntry.entry || '0/0',
                 depart_date: formatDate(editEntry.depart_date),
                 return_date: formatDate(editEntry.return_date),
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
-                 adults:editEntry.adults || 0,
-                children:editEntry.children || 0,
-                infants:editEntry.infants || 0,
-                
-                // Map passport details from parsed object
+                adults: editEntry.adults || 0,
+                children: editEntry.children || 0,
+                infants: editEntry.infants || 0,
                 passengerTitle: parsedPassportDetails.title || '',
                 passengerFirstName: parsedPassportDetails.firstName || '',
                 passengerLastName: parsedPassportDetails.lastName || '',
@@ -161,7 +160,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 documentNo: parsedPassportDetails.documentNo || '',
                 documentExpiry: formatDate(parsedPassportDetails.documentExpiry),
                 documentIssueCountry: parsedPassportDetails.issueCountry || '',
-                
                 receivable_amount: editEntry.receivable_amount || '',
                 paid_cash: editEntry.paid_cash || '',
                 bank_title: editEntry.bank_title || '',
@@ -170,19 +168,46 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 vendor_name: editEntry.vendor_name || '',
                 profit: editEntry.profit || '',
                 remaining_amount: editEntry.remaining_amount || ''
+            });
+        } else {
+            const getCounts = async () => {
+                const counts = await fetchEntryCounts();
+                if (counts) {
+                    const ticketCounts = counts.find(c => c.form_type === 'ticket');
+                    if (ticketCounts) {
+                        setEntryNumber(ticketCounts.current_count + 1);
+                        setTotalEntries(ticketCounts.global_count + 1);
+                    } else {
+                        setEntryNumber(1);
+                        setTotalEntries(1);
+                    }
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
             };
-            
-            setFormInitialValues(newValues);
-            console.log("Loaded edit values:", newValues);
+            getCounts();
+
+            setFormInitialValues(prev => ({
+                ...prev,
+                employee_name: user?.username || ''
+            }));
         }
     }, [editEntry, user]);
 
-    const handlePassengerChange=(type,delta,currentValues,setFieldValue)=>{
-        setFieldValue(type,Math.max(0,(currentValues[type] ||0)+delta)) ;
-    }
+    useEffect(() => {
+        setFormInitialValues(prev => ({
+            ...prev,
+            entry: `${entryNumber}/${totalEntries}`
+        }));
+    }, [entryNumber, totalEntries]);
+
+
+    const handlePassengerChange = (type, delta, currentValues, setFieldValue) => {
+        setFieldValue(type, Math.max(0, (currentValues[type] || 0) + delta));
+    };
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-        // Create a structured passport details object
         const passportDetail = JSON.stringify({
             title: values.passengerTitle,
             firstName: values.passengerFirstName,
@@ -195,29 +220,34 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             issueCountry: values.documentIssueCountry,
         });
 
-        const requestData = {
-            employee_name: values.employee_name,
-            customer_add: values.customer_add,
-            reference: values.reference,
-            depart_date: values.depart_date,
-            return_date: values.return_date,
-            sector: values.sector,
-            airline: values.airline,
-            adults: values.adults,
-            children: values.children,
-            infants: values.infants,
-            passport_detail: passportDetail,
-            receivable_amount: parseInt(values.receivable_amount),
-            paid_cash: parseInt(values.paid_cash),
-            bank_title: values.bank_title,
-            paid_in_bank: values.paid_in_bank,
-            payable_to_vendor: parseInt(values.payable_to_vendor),
-            vendor_name: values.vendor_name,
-            profit: parseInt(values.profit),
-            remaining_amount: parseInt(values.remaining_amount)
-        };
-
         try {
+            const entryValueToSubmit = editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`;
+            // Extract the actual entry number (e.g., 5 from "5/5")
+            const parsedEntryNumber = parseInt(entryValueToSubmit.split('/')[0]);
+            
+            const requestData = {
+                employee_name: values.employee_name,
+                customer_add: values.customer_add,
+                reference: values.reference,
+                entry: entryValueToSubmit,
+                depart_date: values.depart_date,
+                return_date: values.return_date,
+                sector: values.sector,
+                airline: values.airline,
+                adults: values.adults,
+                children: values.children,
+                infants: values.infants,
+                passport_detail: passportDetail,
+                receivable_amount: parseInt(values.receivable_amount),
+                paid_cash: parseInt(values.paid_cash),
+                bank_title: values.bank_title,
+                paid_in_bank: values.paid_in_bank,
+                payable_to_vendor: parseInt(values.payable_to_vendor),
+                vendor_name: values.vendor_name,
+                profit: parseInt(values.profit),
+                remaining_amount: parseInt(values.remaining_amount)
+            };
+
             const url = editEntry ? `${BASE_URL}/ticket/${editEntry.id}` : `${BASE_URL}/ticket`;
             const method = editEntry ? 'PUT' : 'POST';
 
@@ -233,9 +263,15 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            await response.json();
+            if (!editEntry) {
+                // Pass the actual entry number used for the ticket
+                const updatedCounts = await incrementFormEntry('ticket', parsedEntryNumber);
+                if (updatedCounts) {
+                    setEntryNumber(updatedCounts.currentCount);
+                    setTotalEntries(updatedCounts.globalCount);
+                }
+            }
 
-            // Add vendor data if not editing
             if (!editEntry) {
                 const vendorData = {
                     user_name: values.vendor_name,
@@ -267,7 +303,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-    // Animation variants
     const formVariants = {
         hidden: { opacity: 0 },
         visible: { 
@@ -289,9 +324,9 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-    // Form fields grouped by section
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
@@ -300,12 +335,11 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'airline', label: 'Airline', type: 'text', placeholder: 'Enter airline', icon: 'plane' },
     ];
 
-    // New section for passport details
     const section2Fields = [
-         {
+        {
             name: 'passengerCount',
             label: 'Passenger',
-            type: 'custom_passenger', // Custom type for the passenger slider
+            type: 'custom_passenger',
             icon: 'users'
         },
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
@@ -354,19 +388,18 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         ))}
                     </Field>
                 ) : field.type === 'custom_passenger' ? (
-                                    <Field name={field.name}>
-                                        {({ field: formikField, form: { values, setFieldValue } }) => (
-                                            <div
-                                                className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
-                                                onClick={() => setShowPassengerSlider(!showPassengerSlider)}
-                                            >
-                                                <span>{`${values.adults} Adults, ${values.children} Children, ${values.infants} Infants`}</span>
-                                                <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
-                                            </div>
-                                        )}
-                                    </Field>
-                                ):
-                (
+                    <Field name={field.name}>
+                        {({ field: formikField, form: { values, setFieldValue } }) => (
+                            <div
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
+                                onClick={() => setShowPassengerSlider(!showPassengerSlider)}
+                            >
+                                <span>{`${values.adults} Adults, ${values.children} Children, ${values.infants} Infants`}</span>
+                                <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
+                            </div>
+                        )}
+                    </Field>
+                ) : (
                     <Field
                         id={field.name}
                         type={field.type}
@@ -380,93 +413,91 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     />
                 )}
 
-                   {/* Passenger Slider */}
-                                 {field.name === 'passengerCount' && showPassengerSlider && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="absolute z-10 bg-white border border-gray-300 rounded-md shadow-lg p-4 mt-1 w-64 right-0"
-                                    >
-                                        {/* Access formik context directly here to update values */}
-                                        <FormikConsumer>
-                                            {({ values, setFieldValue }) => (
-                                                <>
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <span className="text-gray-700">Adults (12+ yrs)</span>
-                                                        <div className="flex items-center">
-                                                            <button
-                                                                type="button"
-                                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                                                                onClick={() => handlePassengerChange('adults', -1, values, setFieldValue)}
-                                                            >
-                                                                <i className="fas fa-minus"></i>
-                                                            </button>
-                                                            <span className="mx-3 font-semibold">{values.adults}</span>
-                                                            <button
-                                                                type="button"
-                                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                                                                onClick={() => handlePassengerChange('adults', 1, values, setFieldValue)}
-                                                            >
-                                                                <i className="fas fa-plus"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <span className="text-gray-700">Children (2-12 yrs)</span>
-                                                        <div className="flex items-center">
-                                                            <button
-                                                                type="button"
-                                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                                                                onClick={() => handlePassengerChange('children', -1, values, setFieldValue)}
-                                                            >
-                                                                <i className="fas fa-minus"></i>
-                                                            </button>
-                                                            <span className="mx-3 font-semibold">{values.children}</span>
-                                                            <button
-                                                                type="button"
-                                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                                                                onClick={() => handlePassengerChange('children', 1, values, setFieldValue)}
-                                                            >
-                                                                <i className="fas fa-plus"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <span className="text-gray-700">Infant (Under 2 yrs)</span>
-                                                        <div className="flex items-center">
-                                                            <button
-                                                                type="button"
-                                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                                                                onClick={() => handlePassengerChange('infants', -1, values, setFieldValue)}
-                                                            >
-                                                                <i className="fas fa-minus"></i>
-                                                            </button>
-                                                            <span className="mx-3 font-semibold">{values.infants}</span>
-                                                            <button
-                                                                type="button"
-                                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                                                                onClick={() => handlePassengerChange('infants', 1, values, setFieldValue)}
-                                                            >
-                                                                <i className="fas fa-plus"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right mt-4">
-                                                        <button
-                                                            type="button"
-                                                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                                                            onClick={() => setShowPassengerSlider(false)}
-                                                        >
-                                                            Done
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </FormikConsumer>
-                                    </motion.div>
-                                )}
+                {field.name === 'passengerCount' && showPassengerSlider && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute z-10 bg-white border border-gray-300 rounded-md shadow-lg p-4 mt-1 w-64 right-0"
+                    >
+                        <FormikConsumer>
+                            {({ values, setFieldValue }) => (
+                                <>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-gray-700">Adults (12+ yrs)</span>
+                                        <div className="flex items-center">
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('adults', -1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-minus"></i>
+                                            </button>
+                                            <span className="mx-3 font-semibold">{values.adults}</span>
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('adults', 1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-gray-700">Children (2-12 yrs)</span>
+                                        <div className="flex items-center">
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('children', -1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-minus"></i>
+                                            </button>
+                                            <span className="mx-3 font-semibold">{values.children}</span>
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('children', 1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-gray-700">Infant (Under 2 yrs)</span>
+                                        <div className="flex items-center">
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('infants', -1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-minus"></i>
+                                            </button>
+                                            <span className="mx-3 font-semibold">{values.infants}</span>
+                                            <button
+                                                type="button"
+                                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
+                                                onClick={() => handlePassengerChange('infants', 1, values, setFieldValue)}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="text-right mt-4">
+                                        <button
+                                            type="button"
+                                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                            onClick={() => setShowPassengerSlider(false)}
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </FormikConsumer>
+                    </motion.div>
+                )}
 
                 <ErrorMessage 
                     name={field.name} 
@@ -485,7 +516,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
-            {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-6 px-8 rounded-t-xl">
                 <motion.h2 
                     className="text-2xl font-bold text-black flex items-center"
@@ -506,7 +536,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </motion.p>
             </div>
 
-            {/* Progress tabs */}
             <div className="px-8 pt-6">
                 <div className="flex justify-between mb-8">
                     {[1, 2, 3].map((step) => (
@@ -544,7 +573,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
             </div>
 
-            {/* Form content */}
             <div className="px-8 pb-8">
                 <Formik
                     initialValues={formInitialValues}
@@ -579,7 +607,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </motion.div>
                             )}
 
-                            {/* Navigation buttons */}
                             <motion.div 
                                 className="flex justify-between mt-8 pt-4 border-t border-gray-100"
                                 initial={{ opacity: 0 }}
@@ -601,17 +628,16 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </div>
                                 
                                 <div className="flex space-x-3">
-                                    <motion.button
-                                        type="button"
-                                        onClick={onCancel}
-                                        className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        disabled={isSubmitting}
-                                    >
-                                        Cancel
-                                    </motion.button>
-                                    
+                                      <motion.button
+                                                                            type="button"
+                                                                            onClick={onCancel}
+                                                                            className="px-5 py-2 border bg-gray-400 border-gray-300 rounded-lg text-black hover:bg-blue-600 transition-colors"
+                                                                            whileHover={{ scale: 1.03 }}
+                                                                            whileTap={{ scale: 0.97 }}
+                                                                            disabled={isSubmitting}
+                                                                        >
+                                                                            Cancel
+                                                                        </motion.button>
                                     {activeSection < 3 ? (
                                         <motion.button
                                            
