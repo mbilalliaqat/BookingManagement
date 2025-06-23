@@ -1,267 +1,271 @@
-import React, { useEffect, useState } from 'react'
-import Table from '../../ui/Table'
-import axios from 'axios';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useAppContext } from '../../contexts/AppContext';
 import TableSpinner from '../../ui/TableSpinner';
 import ButtonSpinner from '../../ui/ButtonSpinner';
-import Vendor_Form from './Vendor_Form';
-import { useAppContext } from '../../contexts/AppContext';
+import Table from '../../ui/Table';
 import Modal from '../../ui/Modal';
+import axios from 'axios';
+import VenderForm from './Vendor_Form';
 
 const Vender = () => {
-        const [search, setSearch] = useState('');
-        const [showForm,setShowForm]=useState(false);
-        const [entries,setEntries]=useState([]);
-        const [error,setError]=useState(null);
-        const [isLoading, setIsLoading] = useState(true);
-        const [editEntry, setEditEntry] = useState(null);
-        const [showDeleteModal, setShowDeleteModal] = useState(false);
-        const [deleteId, setDeleteId] = useState(null);
-        const [isDeleting, setIsDeleting] = useState(false);
-        const { user } = useAppContext();
+  const { user } = useAppContext();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [data, setData] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [vendorNames, setVendorNames] = useState([]);
+  const [selectedVendor, setSelectedVendor] = useState('');
+  const [filteredData, setFilteredData] = useState([]);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [loadingActionId, setLoadingActionId] = useState(null);
 
-        const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-        const fetchData = async()=>{
-            setIsLoading(true);
-            try{
-                const response = await axios.get(`${BASE_URL}/vender`)
-                if(response.status!==200){
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data=response.data;
-                console.log("Fetched data:", data);
-                
-                const formattedData = data.vender?.map((entry,index) => ({
-                    ...entry,
-                    serialNo: index + 1,
-                    date: new Date(entry.date).toLocaleDateString(),
-                    debit: entry.debit || 0,
-                    credit: entry.credit || 0, 
-                    file_path: entry.file_path // <--- ADD THIS LINE
-                }));
-                setEntries(formattedData);
-                
-            }
-            catch(error){
-                console.log("Error Fetching data",error);
-                setError('Failed to load data. Please try again later.');
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+  };
 
-            }  finally {
-                setIsLoading(false);
-            }
-        }
-        useEffect(()=>{
-            fetchData();
-        },[])
-    const columns = [
-        {header:'USERNAME', accessor:'user_name'},
-        { header: 'DATE', accessor: 'date' },
-        { header: 'ENTRY', accessor: 'serialNo' },
-        {header:'DETAIL', accessor:'entry'},
-        { header: 'BANK TITLE', accessor: 'bank_title' },
-        { header: 'DEBIT', accessor: 'debit' },                    
-        { header: 'CREDIT', accessor: 'credit' },                  
-       { header: 'AMOUNT', accessor: 'amount' },
-       { header: 'WITHDRAW', accessor: 'withdraw' },
-
-// Enhanced file display with error handling
-{ 
-    header: 'ATTACHMENT', 
-    accessor: 'file_path', 
-    render: (filePathValue, row) => {
-        if (!row || !row.file_path) {
-            return <span className="text-gray-400">No file</span>;
-        }
-        
-        const fileUrl = `${BASE_URL}/uploads/${row.file_path}`; 
-        
-        const handleFileClick = async (e) => {
-            e.preventDefault();
-            
-            try {
-                // First check if file exists
-                const response = await fetch(fileUrl, { method: 'HEAD' });
-                
-                if (response.ok) {
-                    window.open(fileUrl, '_blank');
-                } else {
-                    alert('File not found or cannot be accessed');
-                }
-            } catch (error) {
-                console.error('Error accessing file:', error);
-                alert('Error accessing file. Please try again later.');
-            }
-        };
-        
-        return (
-            <button
-                onClick={handleFileClick}
-                className="text-blue-500 hover:text-blue-700 bg-none border-none cursor-pointer"
-            >
-                <i className="fas fa-file"></i> View
-            </button>
-        );
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`${BASE_URL}/vender`);
+      const formattedData = response.data.vendors?.map((entry) => ({
+        ...entry,
+        date: formatDate(entry.date),
+        debit: entry.debit || 0,
+        credit: entry.credit || 0,
+        remaining_amount: entry.remaining_amount || 0, 
+        bank_title: entry.bank_title || '',
+      }));
+      setData(formattedData.reverse() || []);
+    } catch (error) {
+      setError(error.message);
+      console.error('Error Fetching Data:', error.message);
+    } finally {
+      setIsLoading(false);
     }
-},
-        ...(user.role === 'admin' ? [{
-            header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
-                <>
-                    <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
-                        onClick={() => handleUpdate(index)}
-                    >
-                        <i className="fas fa-edit"></i> 
-                    </button>
-                    <button
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => openDeleteModal(index)}
-                    >
-                        <i className="fas fa-trash"></i> 
-                    </button>
-                </>
-            )
-        }] : [])
+  };
 
-    ];
-     const filteredData = entries?.filter((index) =>
-            Object.values(index).some((value) =>
-              String(value).toLowerCase().includes(search.toLowerCase())
-            )
-          );
-    
-          const handleCancel=()=>{
-            setShowForm(false);
-            setEditEntry(null);
+  const fetchVendorNames = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/vender-names/existing`);
+      if (response.data.status === 'success') {
+        setVendorNames(response.data.vendorNames || []);
+      }
+    } catch (error) {
+      console.error('Error fetching vendor names:', error);
+    }
+  };
 
-          }
-          const handleFormSubmit = () => {
-            fetchData();
-            setShowForm(false);
-            setEditEntry(null);
+  useEffect(() => {
+    fetchData();
+    fetchVendorNames();
+  }, []);
 
-        };
+  useEffect(() => {
+    if (selectedVendor === '' || selectedVendor === 'all') {
+      setFilteredData(data);
+    } else {
+      setFilteredData(data.filter(item => item.vender_name === selectedVendor));
+    }
+  }, [data, selectedVendor]);
 
-        const handleUpdate = (entry) => {
-            setEditEntry(entry);
-            setShowForm(true);
-        };
-    
-        const openDeleteModal = (id) => {
-            setDeleteId(id);
-            setShowDeleteModal(true);
-        };
-    
-        const closeDeleteModal = () => {
-            setShowDeleteModal(false);
-            setDeleteId(null);
-        };
+  const handleCancel = useCallback(() => {
+    setShowForm(false);
+    setEditingEntry(null);
+  }, []);
 
-        const handleDelete = async (id) => {
-            console.log('Attempting to delete vendor with id:', id);
-            setIsDeleting(true);
-            const parsedId = typeof id === 'object' && id !== null ? id.id : id;
-            if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
-                console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-                setError('Invalid vendor ID. Cannot delete.');
-                setIsDeleting(false);
-                return;
-            }
-            try {
-                const response = await axios.delete(`${BASE_URL}/vender/${parsedId}`);
-                if (response.status === 200) {
-                    setEntries(entries.filter(entry => entry.id !== parsedId));
-                    console.log('Vendor deleted successfully');
-                } else {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-            } catch (error) {
-                console.error('Error deleting vendor:', error);
-                setError('Failed to delete vendor. Please try again later.');
-            } finally {
-                setIsDeleting(false);
-                closeDeleteModal();
-            }
-        };
+  const handleFormSubmit = useCallback(() => {
+    setShowForm(false);
+    setEditingEntry(null);
+    fetchData();
+    fetchVendorNames();
+  }, []);
 
+  const openDeleteModal = useCallback((id) => {
+    setDeleteId(id);
+    setShowDeleteModal(true);
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    setShowDeleteModal(false);
+    setDeleteId(null);
+  }, []);
+
+  const handleUpdate = useCallback((entry) => {
+    if (!entry) {
+      console.error('Entry is undefined or null');
+      return;
+    }
+    setLoadingActionId(entry.id);
+    console.log('Updating entry:', entry);
+    const entryForEdit = {
+      ...entry,
+      date: entry.date ? convertToInputDate(entry.date) : '',
+    };
+    console.log('Prepared entry for edit:', entryForEdit);
+    setTimeout(() => {
+      setEditingEntry(entryForEdit);
+      setShowForm(true);
+      setLoadingActionId(null);
+    }, 500);
+  }, []);
+
+  const convertToInputDate = (formattedDate) => {
+    if (!formattedDate) return '';
+    if (formattedDate.includes('-') && formattedDate.length === 10) {
+      return formattedDate;
+    }
+    const parts = formattedDate.split('/');
+    if (parts.length === 3) {
+      const [month, day, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return formattedDate;
+  };
+
+  const handleDelete = useCallback(
+    async (id) => {
+      const parsedId = typeof id === 'object' && id !== null ? id.id : id;
+      if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
+        setError('Invalid vendor ID. Cannot delete.');
+        return;
+      }
+      setIsDeleting(true);
+      setLoadingActionId(parsedId);
+      try {
+        const response = await axios.delete(`${BASE_URL}/vender/${parsedId}`);
+        if (response.status === 200) {
+          setData(data.filter(entry => entry.id !== parsedId));
+          console.log('Vendor entry deleted successfully');
+          fetchData();
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Error deleting vendor entry:', error);
+        setError('Failed to delete vendor entry. Please try again later.');
+      } finally {
+        setIsDeleting(false);
+        setLoadingActionId(null);
+        closeDeleteModal();
+      }
+    },
+    [data, closeDeleteModal]
+  );
+
+  const handleVendorChange = (e) => {
+    setSelectedVendor(e.target.value);
+  };
+
+  const columns = useMemo(
+    () => [
+      { header: 'VENDOR NAME', accessor: 'vender_name' },
+      { header: 'DATE', accessor: 'date' },
+       { header: 'ENTRY', accessor: 'entry' },
+      { header: 'BANK TITLE', accessor: 'bank_title' },
+      { header: 'DETAIL', accessor: 'detail' },
+      { header: 'CREDIT', accessor: 'credit' },
+      { header: 'DEBIT', accessor: 'debit' },
+      { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
+     ...(user.role === 'admin'
+            ? [
+                  {
+                      header: 'ACTIONS',
+                      accessor: 'actions',
+                      render: (row, index) => (
+                          <>
+                              <button
+                                  className="text-blue-500 hover:text-blue-700 mr-3"
+                                  onClick={() => handleUpdate(index)}
+                                  disabled={loadingActionId === index.id}
+                              >
+                                  {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
+                              </button>
+                              <button
+                                  className="text-red-500 hover:text-red-700"
+                                  onClick={() => openDeleteModal(index.id)}
+                                  disabled={loadingActionId === index.id}
+                              >
+                                  <i className="fas fa-trash"></i>
+                              </button>
+                          </>
+                      ),
+                  },
+              ]
+            : []),
+    ],
+    [user.role, loadingActionId, handleUpdate, openDeleteModal]
+  );
 
   return (
-    <div className="h-full flex flex-col">
-    {showForm ? (
-        <Vendor_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry}/>
-    ) : (
-        <div className="flex flex-col h-full ">
-            <div className="flex justify-between items-center mb-4 relative">
-                <input
-                    type="text"
-                    placeholder="Search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
-                />
-                                     <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
-
-                <button
-                    className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
-                    onClick={() => setShowForm(true)}
-                >
-                    <i className="fas fa-plus mr-1"></i> Add New
-                </button>
-            </div>
-            <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
-            {
-                    isLoading ? (
-                       <TableSpinner/> 
-                    ):error? (
-                        <div className="flex items-center justify-center w-full h-64">
-                            <div className="text-red-500">
-                                <i className="fas fa-exclamation-circle mr-2"></i>
-                                {error}
-                            </div>
-                        </div> 
-                    ):(
-                        <Table data={filteredData} columns={columns} />
-                    )
-                }
-            </div>
-        </div>
-    )}
-    <Modal
-                isOpen={showDeleteModal}
-                onClose={closeDeleteModal}
-                title="Delete Confirmation"
+    <div className="flex flex-col h-full">
+      {showForm ? (
+        <VenderForm onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editingEntry={editingEntry} />
+      ) : (
+        <>
+          <div className="flex justify-between items-center mb-4 relative">
+            <select className="p-2 border border-gray-300 rounded-md" value={selectedVendor} onChange={handleVendorChange}>
+              <option value="all">All Vendors</option>
+              {vendorNames.map((name, index) => (
+                <option key={index} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <button
+              className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+              onClick={() => setShowForm(true)}
             >
-                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
-                    <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+              <i className="fas fa-plus mr-1"></i> Add New
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
+            {isLoading ? (
+              <TableSpinner />
+            ) : error ? (
+              <div className="flex items-center justify-center w-full h-64">
+                <div className="text-red-500">
+                  <i className="fas fa-exclamation-circle mr-2"></i>
+                  {error}
                 </div>
-                <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this vendor entry? 
-                </p>
-                <div className="flex items-center justify-center space-x-4">
-                    <button
-                        onClick={closeDeleteModal}
-                        className="px-4 py-2 text-sm font-medium text-black bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                        disabled={isDeleting}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={() => handleDelete(deleteId)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
-                        disabled={isDeleting}
-                    >
-                        {isDeleting ? (
-                            <>
-                                <ButtonSpinner />
-                                <span>Deleting...</span>
-                            </>
-                        ) : (
-                            'Delete'
-                        )}
-                    </button>
-                </div>
-            </Modal>
-</div>
-  )
-}
+              </div>
+            ) : (
+              <Table columns={columns} data={filteredData.length ? filteredData : []} />
+            )}
+          </div>
+        </>
+      )}
+      <Modal isOpen={showDeleteModal} onClose={closeDeleteModal} title="Delete Confirmation">
+        <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
+          <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+        </div>
+        <p className="text-sm text-center text-white mb-6">Are you sure you want to delete this vendor entry?</p>
+        <div className="flex items-center justify-center space-x-4">
+          <button
+            onClick={closeDeleteModal}
+            className="px-4 py-2 text-sm font-medium text-black bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
+            disabled={isDeleting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => handleDelete(deleteId)}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
+            disabled={isDeleting}
+          >
+            {isDeleting && <ButtonSpinner />}
+            Delete
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+};
 
-export default Vender
+export default Vender;

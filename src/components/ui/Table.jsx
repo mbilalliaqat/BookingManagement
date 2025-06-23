@@ -12,7 +12,7 @@ function Table({ data, columns, maxHeight = '400px' }) {
                   {columns?.map((col, index) => (
                     <th
                       key={index}
-                      className="sticky top-0 p-4 text-left  capitalize cursor-pointer  z-10"
+                      className="sticky top-0 px-8 py-4 text-left  capitalize cursor-pointer  z-10"
                     >
                       {col.header}
                     </th>

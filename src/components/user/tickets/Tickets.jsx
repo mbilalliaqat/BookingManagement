@@ -161,6 +161,7 @@ const Tickets = () => {
     ];
     const financialColumns=[
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
+        { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'BANK TITLE', accessor: 'bank_title' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },

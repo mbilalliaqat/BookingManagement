@@ -1,5 +1,3 @@
-// frontend/src/components/Tickets_Form.jsx
-
 import React, { useEffect, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage, useFormikContext } from 'formik';
 import * as Yup from 'yup';
@@ -7,6 +5,7 @@ import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts, incrementFormEntry } from '../../ui/api';
+import axios from 'axios';
 
 // Auto-calculation component for ticket form
 const AutoCalculate = () => {
@@ -48,14 +47,27 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
     const [showPassengerSlider, setShowPassengerSlider] = useState(false);
-    const [entryNumber, setEntryNumber] = useState(0); // Initialize as number
-    const [totalEntries, setTotalEntries] = useState(0); // Initialize as number
+    const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+    const [agentNames, setAgentNames] = useState([]);
+    const [vendorNames, setVendorNames] = useState([]);
+
+    // Static bank titles from OfficeAccounts.jsx
+    const bankOptions = [
+        { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
+        { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
+        { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
+        { value: "MCB", label: "MCB (FIT MANPOWER)" }
+    ];
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
+        agent_name: '',
         customer_add: '',
         reference: '',
-        entry: '0/0', // Default, will be updated by useEffect
+        entry: '0/0',
         depart_date: '',
         return_date: '',
         sector: '',
@@ -107,10 +119,40 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         bank_title: Yup.string().required('Bank Title is required'),
         paid_in_bank: Yup.string().required('Paid In Bank is required'),
         payable_to_vendor: Yup.number().required('Payable To Vendor is required').typeError('Payable To Vendor must be a number'),
-        vendor_name: Yup.string().required('Vendor Name is required'),
+        
         profit: Yup.number(),
         remaining_amount: Yup.number()
     });
+
+    // Fetch agent names
+    useEffect(() => {
+        const fetchAgentNames = async () => {
+            try {
+                const response = await axios.get(`${BASE_URL}/agent-names/existing`);
+                if (response.data.status === 'success') {
+                    setAgentNames(response.data.agentNames || []);
+                }
+            } catch (error) {
+                console.error('Error fetching agent names:', error);
+            }
+        };
+        fetchAgentNames();
+    }, [BASE_URL]);
+
+    // Fetch vendor names
+    useEffect(() => {
+        const fetchVendorNames = async () => {
+            try {
+                const response = await axios.get(`${BASE_URL}/vender-names/existing`);
+                if (response.data.status === 'success') {
+                    setVendorNames(response.data.vendorNames || []);
+                }
+            } catch (error) {
+                console.error('Error fetching vendor names:', error);
+            }
+        };
+        fetchVendorNames();
+    }, [BASE_URL]);
 
     useEffect(() => {
         const formatDate = (dateStr) => {
@@ -141,6 +183,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             setFormInitialValues({
                 employee_name: editEntry.employee_name || user?.username || '',
+                agent_name: editEntry.agent_name || '',
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 entry: editEntry.entry || '0/0',
@@ -202,106 +245,157 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }));
     }, [entryNumber, totalEntries]);
 
-
     const handlePassengerChange = (type, delta, currentValues, setFieldValue) => {
         setFieldValue(type, Math.max(0, (currentValues[type] || 0) + delta));
     };
 
-    const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-        const passportDetail = JSON.stringify({
-            title: values.passengerTitle,
-            firstName: values.passengerFirstName,
-            lastName: values.passengerLastName,
-            dob: values.passengerDob,
-            nationality: values.passengerNationality,
-            documentType: values.documentType,
-            documentNo: values.documentNo,
-            documentExpiry: values.documentExpiry,
-            issueCountry: values.documentIssueCountry,
+ const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
+    const passportDetail = JSON.stringify({
+        title: values.passengerTitle,
+        firstName: values.passengerFirstName,
+        lastName: values.passengerLastName,
+        dob: values.passengerDob,
+        nationality: values.passengerNationality,
+        documentType: values.documentType,
+        documentNo: values.documentNo,
+        documentExpiry: values.documentExpiry,
+        issueCountry: values.documentIssueCountry,
+    });
+
+    try {
+        const entryValueToSubmit = editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`;
+        const parsedEntryNumber = parseInt(entryValueToSubmit.split('/')[0]);
+        
+        const requestData = {
+            employee_name: values.employee_name,
+            agent_name: values.agent_name,
+            customer_add: values.customer_add,
+            reference: values.reference,
+            entry: entryValueToSubmit,
+            depart_date: values.depart_date,
+            return_date: values.return_date,
+            sector: values.sector,
+            airline: values.airline,
+            adults: values.adults,
+            children: values.children,
+            infants: values.infants,
+            passport_detail: passportDetail,
+            receivable_amount: parseInt(values.receivable_amount),
+            paid_cash: parseInt(values.paid_cash),
+            bank_title: values.bank_title,
+            paid_in_bank: values.paid_in_bank,
+            payable_to_vendor: parseInt(values.payable_to_vendor),
+            vendor_name: values.vendor_name,
+            profit: parseInt(values.profit),
+            remaining_amount: parseInt(values.remaining_amount)
+        };
+
+        console.log('Submitting ticket data:', requestData);
+
+        const url = editEntry ? `${BASE_URL}/ticket/${editEntry.id}` : `${BASE_URL}/ticket`;
+        const method = editEntry ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData),
         });
 
-        try {
-            const entryValueToSubmit = editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`;
-            // Extract the actual entry number (e.g., 5 from "5/5")
-            const parsedEntryNumber = parseInt(entryValueToSubmit.split('/')[0]);
-            
-            const requestData = {
-                employee_name: values.employee_name,
-                customer_add: values.customer_add,
-                reference: values.reference,
-                entry: entryValueToSubmit,
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        if (!editEntry) {
+            const updatedCounts = await incrementFormEntry('ticket', parsedEntryNumber);
+            if (updatedCounts) {
+                setEntryNumber(updatedCounts.currentCount);
+                setTotalEntries(updatedCounts.globalCount);
+            }
+        }
+
+        if (!editEntry) {
+            const vendorDetail = JSON.stringify({
+                sector: values.sector,
                 depart_date: values.depart_date,
                 return_date: values.return_date,
-                sector: values.sector,
                 airline: values.airline,
-                adults: values.adults,
-                children: values.children,
-                infants: values.infants,
-                passport_detail: passportDetail,
-                receivable_amount: parseInt(values.receivable_amount),
-                paid_cash: parseInt(values.paid_cash),
+                passengerFirstName: values.passengerFirstName,
+                passengerLastName: values.passengerLastName
+            });
+
+            const vendorData = {
+                vender_name: values.vendor_name,
+                detail: vendorDetail,
+                debit: parseInt(values.payable_to_vendor),
+                date: new Date().toISOString().split('T')[0],
+                entry: '',
                 bank_title: values.bank_title,
-                paid_in_bank: values.paid_in_bank,
-                payable_to_vendor: parseInt(values.payable_to_vendor),
-                vendor_name: values.vendor_name,
-                profit: parseInt(values.profit),
-                remaining_amount: parseInt(values.remaining_amount)
+                credit: null
             };
 
-            const url = editEntry ? `${BASE_URL}/ticket/${editEntry.id}` : `${BASE_URL}/ticket`;
-            const method = editEntry ? 'PUT' : 'POST';
+            console.log('Submitting vendor data:', vendorData);
 
-            const response = await fetch(url, {
-                method,
+            const vendorResponse = await fetch(`${BASE_URL}/vender`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(requestData),
+                body: JSON.stringify(vendorData),
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (!vendorResponse.ok) {
+                console.error('Vendor submission failed:', vendorResponse.status);
+                setErrors({ general: 'Ticket saved, but failed to save vendor details. Please try again later.' });
             }
 
-            if (!editEntry) {
-                // Pass the actual entry number used for the ticket
-                const updatedCounts = await incrementFormEntry('ticket', parsedEntryNumber);
-                if (updatedCounts) {
-                    setEntryNumber(updatedCounts.currentCount);
-                    setTotalEntries(updatedCounts.globalCount);
-                }
+             // Add agent data submission
+            const agentDetail = JSON.stringify({
+                sector: values.sector,
+                depart_date: values.depart_date,
+                return_date: values.return_date,
+                airline: values.airline,
+                passengerFirstName: values.passengerFirstName,
+                passengerLastName: values.passengerLastName
+            });
+
+            const agentData = {
+                agent_name: values.agent_name,
+                employee:values.employee,
+                detail: agentDetail,
+                credit: parseInt(values.receivable_amount),
+                date: new Date().toISOString().split('T')[0],
+                entry: '',
+                bank_title: values.bank_title,
+                debit: null
+            };
+
+            console.log('Submitting agent data:', agentData);
+
+            const agentResponse = await fetch(`${BASE_URL}/agent`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(agentData),
+            });
+
+            if (!agentResponse.ok) {
+                console.error('Agent submission failed:', agentResponse.status);
+                setErrors({ general: 'Ticket saved, but failed to save agent details. Please try again later.' });
             }
-
-            if (!editEntry) {
-                const vendorData = {
-                    user_name: values.vendor_name,
-                    amount: parseInt(values.payable_to_vendor),
-                    date: new Date(),
-                };
-
-                const vendorResponse = await fetch(`${BASE_URL}/vender`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(vendorData),
-                });
-
-                if (!vendorResponse.ok) {
-                    console.error('Vendor submission failed:', vendorResponse.status);
-                    setErrors({ general: 'Ticket saved, but failed to save vendor details. Please try again later.' });
-                }
-            }
-
-            resetForm();
-            onSubmitSuccess();
-        } catch (error) {
-            console.error('Error:', error);
-            setErrors({ general: 'Failed to submit form. Please try again later.' });
-        } finally {
-            setSubmitting(false);
         }
-    };
+
+        resetForm();
+        onSubmitSuccess();
+    } catch (error) {
+        console.error('Error:', error);
+        setErrors({ general: 'Failed to submit form. Please try again later.' });
+    } finally {
+        setSubmitting(false);
+    }
+};
 
     const formVariants = {
         hidden: { opacity: 0 },
@@ -355,11 +449,12 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const section3Fields = [
         { name: 'receivable_amount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
+        { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },       
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'bank_title', label: 'Bank Title', type: 'text', placeholder: 'Enter Bank Title', icon: 'store' },
+        { name: 'bank_title', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'payable_to_vendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
-        { name: 'vendor_name', label: 'Vendor Name', type: 'text', placeholder: 'Enter vendor name', icon: 'store' },
+        { name: 'vendor_name', label: 'Vendor Name', type: 'select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];
@@ -382,7 +477,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                         disabled={field.readOnly}
                     >
-                        <option value="">Select {field.label}</option>
+                        <option value="">{field.placeholder}</option>
                         {field.options && field.options.map(option => (
                             <option key={option} value={option}>{option}</option>
                         ))}
@@ -608,7 +703,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             )}
 
                             <motion.div 
-                                className="flex justify-between mt-8 pt-4 border-t border-gray-100"
+                                className="flex justify-between mt-8 pt-4 border-t border-gray-200"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5 }}
@@ -628,16 +723,16 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </div>
                                 
                                 <div className="flex space-x-3">
-                                      <motion.button
-                                                                            type="button"
-                                                                            onClick={onCancel}
-                                                                            className="px-5 py-2 border bg-gray-400 border-gray-300 rounded-lg text-black hover:bg-blue-600 transition-colors"
-                                                                            whileHover={{ scale: 1.03 }}
-                                                                            whileTap={{ scale: 0.97 }}
-                                                                            disabled={isSubmitting}
-                                                                        >
-                                                                            Cancel
-                                                                        </motion.button>
+                                    <motion.button
+                                        type="button"
+                                        onClick={onCancel}
+                                        className="px-5 py-2 border bg-gray-400 border-gray-300 rounded-lg text-black hover:bg-blue-600 transition-colors"
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        disabled={isSubmitting}
+                                    >
+                                        Cancel
+                                    </motion.button>
                                     {activeSection < 3 ? (
                                         <motion.button
                                            

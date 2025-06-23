@@ -1,305 +1,272 @@
 import React, { useState, useEffect } from 'react';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+import axios from 'axios';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import VenderNameModal from '../../ui/VenderNameModal'; // Fixed: Match the actual filename
 
-const Vendor_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
-
-     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-    const [data, setData] = useState({
-        user_name: '',
-        entry: '',
-        date: '',
-        amount: '',
-        bank_title: '',
-        debit: '',       
-        credit: '',      
-        file: null,
-        withdraw:''
-    });
-
-    const [prevError, setPrevError] = useState({
-        user_name: '',
-        entry: '',
-        date: '',
-        amount: '',
-        bank_title: '',
-        debit: '',        
-        credit: '',       
-        general: ''
-    });
-    
+const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
+    const [vendorNames, setVendorNames] = useState([]);
+    const [isLoadingNames, setIsLoadingNames] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-    useEffect(() => {
-        if (editEntry) {
-            setData({
-                user_name: editEntry.user_name || '',
-                entry: editEntry.entry || '',
-                date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
-                amount: editEntry.amount || '',
-                bank_title: editEntry.bank_title || '',
-                debit: editEntry.debit || '',      
-                credit: editEntry.credit || '',    
-                file: null,
-                withdraw: editEntry.withdraw || ''
-            });
-        }
-    }, [editEntry]);
+    const isEditing = !!editingEntry;
 
-    const handleChange = (e) => {
-         if (e.target.type === 'file') {
-        setData({ ...data, file: e.target.files[0] });  
-    } else {
-        setData({ ...data, [e.target.name]: e.target.value });
-    }
-        setPrevError({ ...prevError, [e.target.name]: '' });
+    // Initial values for Formik form
+    const initialValues = {
+        vender_name: editingEntry?.vender_name || '', // Renamed from user_name to vender_name
+        date: editingEntry?.date ? new Date(editingEntry.date).toISOString().split('T')[0] : '',
+        entry: editingEntry?.entry || '',
+        detail: editingEntry?.detail || '', // Assuming 'entry' in old form maps to 'detail' in backend, and 'entry' in backend is a separate field
+        bank_title: editingEntry?.bank_title || '',
+        credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
+        debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
+        // 'amount' and 'withdraw' fields from the original form are not present in the backend `vender` table.
+        // I will exclude them from the Formik form and validation for now to match the backend structure.
+        // If they are needed, their purpose and how they relate to 'credit'/'debit' and 'remaining_amount' should be clarified.
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        let newErrors = {};
-        let isValid = true;
+    // Validation schema using Yup
+    const validationSchema = Yup.object({
+        vender_name: Yup.string().required('Vendor name is required'),
+        date: Yup.date().required('Date is required'),
+        entry: Yup.string().required('Entry is required'),
+        detail: Yup.string().required('Detail is required'),
+        bank_title: Yup.string().required('Bank Title is required'),
+        credit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Credit must be positive').nullable(),
+        debit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Debit must be positive').nullable(),
+    }).test('credit-debit-test', 'Either Credit or Debit is required, but not both', (values) => {
+        const hasCredit = parseFloat(values.credit) > 0;
+        const hasDebit = parseFloat(values.debit) > 0;
+        return (hasCredit && !hasDebit) || (!hasCredit && hasDebit);
+    });
 
-        if (!data.user_name) {
-            newErrors.user_name = 'Enter Name';
-            isValid = false;
-        }
-        if (!data.date) {
-            newErrors.date = 'Enter Date';
-            isValid = false;
-        }
-        if (!data.entry) {
-            newErrors.entry = 'Enter Entry';
-            isValid = false;
-        }
-        if (!data.amount) {
-            newErrors.amount = 'Enter Amount';
-            isValid = false;
-        }
-        if (!data.bank_title) {
-            newErrors.bank_title = 'Enter Bank Title';
-            isValid = false;
-        }
-
-        // Validate date format
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (data.date && !dateRegex.test(data.date)) {
-            newErrors.date = 'Invalid date format (yyyy-MM-dd)';
-            isValid = false;
-        } else if (data.date) {
-            const [year, month, day] = data.date.split('-').map(Number);
-            if (month < 1 || month > 12 || day < 1 || day > 31) {
-                newErrors.date = 'Invalid date values';
-                isValid = false;
+    // Fetch existing vendor names
+    const fetchVendorNames = async () => {
+        try {
+            setIsLoadingNames(true);
+            const response = await axios.get(`${BASE_URL}/vender-names/existing`);
+            if (response.data.status === 'success') {
+                setVendorNames(response.data.vendorNames || []);
             }
+        } catch (error) {
+            console.error('Error fetching vendor names:', error);
+            // Optionally set an error state here to display to the user
+        } finally {
+            setIsLoadingNames(false);
         }
+    };
 
-        if (isValid) {
+    useEffect(() => {
+        fetchVendorNames();
+    }, []);
+
+    // Handler for when a new vendor name is added via the modal
+    const handleVendorAdded = async (newVendorName) => {
+        if (newVendorName && !vendorNames.includes(newVendorName)) {
+            setVendorNames(prev => [...prev, newVendorName].sort());
+        }
+        return Promise.resolve(); // Return a promise as AgentForm's handleAgentAdded does
+    };
+
+    const onSubmit = async (values, { setSubmitting, resetForm }) => {
+        try {
             setIsSubmitting(true);
-            const formData = new FormData();
-            formData.append('user_name', data.user_name);
-            formData.append('entry', data.entry);
-            formData.append('date', data.date);
-            formData.append('amount', data.amount);
-            formData.append('bank_title', data.bank_title);
-            formData.append('debit', data.debit || '0');
-            formData.append('credit', data.credit || '0');
-            formData.append('withdraw', data.withdraw || '0'); // ✅ FIXED: Added withdraw field
-            
-            // Only append file if it exists
-            if (data.file) {
-                formData.append('file', data.file);
+            setSubmitting(true); // Formik's own submitting state
+
+            const submitData = {
+                vender_name: values.vender_name,
+                date: values.date,
+                entry: values.entry, // This maps to the 'entry' field in your backend
+                detail: values.detail, // This maps to the 'detail' field in your backend
+                bank_title: values.bank_title,
+                credit: parseFloat(values.credit) || null, // Ensure null for 0 or empty string
+                debit: parseFloat(values.debit) || null,   // Ensure null for 0 or empty string
+            };
+
+            let response;
+            if (isEditing) {
+                response = await axios.put(`${BASE_URL}/vender/${editingEntry.id}`, submitData);
+            } else {
+                response = await axios.post(`${BASE_URL}/vender`, submitData);
             }
 
-            try {
-                   const url = editEntry
-                    ? `${BASE_URL}/vender/${editEntry.id}`
-                    : `${BASE_URL}/vender`;
-                const method = editEntry ? 'PUT' : 'POST';
-
-                const response = await fetch(url, {
-                    method,
-                    body: formData, 
-        });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-                }
-
-                const result = await response.json();
-                console.log('Success:', result);
-
-                setData({
-                    user_name: '',
-                    entry: '',
-                    date: '',
-                    amount: '',
-                    bank_title: '',
-                    debit: '',
-                    credit: '',
-                    file: null,
-                    withdraw: ''
-                });
-
-                if (onSubmitSuccess) {
-                    onSubmitSuccess();
-                } else {
-                    onCancel();
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                setPrevError({ ...prevError, general: `Failed to submit form: ${error.message}` });
-            } finally {
-                setIsSubmitting(false);
+            if (response.data.status === 'success') {
+                console.log(`Vendor entry ${isEditing ? 'updated' : 'created'} successfully:`, response.data);
+                resetForm();
+                onSubmitSuccess(); // Call success callback
+            } else {
+                // Handle backend errors
+                alert(`Failed to ${isEditing ? 'update' : 'save'} vendor entry: ${response.data.message}`);
             }
-        } else {
-            setPrevError(newErrors);
+        } catch (error) {
+            console.error(`Error ${isEditing ? 'updating' : 'submitting'} form:`, error);
+            alert(`Failed to ${isEditing ? 'update' : 'save'} vendor entry: ${error.response?.data?.message || error.message}`);
+        } finally {
+            setIsSubmitting(false);
+            setSubmitting(false); // Reset Formik's submitting state
         }
     };
 
     return (
         <div className="flex items-center justify-center bg-white p-4">
-            <div className="w-full max-w-3xl p-8 rounded-md">
+            <div className="w-full max-w-2xl p-8 rounded-md">
                 <div className="text-2xl font-semibold mb-6 relative inline-block">
-                    VENDOR FORM
+                    {isEditing ? 'UPDATE VENDOR ENTRY' : 'VENDOR FORM'}
                     <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
                 </div>
-                <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
-                    <div className="flex flex-wrap justify-between gap-4">
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">User Name</label>
-                            <input
-                                type="text"
-                                name="user_name"
-                                value={data.user_name}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                            />
-                            {prevError.user_name && <span className="text-red-500">{prevError.user_name}</span>}
-                        </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Date</label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={data.date}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                            />
-                            {prevError.date && <span className="text-red-500">{prevError.date}</span>}
-                        </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Detail</label>
-                            <input
-                                type="text"
-                                name="entry"
-                                value={data.entry}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                            />
-                            {prevError.entry && <span className="text-red-500">{prevError.entry}</span>}
-                        </div>
-                      
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Bank Title</label>
-                            <input
-                                type="text"
-                                name="bank_title"
-                                value={data.bank_title}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                            />
-                            {prevError.bank_title && <span className="text-red-500">{prevError.bank_title}</span>}
-                        </div>
-                          <div className="w-full sm:w-[calc(50%-10px)]">
-                              <label className="block font-medium mb-1">Debit</label>
-                               <input
-                               type="number"
-                               name="debit"
-                               value={data.debit}
-                               onChange={handleChange}
-                               className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                               disabled={isSubmitting}
-                           />
-                              {prevError.debit && <span className="text-red-500">{prevError.debit}</span>}
-                        </div>
-                          <div className="w-full sm:w-[calc(50%-10px)]">
-                              <label className="block font-medium mb-1">Credit</label>
-                                <input
-                                type="number"
-                                name="credit"
-                                value={data.credit}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                           />
-                                 {prevError.credit && <span className="text-red-500">{prevError.credit}</span>}
+
+                <Formik
+                    initialValues={initialValues}
+                    validationSchema={validationSchema}
+                    onSubmit={onSubmit}
+                    enableReinitialize={true} // Important for updating form when editingEntry changes
+                >
+                    {formik => (
+                        <Form className="flex-1 overflow-hidden p-6">
+                            <div className="flex flex-wrap justify-between gap-4">
+                                {/* Vendor Name with Dropdown and Add Button */}
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Vendor Name</label>
+                                    <div className="flex items-center gap-2">
+                                        <Field name="vender_name">
+                                            {({ field }) => (
+                                                <select
+                                                    {...field}
+                                                    className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                                    disabled={isLoadingNames || isSubmitting}
+                                                >
+                                                    <option value="">
+                                                        {isLoadingNames ? 'Loading...' : 'Select Vendor Name'}
+                                                    </option>
+                                                    {vendorNames.map((name, index) => (
+                                                        <option key={index} value={name}>
+                                                            {name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        </Field>
+                                        {!isEditing && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsModalOpen(true)}
+                                                className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 transition-colors"
+                                                title="Add New Vendor Name"
+                                                disabled={isSubmitting}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        )}
+                                    </div>
+                                    <ErrorMessage name="vender_name" component="div" className="text-red-500 text-sm mt-1" />
+                                </div>
+
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Date</label>
+                                    <Field
+                                        type="date"
+                                        name="date"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={isSubmitting}
+                                    />
+                                    <ErrorMessage name="date" component="div" className="text-red-500 text-sm mt-1" />
+                                </div>
+
+                                {/* Assuming 'entry' in your old VendorForm maps to 'detail' in backend, and backend 'entry' is a separate field. */}
+                                {/* If your backend 'entry' is a concise description and 'detail' is more elaborate, adjust labels accordingly. */}
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Entry</label>
+                                    <Field
+                                        type="text"
+                                        name="entry"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={isSubmitting}
+                                    />
+                                    <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
+                                </div>
+
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Detail</label>
+                                    <Field
+                                        type="text"
+                                        name="detail"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={isSubmitting}
+                                    />
+                                    <ErrorMessage name="detail" component="div" className="text-red-500 text-sm mt-1" />
+                                </div>
+
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Bank Title</label>
+                                    <Field
+                                        type="text"
+                                        name="bank_title"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={isSubmitting}
+                                    />
+                                    <ErrorMessage name="bank_title" component="div" className="text-red-500 text-sm mt-1" />
+                                </div>
+
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Credit</label>
+                                    <Field
+                                        type="number"
+                                        name="credit"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={isSubmitting}
+                                    />
+                                    <ErrorMessage name="credit" component="div" className="text-red-500 text-sm mt-1" />
+                                </div>
+
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Debit</label>
+                                    <Field
+                                        type="number"
+                                        name="debit"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={isSubmitting}
+                                    />
+                                    <ErrorMessage name="debit" component="div" className="text-red-500 text-sm mt-1" />
+                                </div>
+
+                                {/* Removed 'Amount', 'Withdraw', and 'Attachment' fields as they are not directly handled by the provided vender.ts */}
+                                {/* If 'Amount' and 'Withdraw' need to be re-added, their logic concerning 'credit' and 'debit' needs clarification. */}
+                                {/* For 'Attachment', you'd need a separate file upload mechanism and backend endpoint if files are to be stored. */}
                             </div>
-                              <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Withdraw</label>
-                            <input
-                                type="number"
-                                name="withdraw"
-                                value={data.withdraw}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                            />
-                        </div>
-                              <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Amount</label>
-                            <input
-                                type="number"
-                                name="amount"
-                                value={data.amount}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                disabled={isSubmitting}
-                            />
-                            {prevError.amount && <span className="text-red-500">{prevError.amount}</span>}
-                        </div>
-                         <div className="w-full sm:w-[calc(50%-10px)]">
-                             <label className="block font-medium mb-1">Attachment</label>
-                             <input
-                            type="file"
-                            name="file"
-                            onChange={handleChange}
-                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                             disabled={isSubmitting}
-                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                            />
+
+                            <div className="mt-10 flex justify-center">
+                                <button
+                                    type="submit"
+                                    className="w-70 bg-gray-300 text-black font-medium py-3 px-6 rounded-md hover:bg-gray-400 transition-all cursor-pointer flex items-center justify-center"
+                                    disabled={isSubmitting || formik.isSubmitting}
+                                >
+                                    {(isSubmitting || formik.isSubmitting) && <ButtonSpinner />}
+                                    {isEditing ? 'Update' : 'Submit'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="ml-4 w-70 bg-gray-300 text-black font-medium py-3 px-6 rounded-md hover:bg-gray-400 transition-all cursor-pointer"
+                                    onClick={onCancel}
+                                    disabled={isSubmitting || formik.isSubmitting}
+                                >
+                                    Cancel
+                                </button>
                             </div>
-                     </div>
-                    {prevError.general && <div className="text-red-500 mt-4">{prevError.general}</div>}
-                    <div className="mt-10 flex justify-center">
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-70 bg-gray-300 text-black font-medium py-3 rounded-md hover:bg-gray-400 transition-all cursor-pointer flex items-center justify-center"
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <ButtonSpinner />
-                                    <span>{editEntry ? 'Updating...' : 'Submitting...'}</span>
-                                </>
-                            ) : (
-                                editEntry ? 'Update' : 'Submit'
-                            )}
-                        </button>
-                        <button
-                            type="button"
-                            className="ml-4 w-70 bg-gray-300 text-black font-medium py-3 rounded-md hover:bg-gray-400 transition-all cursor-pointer"
-                            onClick={onCancel}
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </form>
+                        </Form>
+                    )}
+                </Formik>
+
+                {/* Vendor Name Modal - Only show when not editing */}
+                {!isEditing && (
+                    <VenderNameModal
+                        isOpen={isModalOpen}
+                        onClose={() => setIsModalOpen(false)}
+                        onVenderAdded={handleVendorAdded} // Fixed: Changed from onVendorAdded to onVenderAdded to match the modal's expected prop
+                    />
+                )}
             </div>
         </div>
     );
