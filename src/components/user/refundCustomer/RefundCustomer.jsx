@@ -66,11 +66,13 @@ const RefundCustomer = () => {
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'DETAIL SECTOR', accessor: 'detail_sector' },
         { header: 'TOTAL AMOUNT', accessor: 'total_amount' },
+        { header: 'VENDER NAME', accessor: 'vender_name' },
         { header: 'RETURN FROM VENDOR', accessor: 'return_from_vendor' },
         { header: 'OFFICE SERVICE CHARGES', accessor: 'office_service_charges' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
+        { header: 'BANK TITLE', accessor: 'bank_title' },
         { header: 'BALANCE', accessor: 'balance' },
         
         ...(user.role === 'admin' ? [{

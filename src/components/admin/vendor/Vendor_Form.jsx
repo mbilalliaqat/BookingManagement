@@ -3,7 +3,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
 import ButtonSpinner from '../../ui/ButtonSpinner';
-import VenderNameModal from '../../ui/VenderNameModal'; // Fixed: Match the actual filename
+import VenderNameModal from '../../ui/VenderNameModal'; 
 
 const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [vendorNames, setVendorNames] = useState([]);
@@ -16,16 +16,13 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
 
     // Initial values for Formik form
     const initialValues = {
-        vender_name: editingEntry?.vender_name || '', // Renamed from user_name to vender_name
+        vender_name: editingEntry?.vender_name || '', 
         date: editingEntry?.date ? new Date(editingEntry.date).toISOString().split('T')[0] : '',
         entry: editingEntry?.entry || '',
-        detail: editingEntry?.detail || '', // Assuming 'entry' in old form maps to 'detail' in backend, and 'entry' in backend is a separate field
+        detail: editingEntry?.detail || '', 
         bank_title: editingEntry?.bank_title || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
         debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
-        // 'amount' and 'withdraw' fields from the original form are not present in the backend `vender` table.
-        // I will exclude them from the Formik form and validation for now to match the backend structure.
-        // If they are needed, their purpose and how they relate to 'credit'/'debit' and 'remaining_amount' should be clarified.
     };
 
     // Validation schema using Yup

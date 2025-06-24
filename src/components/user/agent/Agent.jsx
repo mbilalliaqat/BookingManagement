@@ -40,9 +40,10 @@ const Agent = () => {
             const formattedData = response.data.agents.map((entry) => ({
                 ...entry,
                 date: formatDate(entry.date),
-            }));
+            }))
+            .sort((a, b) => a.id - b.id) || [];
             
-            setData(formattedData.reverse() || []);
+            setData(formattedData);
         } catch (error) {
             setError(error.message);
             console.error("Error Fetching Data", error.message);

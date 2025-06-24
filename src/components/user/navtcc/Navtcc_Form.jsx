@@ -14,16 +14,22 @@ const AutoCalculate = () => {
         const receivable = parseInt(values.receivable_amount) || 0;
         const cashPaid = parseInt(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
+        const payedToBank = parseFloat(values.payed_to_bank) || 0;
         
         
         // Calculate remaining amount
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining);
+
+          const profit = receivable - payedToBank;
+        setFieldValue('profit', profit);
+
         
     }, [
         values.receivable_amount,
         values.paid_cash,
         values.paid_in_bank,
+        values.payed_to_bank,
         setFieldValue
     ]);
     
@@ -55,6 +61,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_cash: '',
         paid_from_bank:'',
         paid_in_bank: '',
+        payed_to_bank: '',
         profit: '',
         remaining_amount: '0'
     });
@@ -78,6 +85,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_cash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
         paid_in_bank: Yup.number().required('Paid In Bank is required').typeError('Paid Cash must be a number'),
         paid_from_bank: Yup.string().required('Paid From Bank is required'),
+        payed_to_bank: Yup.number().required('Payed To Bank is required').typeError('Payed To Bank must be a number'),
         profit: Yup.number(),
         remaining_amount: Yup.number()
     });
@@ -130,6 +138,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_cash: editEntry.paid_cash || '',
                 paid_from_bank: editEntry.paid_from_bank || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
+                payed_to_bank:editEntry.payed_to_bank || '',
                 profit: editEntry.profit || '',
                 remaining_amount: editEntry.remaining_amount || ''
             };
@@ -163,6 +172,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             paid_cash: parseInt(values.paid_cash),
             paid_from_bank: values.paid_from_bank,
             paid_in_bank: values.paid_in_bank,
+            payed_to_bank:values.payed_to_bank,
             profit: parseInt(values.profit),
             remaining_amount: parseInt(values.remaining_amount)
         };
@@ -217,6 +227,15 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
+    const bankOptions = [
+  { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
+  { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
+  { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
+  { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
+  { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
+  { value: "MCB", label: "MCB (FIT MANPOWER)" }
+];
+
     // Animation variants
     const formVariants = {
         hidden: { opacity: 0 },
@@ -263,8 +282,16 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section3Fields = [
         { name: 'receivable_amount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'paid_from_bank', label: 'Paid From Bank', type: 'text', placeholder: 'Enter bank Title', icon: 'university' },
+        { 
+         name: 'paid_from_bank', 
+         label: 'Paid From Bank', 
+         type: 'select', 
+         options: bankOptions.map(option => option.label), // Use bank options for select
+         placeholder: 'Select bank title', 
+         icon: 'university' 
+        },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university' },
+        { name: 'payed_to_bank', label: 'Payed To Bank', type: 'number', placeholder: 'Enter amount paid to bank', icon: 'university' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: false},
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];
@@ -331,7 +358,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     transition={{ duration: 0.5 }}
                 >
                     <i className="fas fa-ticket-alt mr-3"></i>
-                    {editEntry ? 'Update Ticket' : 'New Ticket Booking'}
+                    {editEntry ? 'Update Navtcc' : 'New Navtcc'}
                 </motion.h2>
                 <motion.p 
                     className="text-blue-600 mt-1"
@@ -339,7 +366,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2, duration: 0.5 }}
                 >
-                    Please fill in the ticket details
+                    Please fill in the Navtcc details
                 </motion.p>
             </div>
 
@@ -368,7 +395,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     )}
                                 </div>
                                 <span className="text-sm font-medium">
-                                    {step === 1 ? 'Ticket Info' : step === 2 ? 'Passport Details' : 'Payment Details'}
+                                    {step === 1 ? 'Navtcc Info' : step === 2 ? 'Passport Details' : 'Payment Details'}
                                 </span>
                             </div>
                             {step < 3 && (

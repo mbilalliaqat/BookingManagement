@@ -10,14 +10,13 @@ const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
     
     useEffect(() => {
-        // Get values as numbers (defaulting to 0 if empty or NaN)
-        const totalAmount = parseFloat(values.total_amount) || 0;
+         const totalAmount = parseFloat(values.total_amount) || 0;
         const returnFromVendor = parseFloat(values.return_from_vendor) || 0;
         const officeServiceCharges = parseFloat(values.office_service_charges) || 0;
         const paidCash = parseFloat(values.paid_cash) || 0;
         const paidInBank = parseFloat(values.paid_in_bank) || 0;
         
-        // Calculate remaining amount: total - return from vendor - office service charges
+        // Calculate remaining amount: return from vendor - office service charges
         const remaining = totalAmount - returnFromVendor - officeServiceCharges;
         setFieldValue('remaining_amount', remaining);
         
@@ -41,6 +40,7 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
+    const [vendorNames, setVendorNames] = useState([]);
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee: user?.username || '',
@@ -50,11 +50,13 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         reference: '',
         detail_sector: '',
         total_amount: '',
+        vender_name: '',
         return_from_vendor: '',
         office_service_charges: '',
         remaining_amount: '0',
         paid_cash: '',
         paid_in_bank: '',
+         bank_title: '',
         balance: '0'
     });
 
@@ -66,13 +68,30 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         reference: Yup.string().required('Reference is required'),
         detail_sector: Yup.string().required('Detail sector is required'),
         total_amount: Yup.number().required('Total amount is required').typeError('Total amount must be a number'),
+        vender_name: Yup.string().required('Vender Name is required'),
         return_from_vendor: Yup.number().required('Return from vendor is required').typeError('Return from vendor must be a number'),
         office_service_charges: Yup.number().required('Office service charges is required').typeError('Office service charges must be a number'),
         remaining_amount: Yup.number(),
         paid_cash: Yup.number().required('Paid cash is required').typeError('Paid cash must be a number'),
         paid_in_bank: Yup.number().required('Paid in bank is required').typeError('Paid in bank must be a number'),
+        bank_title: Yup.string().required('Bank Title is required'),
         balance: Yup.number()
     });
+
+     useEffect(() => {
+        const fetchVendorNames = async () => {
+            try {
+                const response = await fetch(`${BASE_URL}/vender-names/existing`);
+                const data = await response.json();
+                if (data.status === 'success') {
+                    setVendorNames(data.vendorNames || []);
+                }
+            } catch (error) {
+                console.error('Error fetching vendor names:', error);
+            }
+        };
+        fetchVendorNames();
+    }, [BASE_URL]);
 
     useEffect(() => {
         if (editEntry) {
@@ -91,11 +110,13 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 reference: editEntry.reference || '',
                 detail_sector: editEntry.detail_sector || '',
                 total_amount: editEntry.total_amount || '',
+                vender_name: editEntry.vender_name || '',
                 return_from_vendor: editEntry.return_from_vendor || '',
                 office_service_charges: editEntry.office_service_charges || '',
                 remaining_amount: editEntry.remaining_amount || '',
                 paid_cash: editEntry.paid_cash || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
+                bank_title:editEntry.bank_title || '',
                 balance: editEntry.balance || ''
             };
             
@@ -113,11 +134,13 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             reference: values.reference,
             detail_sector: values.detail_sector,
             total_amount: parseFloat(values.total_amount),
+            vender_name: values.vender_name,
             return_from_vendor: parseFloat(values.return_from_vendor),
             office_service_charges: parseFloat(values.office_service_charges),
             remaining_amount: parseFloat(values.remaining_amount),
             paid_cash: parseFloat(values.paid_cash),
             paid_in_bank: parseFloat(values.paid_in_bank),
+            bank_title:values.bank_title,
             balance: parseFloat(values.balance)
         };
 
@@ -147,6 +170,15 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             setSubmitting(false);
         }
     };
+
+    const bankOptions = [
+  { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
+  { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
+  { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
+  { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
+  { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
+  { value: "MCB", label: "MCB (FIT MANPOWER)" }
+];
 
     // Animation variants
     const formVariants = {
@@ -182,24 +214,50 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const section2Fields = [
         { name: 'total_amount', label: 'Total Amount', type: 'number', placeholder: 'Enter total amount', icon: 'dollar-sign' },
+         { name: 'vender_name', label: 'Vender Name', type: 'select', options: vendorNames,placeholder: 'Select vendor name',icon: 'store' 
+},
         { name: 'return_from_vendor', label: 'Return From Vendor', type: 'number', placeholder: 'Enter return from vendor', icon: 'undo' },
         { name: 'office_service_charges', label: 'Office Service Charges', type: 'number', placeholder: 'Enter office service charges', icon: 'file-invoice-dollar' },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'calculator', readOnly: true },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter paid in bank', icon: 'university' },
+         { 
+      name: 'bank_title', 
+      label: 'Bank Title', 
+      type: 'select', 
+      options: bankOptions.map(option => option.label), 
+      placeholder: 'Select bank title', 
+      icon: 'university' 
+    },
         { name: 'balance', label: 'Balance', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];
 
-    const renderField = (field) => (
-        <motion.div 
-            key={field.name}
-            className="mb-4"
-            variants={itemVariants}
-        >
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={field.name}>
-                {field.label}
-            </label>
-            <div className="relative">
+
+
+const renderField = (field) => (
+    <motion.div 
+        key={field.name}
+        className="mb-4"
+        variants={itemVariants}
+    >
+        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={field.name}>
+            {field.label}
+        </label>
+        <div className="relative">
+            {field.type === 'select' ? (
+                <Field
+                    as="select"
+                    id={field.name}
+                    name={field.name}
+                    className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    disabled={field.readOnly}
+                >
+                    <option value="">{field.placeholder || `Select ${field.label}`}</option>
+                    {field.options && field.options.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </Field>
+            ) : (
                 <Field
                     id={field.name}
                     type={field.type}
@@ -211,20 +269,23 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     disabled={field.readOnly}
                     readOnly={field.readOnly}
                 />
-                <ErrorMessage 
-                    name={field.name} 
-                    component="p" 
-                    className="mt-1 text-sm text-red-500 flex items-center"
-                >
-                    {(msg) => (
-                        <span className="flex items-center">
-                            <i className="fas fa-exclamation-circle mr-1"></i> {msg}
-                        </span>
-                    )}
-                </ErrorMessage>
-            </div>
-        </motion.div>
-    );
+            )}
+            <ErrorMessage 
+                name={field.name} 
+                component="p" 
+                className="mt-1 text-sm text-red-500 flex items-center"
+            >
+                {(msg) => (
+                    <span className="flex items-center">
+                        <i className="fas fa-exclamation-circle mr-1"></i> {msg}
+                    </span>
+                )}
+            </ErrorMessage>
+        </div>
+    </motion.div>
+);
+
+
 
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">

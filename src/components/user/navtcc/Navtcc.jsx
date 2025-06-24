@@ -90,6 +90,7 @@ const Navtcc = () => {
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID FROM BANK', accessor: 'paid_from_bank' },
+        { header: 'PAYED TO BANK', accessor: 'payed_to_bank' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
