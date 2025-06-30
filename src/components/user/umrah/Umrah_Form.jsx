@@ -4,6 +4,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts } from '../../ui/api';
 
 // Create a component to handle automatic calculation of remaining amount
 
@@ -18,6 +19,8 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
     const [showPassengerSlider,setShowPassengerSlider]=useState(false);
+    const [entryNumber, setEntryNumber]=useState(0);
+    const [totalEntries,setTotalEntries]=useState(0);
 
     const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
@@ -52,11 +55,16 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     return null;
 };
 
+const formatEntry = (entryNumber, totalEntries) => {
+    return `um${entryNumber}/t${totalEntries}`;
+};
+
 
     const [formInitialValues, setFormInitialValues] = useState({
         userName: user?.username || '',
         customerAdd: '',
         reference: '',
+        entry:'0/0',
         packageDetail: '',
         depart_date: '',
         return_date:'',
@@ -119,6 +127,39 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         remainingAmount: Yup.number()
     });
 
+    useEffect(()=>{
+        const getCounts = async ()=>{
+            const counts = await fetchEntryCounts();
+            if(counts){
+                const umrahCounts = counts.find(c=>c.form_type === 'umrah');
+                if(umrahCounts){
+                    setEntryNumber(umrahCounts.current_count + 1);
+                    setTotalEntries(umrahCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                } 
+            } else{
+                setEntryNumber(1);
+                    setTotalEntries(1);
+            }
+        };
+        getCounts();
+
+        setFormInitialValues(prev =>({
+            ...prev,
+            userName :user?.username || '',
+            entry: formatEntry(entryNumber, totalEntries)
+        }))
+    },[editEntry,user]);
+
+     useEffect(() => {
+        setFormInitialValues(prev => ({
+            ...prev,
+            entry: formatEntry(entryNumber, totalEntries),
+        }));
+    }, [entryNumber, totalEntries]);
+
     useEffect(() => {
         if (editEntry) {
             // Parse passport details if it's stored as a JSON string
@@ -145,6 +186,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 userName: editEntry.userName || user?.username || '',
                 customerAdd: editEntry.customerAdd || '',
                 reference: editEntry.reference || '',
+                entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
                 packageDetail: editEntry.packageDetail || '',
                 depart_date: formatDate(editEntry.depart_date),
                 return_date: formatDate(editEntry.return_date),
@@ -199,10 +241,13 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             issueCountry: values.documentIssueCountry,
         });
 
+         
+
         const requestData = {
             userName: values.userName,
             customerAdd: values.customerAdd,
             reference: values.reference,
+             entry: formatEntry(entryNumber, totalEntries),
             packageDetail: values.packageDetail || null,
             depart_date: new Date(values.depart_date),
             return_date: new Date(values.return_date),
@@ -297,6 +342,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'userName', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, // New entry field
         { name: 'customerAdd', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'packageDetail', label: 'Package Detail', type: 'text', placeholder: 'Enter package detail', icon: 'suitcase' },
@@ -484,17 +530,17 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     </motion.div>
                 )}
 
-                <ErrorMessage 
-                    name={field.name} 
-                    component="p" 
-                    className="mt-1 text-sm text-red-500 flex items-center"
-                >
-                    {(msg) => (
-                        <span className="flex items-center">
-                            <i className="fas fa-exclamation-circle mr-1"></i> {msg}
-                        </span>
-                    )}
-                </ErrorMessage>
+               <ErrorMessage 
+    name={field.name} 
+    component="p" 
+    className="mt-1 text-sm text-red-500 flex items-center !text-red-500"
+>
+    {(msg) => (
+        <span className="flex items-center text-red-500">
+            <i className="fas fa-exclamation-circle mr-1 text-red-500"></i> {msg}
+        </span>
+    )}
+</ErrorMessage>
             </div>
         </motion.div>
     );

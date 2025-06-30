@@ -7,12 +7,12 @@ function Table({ data, columns, maxHeight = '400px' }) {
         <div className="inline-block min-w-full">
           <div className="overflow-hidden">
             <table className="min-w-full ">
-              <thead className="bg-[#111827] text-[9px] md:text-[12px] text-gray-400">
+              <thead className="bg-[#111827] text-[9px] md:text-[10px] text-gray-400">
                 <tr>
                   {columns?.map((col, index) => (
                     <th
                       key={index}
-                      className="sticky top-0 px-8 py-4 text-left  capitalize cursor-pointer  z-10"
+                      className="sticky top-0 px-1 py-1 text-left  capitalize cursor-pointer  z-10"
                     >
                       {col.header}
                     </th>
@@ -24,7 +24,7 @@ function Table({ data, columns, maxHeight = '400px' }) {
                   <tr>
                     <td
                       colSpan={columns.length}
-                      className="p-4 text-center text-gray-800"
+                      className=" text-center text-gray-800"
                     >
                       No data available
                     </td>
@@ -40,7 +40,7 @@ function Table({ data, columns, maxHeight = '400px' }) {
                       {columns?.map((col, colIndex) => (
                         <td
                           key={colIndex}
-                          className="p-4 text-[8px] md:text-sm text-black"
+                          className="p-4 text-[4px] md:text-[9px] text-black"
                         >
                           {col.render ? col.render(row[col.accessor], row) : row[col.accessor] || '-'}
                         </td>

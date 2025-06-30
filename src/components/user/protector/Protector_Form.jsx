@@ -1,24 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts } from '../../ui/api'; // Ensure this import is correct
 
 const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
-
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
-    
+
+    const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `pr${entryNumber}/t${totalEntries}`;
+};
+
     const [data, setData] = useState({
         name: '',
         passport: '',
         reference: '',
         file_no: '',
-        withdraw:'',
+        withdraw: '',
         employee: user?.username || '',
         mcb_fee_6000_date: '',
         ncb_fee_6700_date: '',
         ncb_fee_500_date: '',
         protector_date: '',
-        additional_charges: ''
+        additional_charges: '',
+        entry: '0/0'
     });
 
     const [prevError, setPrevError] = useState({
@@ -26,7 +33,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         passport: '',
         reference: '',
         file_no: '',
-        withdraw:'',
+        withdraw: '',
         employee: '',
         mcb_fee_6000_date: '',
         ncb_fee_6700_date: '',
@@ -35,8 +42,40 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         additional_charges: '',
         general: ''
     });
-    
+
     const [isLoading, setIsLoading] = useState(false);
+
+    // Fetch entry counts on component mount
+    useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const protectorCounts = counts.find(c => c.form_type === 'protector');
+                if (protectorCounts) {
+                    setEntryNumber(protectorCounts.current_count + 1);
+                    setTotalEntries(protectorCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+    // Update entry field when entry numbers change
+    useEffect(() => {
+        if (!editEntry) {
+            setData(prev => ({
+                ...prev,
+                employee: user?.username || '',
+                entry: formatEntry(entryNumber, totalEntries)
+            }));
+        }
+    }, [entryNumber, totalEntries, user, editEntry]);
 
     useEffect(() => {
         if (editEntry) {
@@ -56,20 +95,27 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             };
 
             setData({
-                name: editEntry.name || '', // ✅ Fixed: was editEntry.username
+                name: editEntry.name || '',
                 passport: editEntry.passport || '',
                 reference: editEntry.reference || '',
                 file_no: editEntry.file_no || '',
-                withdraw:editEntry.withdraw || '',
+                withdraw: editEntry.withdraw || '',
                 employee: editEntry.employee || user?.username || '',
                 mcb_fee_6000_date: formatDateForInput(editEntry.mcb_fee_6000_date),
                 ncb_fee_6700_date: formatDateForInput(editEntry.ncb_fee_6700_date),
                 ncb_fee_500_date: formatDateForInput(editEntry.ncb_fee_500_date),
                 protector_date: formatDateForInput(editEntry.protector_date),
-                additional_charges: editEntry.additional_charges || ''
+                additional_charges: editEntry.additional_charges || '',
+                entry: editEntry.entry ||  formatEntry(entryNumber, totalEntries)
             });
+            
+            if (editEntry.entry) {
+                const [current, total] = editEntry.entry.split('/').map(Number);
+                setEntryNumber(current);
+                setTotalEntries(total);
+            }
         }
-    }, [editEntry, user?.username]);
+    }, [editEntry, user?.username, entryNumber, totalEntries]);
 
     const handleChange = (e) => {
         setData({ ...data, [e.target.name]: e.target.value });
@@ -155,14 +201,15 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 name: data.name,
                 passport: data.passport,
                 reference: data.reference,
-                file_no: data.file_no, 
-                withdraw:data.withdraw,
-                employee: data.employee, 
+                file_no: data.file_no,
+                withdraw: data.withdraw,
+                employee: data.employee,
                 mcb_fee_6000_date: data.mcb_fee_6000_date,
                 ncb_fee_6700_date: data.ncb_fee_6700_date,
                 ncb_fee_500_date: data.ncb_fee_500_date,
                 protector_date: data.protector_date,
                 additional_charges: parseInt(data.additional_charges),
+                entry:  formatEntry(entryNumber, totalEntries)
             };
 
             // Debug: Log the request data to verify file_no is included
@@ -195,13 +242,14 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     passport: '',
                     reference: '',
                     file_no: '',
-                    withdraw:'',
+                    withdraw: '',
                     employee: user?.username || '',
                     mcb_fee_6000_date: '',
                     ncb_fee_6700_date: '',
                     ncb_fee_500_date: '',
                     protector_date: '',
-                    additional_charges: ''
+                    additional_charges: '',
+                    entry: `${entryNumber}/${totalEntries}`
                 });
 
                 if (onSubmitSuccess) {
@@ -229,16 +277,27 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
                 <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
                     <div className="flex flex-wrap justify-between gap-4">
-                       <div className="w-full sm:w-[calc(50%-10px)]">
+                        <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Employee</label>
                             <input
                                 type="text"
                                 name="employee"
                                 value={data.employee}
                                 onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
+                                readOnly
                             />
                             {prevError.employee && <span className="text-red-500">{prevError.employee}</span>}
+                        </div>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Entry</label>
+                            <input
+                                type="text"
+                                name="entry"
+                                value={data.entry}
+                                readOnly
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 bg-gray-100 cursor-not-allowed"
+                            />
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Name</label>
@@ -284,7 +343,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.file_no && <span className="text-red-500">{prevError.file_no}</span>}
                         </div>
-                                                <div className="w-full sm:w-[calc(50%-10px)]">
+                        <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Withdraw</label>
                             <input
                                 type="text"
@@ -293,7 +352,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 onChange={handleChange}
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
-                            
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">MCB FEE / 6000 DATE</label>

@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAppContext } from '../../contexts/AppContext';
 import AgentNameModal from '../../ui/AgentNameModal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import { fetchEntryCounts } from '../../ui/api';
 
 const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const { user } = useAppContext();
@@ -12,15 +13,20 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [isLoadingNames, setIsLoadingNames] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+        const [entryNumber, setEntryNumber] = useState(0); // Add entryNumber state
+    const [totalEntries, setTotalEntries] = useState(0);
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const isEditing = !!editingEntry;
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `ag${entryNumber}/t${totalEntries}`;
+};
 
     const initialValues = {
         agent_name: editingEntry?.agent_name || '',
         date: editingEntry?.date || '',
         employee: editingEntry?.employee || user?.username || '', 
-        entry: editingEntry?.entry || '',
+        entry: editingEntry?.entry ||  formatEntry(entryNumber, totalEntries), 
         detail: editingEntry?.detail || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
         debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
@@ -37,6 +43,33 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     }).test('credit-debit-test', 'Either Credit or Debit is required', (values) => {
         return values.credit || values.debit;
     });
+
+       useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const agentCounts = counts.find(c => c.form_type === 'agent');
+                if (agentCounts) {
+                    setEntryNumber(agentCounts.current_count + 1) ; // Use counts as-is
+                    setTotalEntries(agentCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+    useEffect(() => {
+        if (!isEditing) {
+            // Update entry field in form when counts change
+            setAgentNames(prev => [...prev]); // Trigger re-render if needed
+        }
+    }, [entryNumber, totalEntries, isEditing]);
 
     // Fetch existing agent names
     const fetchAgentNames = async () => {
@@ -177,12 +210,15 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                     <ErrorMessage name="employee" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>
 
-                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                 <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Entry</label>
                                     <Field
                                         type="text"
                                         name="entry"
-                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
+                                        disabled
+                                        readOnly
+                                        value={formatEntry(entryNumber, totalEntries)} 
                                     />
                                     <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>

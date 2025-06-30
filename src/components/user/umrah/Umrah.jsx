@@ -21,6 +21,7 @@ const Umrah = () => {
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    
 
     const fetchUmrah = async () => {
         setIsLoading(true);
@@ -30,7 +31,7 @@ const Umrah = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            const formattedData = data.umrahBookings.map((booking,index) => {
+            const formattedData = data.umrahBookings.map((booking) => {
                  let passportDetails = {};
                 try {
                     if (typeof booking.passportDetail === 'string') {
@@ -43,26 +44,26 @@ const Umrah = () => {
                 }
                 return {
                      ...booking,
-                     serialNo: index + 1,
-                    depart_date: new Date(booking.depart_date).toLocaleDateString(),
-                    return_date: new Date(booking.return_date).toLocaleDateString(),
-                    createdAt: new Date(booking.createdAt).toLocaleDateString(),
+                    
+                    depart_date: new Date(booking.depart_date).toLocaleDateString('en-GB'),
+                    return_date: new Date(booking.return_date).toLocaleDateString('en-GB'),
+                    createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB'),
                     // Add formatted passport details for display
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
                     passengerNationality: passportDetails.nationality || '',
                     documentType: passportDetails.documentType || '',
                     documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                     documentIssueCountry: passportDetails.issueCountry || '',
                     // Keep the original passport detail for editing
                     passportDetail: booking.passportDetail
                 }
             }
         );
-            setEntries(formattedData);
+            setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
@@ -78,7 +79,7 @@ const Umrah = () => {
      const baseColumns = [
         { header: 'BOOKING DATE', accessor: 'createdAt' },
         { header: 'EMPLOYEE NAME', accessor: 'userName' },
-        { header: 'ENTRY', accessor: 'serialNo' },
+        { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customerAdd' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'PACKAGE DETAIL', accessor: 'packageDetail' },
@@ -126,13 +127,13 @@ const Umrah = () => {
         header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
             <>
                 <button
-                    className="text-blue-500 hover:text-blue-700 mr-3"
+                    className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                     onClick={() => handleUpdate(index)}
                 >
                     <i className="fas fa-edit"></i>
                 </button>
                 <button
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 text-[8px]"
                     onClick={() => openDeleteModal(index)}
                 >
                     <i className="fas fa-trash"></i>

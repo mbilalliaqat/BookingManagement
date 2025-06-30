@@ -26,17 +26,17 @@ const OfficeAccounts = () => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     // Memoize date formatting functions to avoid recreating on each render
-    const formatDate = useCallback((dateString) => {
-        if (!dateString) return '';
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return '';
-            return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-        } catch (error) {
-            console.error('Error parsing date:', dateString, error);
-            return '';
-        }
-    }, []);
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('en-GB'); // Format as day/month/year
+    } catch (error) {
+        console.error('Error parsing date:', dateString, error);
+        return '';
+    }
+}, []);
 
     const formatDateForInput = useCallback((dateString) => {
         if (!dateString) return '';
@@ -82,15 +82,12 @@ const OfficeAccounts = () => {
             const data = await response.json();
             
             // Process data with Promise.all for potential performance improvement
-            const formattedData = await Promise.all(
-                data.map(async (entry,index) => ({
-                    ...entry,
-                    serialNo: index + 1,
-                    date: formatDate(entry.date),
-                }))
-            );
+           const formattedData = data.map(entry => ({
+            ...entry,
+            date: formatDate(entry.date),
+             entry: entry.entry
             
-            // Cache the formatted result
+        }));
             entriesCache.set(selectedBank, formattedData);
             
             setEntries(formattedData);
@@ -110,8 +107,8 @@ const OfficeAccounts = () => {
     // Memoize columns to prevent unnecessary re-renders
     const columns = useMemo(() => [
         { header: 'DATE', accessor: 'date' },
+        {header:'ENTRY', accessor:'entry'},
         {header:'EMPLOYEE',accessor:'employee_name'},
-        { header: 'ENTRY', accessor: 'serialNo' },
         { header: 'DETAIL', accessor: 'detail' },
         { header: 'CREDIT', accessor: 'credit' },
         { header: 'DEBIT', accessor: 'debit' },
@@ -124,14 +121,14 @@ const OfficeAccounts = () => {
                       render: (row, index) => (
                           <>
                               <button
-                                  className="text-blue-500 hover:text-blue-700 mr-3"
+                                  className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                                   onClick={() => handleUpdate(index)}
                                   disabled={loadingActionId === index.id}
                               >
                                   {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
                               </button>
                               <button
-                                  className="text-red-500 hover:text-red-700"
+                                  className="text-red-500 hover:text-red-700 text-[8px]"
                                   onClick={() => openDeleteModal(index.id)}
                                   disabled={loadingActionId === index.id}
                               >

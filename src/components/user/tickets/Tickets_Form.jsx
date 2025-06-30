@@ -62,12 +62,16 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { value: "MCB", label: "MCB (FIT MANPOWER)" }
     ];
 
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `ti${entryNumber}/t${totalEntries}`;
+};
+
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
         agent_name: '',
         customer_add: '',
         reference: '',
-        entry: '0/0',
+        entry: formatEntry(entryNumber, totalEntries),
         depart_date: '',
         return_date: '',
         sector: '',
@@ -97,9 +101,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
         customer_add: Yup.string().required('Customer Address is required'),
-        reference: Yup.string().required('Reference is required'),
         depart_date: Yup.date().required('Travel Date is required').typeError('Invalid date'),
-        return_date: Yup.date().required('Return Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
         airline: Yup.string().required('Airline is required'),
         adults: Yup.number().required('Adults is required').min(0, 'Adults cannot be negative'),
@@ -108,16 +110,9 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         passengerTitle: Yup.string().required('Title is required'),
         passengerFirstName: Yup.string().required('First Name is required'),
         passengerLastName: Yup.string().required('Last Name is required'),
-        passengerDob: Yup.date().required('Date of Birth is required').typeError('Invalid date'),
-        passengerNationality: Yup.string().required('Nationality is required'),
-        documentType: Yup.string().required('Document Type is required'),
         documentNo: Yup.string().required('Document Number is required'),
-        documentExpiry: Yup.date().required('Expiry Date is required').typeError('Invalid date'),
-        documentIssueCountry: Yup.string().required('Issue Country is required'),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
-        paid_cash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
-        bank_title: Yup.string().required('Bank Title is required'),
-        paid_in_bank: Yup.string().required('Paid In Bank is required'),
+        
         payable_to_vendor: Yup.number().required('Payable To Vendor is required').typeError('Payable To Vendor must be a number'),
         
         profit: Yup.number(),
@@ -186,7 +181,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 agent_name: editEntry.agent_name || '',
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
-                entry: editEntry.entry || '0/0',
+                entry: editEntry.entry || formatEntry(entryNumber, totalEntries), 
                 depart_date: formatDate(editEntry.depart_date),
                 return_date: formatDate(editEntry.return_date),
                 sector: editEntry.sector || '',
@@ -241,7 +236,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: `${entryNumber}/${totalEntries}`
+            entry: formatEntry(entryNumber, totalEntries)
         }));
     }, [entryNumber, totalEntries]);
 
@@ -439,10 +434,11 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
+        { name: 'documentNo', label: 'Passport No', type: 'text', placeholder: 'Enter Passport number', icon: 'passport' },
         { name: 'passengerDob', label: 'Date of Birth', type: 'date', placeholder: 'Select date of birth', icon: 'calendar' },
         { name: 'passengerNationality', label: 'Nationality', type: 'text', placeholder: 'Enter nationality', icon: 'flag' },
         { name: 'documentType', label: 'Document Type', type: 'select', options: ['Passport'], placeholder: 'Select document type', icon: 'id-card' },
-        { name: 'documentNo', label: 'Document No', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
+
         { name: 'documentExpiry', label: 'Expiry Date', type: 'date', placeholder: 'Select expiry date', icon: 'calendar-times' },
         { name: 'documentIssueCountry', label: 'Issue Country', type: 'text', placeholder: 'Enter issue country', icon: 'globe' },
     ];
@@ -500,7 +496,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         type={field.type}
                         name={field.name}
                         placeholder={field.placeholder}
-                        className={`w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+                        className={`w-full border border-gray-300 rounded-md px-3 py-1  ${
                             field.readOnly ? 'bg-gray-100' : ''
                         }`}
                         disabled={field.readOnly}
@@ -594,17 +590,17 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     </motion.div>
                 )}
 
-                <ErrorMessage 
-                    name={field.name} 
-                    component="p" 
-                    className="mt-1 text-sm text-red-500 flex items-center"
-                >
-                    {(msg) => (
-                        <span className="flex items-center">
-                            <i className="fas fa-exclamation-circle mr-1"></i> {msg}
-                        </span>
-                    )}
-                </ErrorMessage>
+               <ErrorMessage 
+    name={field.name} 
+    component="p" 
+    className="mt-1 text-sm text-red-500 flex items-center"
+>
+    {(msg) => (
+        <span className="flex items-center text-red-500">
+            <i className="fas fa-exclamation-circle mr-1 text-red-500"></i> {msg}
+        </span>
+    )}
+</ErrorMessage>
             </div>
         </motion.div>
     );

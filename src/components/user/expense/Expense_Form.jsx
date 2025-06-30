@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
-
-
+import { fetchEntryCounts } from '../../ui/api';
 
 const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
-
-     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [isLoading, setIsLoading] = useState(false);
+    const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `ex${entryNumber}/t${totalEntries}`;
+};
+    
     const [data, setData] = useState({
         user_name: user?.username || '',
-        entry: '',
+        entry: '0/0',
         date: '',
         detail: '',
         total_amount: '',
         selection: '',
-        withdraw:''
+        withdraw: ''
     });
 
     const [prevError, setPrevError] = useState({
@@ -28,11 +33,41 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         general: ''
     });
 
+    // Fetch entry counts on component mount
+    useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const expenseCounts = counts.find(c => c.form_type === 'expense');
+                if (expenseCounts) {
+                    setEntryNumber(expenseCounts.current_count + 1);
+                    setTotalEntries(expenseCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+    // Update entry field when entry numbers change
+    useEffect(() => {
+        setData(prev => ({
+            ...prev,
+            user_name: user?.username || '',
+            entry: formatEntry(entryNumber, totalEntries)
+        }));
+    }, [entryNumber, totalEntries, user]);
+
     useEffect(() => {
         if (editEntry) {
             setData({
-                user_name: editEntry.user_name    || '',
-                entry: editEntry.entry || '',
+                user_name: editEntry.user_name || user?.username || '',
+                entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
                 date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
                 detail: editEntry.detail || '',
                 total_amount: editEntry.total_amount || '',
@@ -40,7 +75,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 withdraw: editEntry.withdraw || ''
             });
         }
-    }, [editEntry]);
+    }, [editEntry, entryNumber, totalEntries, user]);
 
     const handleChange = (e) => {
         setData({ ...data, [e.target.name]: e.target.value });
@@ -95,12 +130,12 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             
             const requestData = {
                 user_name: data.user_name,
-                entry: data.entry,
+                entry: formatEntry(entryNumber, totalEntries),
                 date: data.date,
                 detail: data.detail,
                 total_amount: parseInt(data.total_amount),
                 selection: data.selection,
-                withdraw:data.withdraw
+                withdraw: data.withdraw
             };
 
             try {
@@ -127,12 +162,12 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
                 setData({
                     user_name: user?.username || '',
-                    entry: '',
+                    entry: `${entryNumber}/${totalEntries}`,
                     date: '',
                     detail: '',
                     total_amount: '',
                     selection: '',
-                    withdraw:''
+                    withdraw: ''
                 });
 
                 if (onSubmitSuccess) {
@@ -175,9 +210,22 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 name="user_name"
                                 value={data.user_name}
                                 onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
+                                readOnly
                             />
                             {prevError.user_name && <span className="text-red-500">{prevError.user_name}</span>}
+                        </div>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Entry</label>
+                            <input
+                                type="text"
+                                name="entry"
+                                value={data.entry}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
+                                readOnly
+                            />
+                            {prevError.entry && <span className="text-red-500">{prevError.entry}</span>}
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Date</label>
@@ -189,17 +237,6 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
                             {prevError.date && <span className="text-red-500">{prevError.date}</span>}
-                        </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Entry</label>
-                            <input
-                                type="text"
-                                name="entry"
-                                value={data.entry}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            />
-                            {prevError.entry && <span className="text-red-500">{prevError.entry}</span>}
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Withdraw</label>

@@ -35,9 +35,9 @@ const Expense = () => {
                 
                 const formattedData = data.expenses?.map((entry) => ({
                     ...entry,
-                    date: new Date(entry.date).toLocaleDateString(),
+                    date: new Date(entry.date).toLocaleDateString('en-GB'),
                 }));
-                setEntries(formattedData);
+                setEntries(formattedData.reverse());
                 
             }
             catch(error){
@@ -53,7 +53,7 @@ const Expense = () => {
         },[])
     const columns = [
         { header: 'SELECT', accessor: 'selection' },
-        {header:'USERNAME', accessor:'user_name'},
+        {header:'EMPLOYEE NAME', accessor:'user_name'},
         { header: 'DATE', accessor: 'date' },
         {header:'ENTRY', accessor:'entry'},
         { header: 'DETAIL', accessor: 'detail' },
@@ -63,13 +63,13 @@ const Expense = () => {
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i> 
                     </button>
                     <button
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 text-[8px]"
                         onClick={() => openDeleteModal(index)}
                     >
                         <i className="fas fa-trash"></i> 

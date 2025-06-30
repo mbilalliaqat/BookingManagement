@@ -1,14 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner'; // Import the spinner component
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts } from '../../ui/api'; // Import the fetchEntryCounts function
 
 const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
-
     const { user } = useAppContext();
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    
+    // Add state for entry numbers
+    const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `ac${entryNumber}/t${totalEntries}`;
+};
+
     const [data, setData] = useState({
         bank_name: '',
-        employee_name:user?.username || '',
+        employee_name: user?.username || '',
+        entry: '0/0', // Add entry field
         date: '',
         detail: '',
         credit: '',
@@ -28,12 +38,43 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [isSubmitting, setIsSubmitting] = useState(false); // Added loading state
     const isEditing = !!editingEntry;
 
+    // Fetch entry counts on component mount
+    useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts(); // Assume this function is available
+            if (counts) {
+                const officeAccountCounts = counts.find(c => c.form_type === 'account');
+                if (officeAccountCounts) {
+                    setEntryNumber(officeAccountCounts.current_count + 1);
+                    setTotalEntries(officeAccountCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+    // Update entry field when entry numbers change
+    useEffect(() => {
+        setData(prev => ({
+            ...prev,
+            employee_name: user?.username || '',
+            entry:  formatEntry(entryNumber, totalEntries)
+        }));
+    }, [entryNumber, totalEntries, user]);
+
     // Set today's date on mount or populate form with editing entry data
     useEffect(() => {
         if (editingEntry) {
             setData({
                 id: editingEntry.id,
                 employee_name: editingEntry.employee_name || '',
+                entry: editingEntry.entry ||  formatEntry(entryNumber, totalEntries), // Update entry field
                 bank_name: editingEntry.bank_name || '',
                 date: editingEntry.date || '',
                 detail: editingEntry.detail || '',
@@ -49,7 +90,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                 date: formattedDate,
             }));
         }
-    }, [editingEntry]);
+    }, [editingEntry, entryNumber, totalEntries]);
 
     const handleCheckboxChange = (e) => {
         // Don't allow changing to "Opening Balance" mode when editing
@@ -111,6 +152,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             const submitData = {
                 bank_name: data.bank_name,
                 employee_name: data.employee_name,
+                entry:  formatEntry(entryNumber, totalEntries),
                 date: data.date || new Date().toISOString().split('T')[0],
                 detail: data.detail,
             };
@@ -158,7 +200,8 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             // Reset form
             setData({
                 bank_name: '',
-                employee_name:user?.username || '',
+                employee_name: user?.username || '',
+                entry: formatEntry(entryNumber, totalEntries),
                 date: new Date().toISOString().split('T')[0],
                 detail: '',
                 credit: '',
@@ -202,27 +245,25 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                         </div>
 
                         <div className="w-full sm:w-[calc(50%-10px)]">
-                                <label className="block font-medium mb-1">Bank Name</label>
-                                <select
-                                    name="bank_name"
-                                    value={data.bank_name}
-                                    onChange={handleChange}
-                                 
-                                    className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                >
-                                    <option value="">Select a Bank</option>
-                                    <option value="UNITED BANK (ubl1)">UNITED BANK (M ALI RAZA)</option>
-                                    <option value="UNITED BANK (ubl2)">UNITED BANK (FAIZAN E RAZA TRAVEL)</option>
-                                    <option value="HABIB BANK (HBL1)">HABIB BANK (M ALI RAZA)</option>
-                                    <option value="HABIB BANK (HBL2)">HABIB BANK (FAIZAN E RAZA TRAVEL)</option>
-                                    <option value="JAZZCASH">JAZZCASH (M ALI RAZA)</option>
-                                     <option value="MCB">MCB (FIT MANPOWER) (FIT MANPOWER)</option>
-                                </select>
-                                {prevError.bank_name && <span className="text-red-500">{prevError.bank_name}</span>}
-                            </div>
+                            <label className="block font-medium mb-1">Bank Name</label>
+                            <select
+                                name="bank_name"
+                                value={data.bank_name}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            >
+                                <option value="">Select a Bank</option>
+                                <option value="UNITED BANK (ubl1)">UNITED BANK (M ALI RAZA)</option>
+                                <option value="UNITED BANK (ubl2)">UNITED BANK (FAIZAN E RAZA TRAVEL)</option>
+                                <option value="HABIB BANK (HBL1)">HABIB BANK (M ALI RAZA)</option>
+                                <option value="HABIB BANK (HBL2)">HABIB BANK (FAIZAN E RAZA TRAVEL)</option>
+                                <option value="JAZZCASH">JAZZCASH (M ALI RAZA)</option>
+                                <option value="MCB">MCB (FIT MANPOWER) (FIT MANPOWER)</option>
+                            </select>
+                            {prevError.bank_name && <span className="text-red-500">{prevError.bank_name}</span>}
+                        </div>
 
-                            
-                              <div className="w-full sm:w-[calc(50%-10px)]">
+                        <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Employee</label>
                             <input
                                 type="text"
@@ -231,7 +272,17 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                 onChange={handleChange}
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
-                            
+                        </div>
+
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Entry</label>
+                            <input
+                                type="text"
+                                name="entry"
+                                value={data.entry}
+                                readOnly
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
+                            />
                         </div>
 
                         <div className="w-full sm:w-[calc(50%-10px)]">

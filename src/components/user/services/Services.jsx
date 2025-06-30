@@ -32,12 +32,11 @@ const Services = () => {
             console.log("Fetched data:", data);
 
             // Assign serialNo based on the fetched order
-            const formattedData = data.services.map((entry, index) => ({
+            const formattedData = data.services.map((entry) => ({
                 ...entry,
-                serialNo: index + 1,
                 booking_date: formatDate(entry.booking_date),
             }));
-            setEntries(formattedData);
+            setEntries(formattedData.reverse());
         } catch (error) {
             console.log("Error Fetching data", error);
             setError('Failed to load data. Please try again later.');
@@ -54,7 +53,7 @@ const Services = () => {
         { header: 'VISA TYPE', accessor: 'visa_type' },
         { header: 'BOOKING DATE', accessor: 'booking_date' },
         { header: 'EMPLOYEE NAME', accessor: 'user_name' },
-        { header: 'ENTRY', accessor: 'serialNo' },
+        { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'SPECIAL DETAIL', accessor: 'specific_detail' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
@@ -66,14 +65,14 @@ const Services = () => {
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                         // Pass the entire row object to handleUpdate
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i>
                     </button>
                     <button
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 text-[8px]"
                         // Pass the row id to openDeleteModal
                         onClick={() => openDeleteModal(index.id)}
                     >
@@ -90,10 +89,10 @@ const Services = () => {
         )
     );
 
-    const formatDate = (dateString) => {
+     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
-        return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+        return date.toLocaleDateString('en-GB'); // Format as day/month/year
     };
 
     const handleCancel = () => {

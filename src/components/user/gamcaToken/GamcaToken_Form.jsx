@@ -4,6 +4,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts } from '../../ui/api';
 
 // Auto-calculation component for GAMCA token form
 const AutoCalculate = () => {
@@ -36,10 +37,17 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
+     const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `Ga${entryNumber}/t${totalEntries}`;
+};
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
         customer_add: '',
+        entry: formatEntry(entryNumber, totalEntries),
         reference: '',
         country: '',
         // Structured passport fields
@@ -83,6 +91,35 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         remaining_amount: Yup.number()
     });
 
+     useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const gamcaCounts = counts.find(c => c.form_type === 'gamca');
+                if (gamcaCounts) {
+                    setEntryNumber(gamcaCounts.current_count + 1);
+                    setTotalEntries(gamcaCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+    // Update form initial values when entry numbers change or user changes
+    useEffect(() => {
+        setFormInitialValues(prev => ({
+            ...prev,
+            employee_name: user?.username || '',
+            entry: formatEntry(entryNumber, totalEntries),
+        }));
+    }, [entryNumber, totalEntries, user]);
+
     useEffect(() => {
         if (editEntry) {
             // Parse passport details if it's stored as a JSON string or structured object
@@ -111,7 +148,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
-                
+                entry: editEntry.entry || formatEntry(entryNumber, totalEntries), 
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 country: editEntry.country || '',
@@ -157,6 +194,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const requestData = {
             employee_name: values.employee_name,
             customer_add: values.customer_add,
+            entry: values.entry,
             reference: values.reference,
             country: values.country,
             passport_detail: passportDetail,
@@ -220,7 +258,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
-        
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'country', label: 'Country', type: 'text', placeholder: 'Enter country', icon: 'globe' },
@@ -290,7 +328,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     className="mt-1 text-sm text-red-500 flex items-center"
                 >
                     {(msg) => (
-                        <span className="flex items-center">
+                        <span className="flex items-center text-red-500">
                             <i className="fas fa-exclamation-circle mr-1"></i> {msg}
                         </span>
                     )}

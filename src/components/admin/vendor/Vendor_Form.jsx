@@ -4,21 +4,27 @@ import * as Yup from 'yup';
 import axios from 'axios';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import VenderNameModal from '../../ui/VenderNameModal'; 
+import { fetchEntryCounts } from '../../ui/api';
 
 const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [vendorNames, setVendorNames] = useState([]);
     const [isLoadingNames, setIsLoadingNames] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [entryNumber, setEntryNumber] = useState(0); // Add entryNumber state
+    const [totalEntries, setTotalEntries] = useState(0);
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const isEditing = !!editingEntry;
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `ve${entryNumber}/t${totalEntries}`;
+};
 
     // Initial values for Formik form
     const initialValues = {
         vender_name: editingEntry?.vender_name || '', 
         date: editingEntry?.date ? new Date(editingEntry.date).toISOString().split('T')[0] : '',
-        entry: editingEntry?.entry || '',
+        entry: editingEntry?.entry || formatEntry(entryNumber, totalEntries),
         detail: editingEntry?.detail || '', 
         bank_title: editingEntry?.bank_title || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
@@ -60,6 +66,33 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         fetchVendorNames();
     }, []);
 
+     useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const vendorCounts = counts.find(c => c.form_type === 'vender');
+                if (vendorCounts) {
+                    setEntryNumber(vendorCounts.current_count + 1); // Use counts as-is
+                    setTotalEntries(vendorCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+     useEffect(() => {
+        if (!isEditing) {
+            // Update entry field in form when counts change
+            setVendorNames(prev => [...prev]); // Trigger re-render if needed
+        }
+    }, [entryNumber, totalEntries, isEditing]);
+
     // Handler for when a new vendor name is added via the modal
     const handleVendorAdded = async (newVendorName) => {
         if (newVendorName && !vendorNames.includes(newVendorName)) {
@@ -76,7 +109,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             const submitData = {
                 vender_name: values.vender_name,
                 date: values.date,
-                entry: values.entry, // This maps to the 'entry' field in your backend
+                entry:  formatEntry(entryNumber, totalEntries),
                 detail: values.detail, // This maps to the 'detail' field in your backend
                 bank_title: values.bank_title,
                 credit: parseFloat(values.credit) || null, // Ensure null for 0 or empty string
@@ -172,18 +205,19 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                     <ErrorMessage name="date" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>
 
-                                {/* Assuming 'entry' in your old VendorForm maps to 'detail' in backend, and backend 'entry' is a separate field. */}
-                                {/* If your backend 'entry' is a concise description and 'detail' is more elaborate, adjust labels accordingly. */}
-                                <div className="w-full sm:w-[calc(50%-10px)]">
-                                    <label className="block font-medium mb-1">Entry</label>
-                                    <Field
-                                        type="text"
-                                        name="entry"
-                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                        disabled={isSubmitting}
-                                    />
-                                    <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
-                                </div>
+                               
+                                 <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Entry</label>
+                            <Field
+                                type="text"
+                                name="entry"
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
+                                disabled
+                                readOnly
+                                value={formatEntry(entryNumber, totalEntries)} 
+                            />
+                            <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
+                        </div>
 
                                 <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Detail</label>

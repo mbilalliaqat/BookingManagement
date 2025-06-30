@@ -24,12 +24,12 @@ const Agent = () => {
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-    // Date formatting function - same as Services component
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-    };
+   const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-GB'); 
+};
 
     const fetchData = async () => {
         try {
@@ -194,14 +194,14 @@ const Agent = () => {
                       render: (row, index) => (
                           <>
                               <button
-                                  className="text-blue-500 hover:text-blue-700 mr-3"
+                                  className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                                   onClick={() => handleUpdate(index)}
                                   disabled={loadingActionId === index.id}
                               >
                                   {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
                               </button>
                               <button
-                                  className="text-red-500 hover:text-red-700"
+                                  className="text-red-500 hover:text-red-700 text-[8px]"
                                   onClick={() => openDeleteModal(index.id)}
                                   disabled={loadingActionId === index.id}
                               >

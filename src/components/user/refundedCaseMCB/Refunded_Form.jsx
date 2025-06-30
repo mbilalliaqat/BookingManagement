@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts } from '../../ui/api';
 
 const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-     const { user } = useAppContext();
+    const { user } = useAppContext();
+    const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `rm${entryNumber}/t${totalEntries}`;
+};
 
     const [data, setData] = useState({
-         employee: user?.username || '',
+        employee: user?.username || '',
+        entry: '0/0',
         date: '',
         name: '',
         passport: '',
@@ -17,11 +24,12 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_fee_date: '',
         paid_refund_date: '',
         total_balance: '',
-        withdraw:''
+        withdraw: ''
     });
 
     const [prevError, setPrevError] = useState({
         employee: '',
+        entry: '',
         date: '',
         name: '',
         passport: '',
@@ -34,10 +42,41 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Fetch entry counts on component mount
+    useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const refundedCounts = counts.find(c => c.form_type === 'refunded');
+                if (refundedCounts) {
+                    setEntryNumber(refundedCounts.current_count + 1);
+                    setTotalEntries(refundedCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+    // Update entry field when entry numbers change
+    useEffect(() => {
+        setData(prev => ({
+            ...prev,
+            employee: user?.username || '',
+            entry: formatEntry(entryNumber, totalEntries)
+        }));
+    }, [entryNumber, totalEntries, user]);
+
     useEffect(() => {
         if (editEntry) {
             setData({
                 employee: editEntry.employee || user?.username || '',
+                entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
                 date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
                 name: editEntry.name || '',
                 passport: editEntry.passport || '',
@@ -48,7 +87,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 withdraw: editEntry.withdraw || ''
             });
         }
-    }, [editEntry]);
+    }, [editEntry, entryNumber, totalEntries, user]);
 
     const handleChange = (e) => {
         setData({ ...data, [e.target.name]: e.target.value });
@@ -79,6 +118,10 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         // Required field validations
         if (!data.employee) {
             newErrors.employee = 'Employee is required';
+            isValid = false;
+        }
+        if (!data.entry) {
+            newErrors.entry = 'Entry is required';
             isValid = false;
         }
         if (!data.date) {
@@ -131,6 +174,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             setIsSubmitting(true);
             const requestData = {
                 employee: data.employee,
+                entry: formatEntry(entryNumber, totalEntries),
                 date: data.date,
                 name: data.name,
                 passport: data.passport,
@@ -164,7 +208,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 console.log('Success:', result);
 
                 setData({
-                    employee: '',
+                    employee: user?.username || '',
+                    entry: `${entryNumber}/${totalEntries}`,
                     date: '',
                     name: '',
                     passport: '',
@@ -172,7 +217,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     paid_fee_date: '',
                     paid_refund_date: '',
                     total_balance: '',
-                    withdraw:''
+                    withdraw: ''
                 });
 
                 if (onSubmitSuccess) {
@@ -208,9 +253,21 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 value={data.employee}
                                 onChange={handleChange}
                                 readOnly
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
                             />
                             {prevError.employee && <span className="text-red-500 text-sm">{prevError.employee}</span>}
+                        </div>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Entry</label>
+                            <input
+                                type="text"
+                                name="entry"
+                                value={data.entry}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
+                                readOnly
+                            />
+                            {prevError.entry && <span className="text-red-500 text-sm">{prevError.entry}</span>}
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Date </label>
@@ -278,7 +335,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.paid_refund_date && <span className="text-red-500 text-sm">{prevError.paid_refund_date}</span>}
                         </div>
-                          <div className="w-full sm:w-[calc(50%-10px)]">
+                        <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">WITHDRAW </label>
                             <input
                                 type="number"

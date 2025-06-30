@@ -34,7 +34,7 @@ const Visa = () => {
             console.log("Response Data", response)
             const data = response.data;
             console.log("API Data", data)
-            const formattedData = data.visa_processing?.map((visa,index) => {
+            const formattedData = data.visa_processing?.map((visa) => {
                 // Parse passport details similar to Tickets component
                 let passportDetails = {};
                 try {
@@ -49,38 +49,38 @@ const Visa = () => {
 
                 return {
                     ...visa,
-                    serialNo: index + 1,
-                    created_at: new Date(visa.created_at).toLocaleDateString(),  
+                  
+                    created_at: new Date(visa.created_at).toLocaleDateString('en-GB'),  
                     embassy_send_date: visa.embassy_send_date
-                        ? new Date(visa.embassy_send_date).toLocaleDateString()
+                        ? new Date(visa.embassy_send_date).toLocaleDateString('en-GB')
                         : 'N/A',
                     embassy_return_date: visa.embassy_return_date
-                        ? new Date(visa.embassy_return_date).toLocaleDateString()
+                        ? new Date(visa.embassy_return_date).toLocaleDateString('en-GB')
                         : 'N/A',
                     protector_date: visa.protector_date
-                        ? new Date(visa.protector_date).toLocaleDateString()
+                        ? new Date(visa.protector_date).toLocaleDateString('en-GB')
                         : 'N/A',
                          expiry_medical_date: visa.expiry_medical_date
-                        ? new Date(visa.expiry_medical_date).toLocaleDateString()
+                        ? new Date(visa.expiry_medical_date).toLocaleDateString('en-GB')
                         : 'N/A',
                     passport_deliver_date: visa.passport_deliver_date
-                        ? new Date(visa.passport_deliver_date).toLocaleDateString()
+                        ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB')
                         : 'N/A',
                     // Add formatted passport details for display
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
                     passengerNationality: passportDetails.nationality || '',
                     documentType: passportDetails.documentType || '',
                     documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                     documentIssueCountry: passportDetails.issueCountry || '',
                     // Keep the original passport detail for editing
                     passport_detail: visa.passport_detail
                 };
             });
-            setEntries(formattedData);
+            setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
@@ -98,7 +98,7 @@ const Visa = () => {
      const baseColumns = [
        { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'serialNo' },
+        { header: 'ENTRY', accessor: 'entry' },
         { header: 'FILE NO.', accessor: 'file_number' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'SPONSOR NAME', accessor: 'sponsor_name' },
@@ -152,13 +152,13 @@ const Visa = () => {
         header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
             <>
                 <button
-                    className="text-blue-500 hover:text-blue-700 mr-3"
+                    className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                     onClick={() => handleUpdate(index)}
                 >
                     <i className="fas fa-edit"></i>
                 </button>
                 <button
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 text-[8px]"
                     onClick={() => openDeleteModal(index)}
                 >
                     <i className="fas fa-trash"></i>

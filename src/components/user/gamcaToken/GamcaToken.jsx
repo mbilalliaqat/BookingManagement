@@ -62,7 +62,7 @@ const GamcaToken = () => {
             const data = response.data.gamcaTokens;
             console.log('Parsed GAMCA tokens:', data);
             
-            const formattedData = data.map((token,index) => {
+            const formattedData = data.map((token) => {
                 let passportDetails = {};
                 try {
                     if (typeof token.passport_detail === 'string') {
@@ -75,22 +75,22 @@ const GamcaToken = () => {
                 }
                 return {
                     ...token,
-                    serialNo: index + 1,
-                    created_at: new Date(token.created_at).toLocaleDateString('en-US'),
+                    
+                    created_at: new Date(token.created_at).toLocaleDateString('en-GB'),
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
                     passengerNationality: passportDetails.nationality || '',
                     documentType: passportDetails.documentType || '',
                     documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                     documentIssueCountry: passportDetails.issueCountry || '',
                     passport_detail: token.passport_detail
                 };
             });
             
-            setEntries(formattedData);
+            setEntries(formattedData.reverse());
             
             if (formattedData.length === 0) {
                 console.log('No GAMCA tokens found in the response');
@@ -119,7 +119,7 @@ const GamcaToken = () => {
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'serialNo' },
+        { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'COUNTRY', accessor: 'country' },
@@ -142,13 +142,13 @@ const GamcaToken = () => {
             header: 'ACTIONS', accessor: 'actions', render: (row,index) => (
                 <>
                     <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i>
                     </button>
                     <button
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 text-[8px]"
                         onClick={() => openDeleteModal(index)}
                     >
                         <i className="fas fa-trash"></i>

@@ -4,6 +4,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext'; // Ensure this path is correct
+import { fetchEntryCounts } from '../../ui/api';
 
 
 // --- Constants (consider moving to a separate file if used across components) ---
@@ -37,12 +38,18 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
+     const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `se${entryNumber}/t${totalEntries}`;
+};
 
     // Memoize initial values to avoid re-creation on every render
     const initialValues = useMemo(() => {
         const base = {
             user_name: user?.username || '',
-            
+             entry: formatEntry(entryNumber, totalEntries),
             customer_add: '',
             booking_date: '',
             specific_detail: '',
@@ -65,7 +72,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             return {
                 ...base,
                 user_name: editEntry.user_name || user?.username || '',
-                
+                 entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
                 customer_add: editEntry.customer_add || '',
                 booking_date: formatDate(editEntry.booking_date),
                 specific_detail: editEntry.specific_detail || '',
@@ -79,7 +86,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             };
         }
         return base;
-    }, [editEntry, user]);
+    }, [editEntry, user, entryNumber, totalEntries]);
 
     const validationSchema = Yup.object().shape({
         user_name: Yup.string().required('User Name is required'),
@@ -97,6 +104,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         const requestData = {
             user_name: values.user_name,
+            entry: formatEntry(entryNumber, totalEntries),
             customer_add: values.customer_add,
             booking_date: values.booking_date,
             specific_detail: values.specific_detail,
@@ -137,6 +145,26 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
+     useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const serviceCounts = counts.find(c => c.form_type === 'services');
+                if (serviceCounts) {
+                    setEntryNumber(serviceCounts.current_count + 1);
+                    setTotalEntries(serviceCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
     // Animation variants
     const formVariants = {
         hidden: { opacity: 0 },
@@ -162,6 +190,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'user_name', label: 'User Name', type: 'text', placeholder: 'Enter user name', icon: 'user', readOnly: true },
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Select booking date', icon: 'calendar' },
     ];
@@ -228,7 +257,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     className="mt-1 text-sm text-red-500 flex items-center"
                 >
                     {(msg) => (
-                        <span className="flex items-center">
+                        <span className="flex items-center text-red-500">
                             <i className="fas fa-exclamation-circle mr-1"></i> {msg}
                         </span>
                     )}

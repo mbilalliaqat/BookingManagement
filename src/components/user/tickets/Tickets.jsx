@@ -34,7 +34,7 @@ const Tickets = () => {
             // Sort by ID to maintain consistent order
             const sortedTickets = data.ticket.sort((a, b) => a.id - b.id);
             
-            const formattedData = sortedTickets.map((ticket, index) => {
+            const formattedData = sortedTickets.map((ticket) => {
                 let passportDetails = {};
                 try {
                     if (typeof ticket.passport_detail === 'string') {
@@ -47,25 +47,25 @@ const Tickets = () => {
                 }
                 return {
                     ...ticket,
-                    serialNo: index + 1,
-                    depart_date: new Date(ticket.depart_date).toLocaleDateString(),
-                    return_date: new Date(ticket.return_date).toLocaleDateString(),
-                    created_at: new Date(ticket.created_at).toLocaleDateString('en-US'),
+                    depart_date: new Date(ticket.depart_date).toLocaleDateString('en-GB'),
+                    return_date: new Date(ticket.return_date).toLocaleDateString('en-GB'),
+                    created_at: new Date(ticket.created_at).toLocaleDateString('en-GB'),
                     // Add formatted passport details for display
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
                     passengerNationality: passportDetails.nationality || '',
                     documentType: passportDetails.documentType || '',
                     documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                     documentIssueCountry: passportDetails.issueCountry || '',
                     // Keep the original passport detail for editing
                     passport_detail: ticket.passport_detail
                 };
+
             });
-            setEntries(formattedData);
+            setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
@@ -96,17 +96,17 @@ const Tickets = () => {
             const formattedTicket = {
                 ...updatedTicket,
                 serialNo: entries[entryIndex].serialNo, // Keep original serial number
-                depart_date: new Date(updatedTicket.depart_date).toLocaleDateString(),
-                return_date: new Date(updatedTicket.return_date).toLocaleDateString(),
-                created_at: new Date(updatedTicket.created_at).toLocaleDateString('en-US'),
+                depart_date: new Date(updatedTicket.depart_date).toLocaleDateString('en-GB'),
+                return_date: new Date(updatedTicket.return_date).toLocaleDateString('en-GB'),
+                created_at: new Date(updatedTicket.created_at).toLocaleDateString('en-GB'),
                 passengerTitle: passportDetails.title || '',
                 passengerFirstName: passportDetails.firstName || '',
                 passengerLastName: passportDetails.lastName || '',
-                passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
                 passengerNationality: passportDetails.nationality || '',
                 documentType: passportDetails.documentType || '',
                 documentNo: passportDetails.documentNo || '',
-                documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                 documentIssueCountry: passportDetails.issueCountry || '',
                 passport_detail: updatedTicket.passport_detail
             };
@@ -128,12 +128,28 @@ const Tickets = () => {
 
     const baseColumns=[
          { header: 'BOOKING DATE', accessor: 'created_at' },
-        { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'entry' },
+         { 
+        header: 'EMPLOYEE & ENTRY', 
+        accessor: 'employee_entry', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.employee_name || ''}</div>
+                <div style={{ }}>{row?.entry || ''}</div>
+            </div>
+        )
+    },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
-        { header: 'DEPART DATE', accessor: 'depart_date' },
-        { header: 'RETURN DATE', accessor: 'return_date' },
+  { 
+        header: 'DEPART & RETURN DATE', 
+        accessor: 'depart_return_date', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.depart_date || ''}</div>
+                <div style={{  }}>{row?.return_date || ''}</div>
+            </div>
+        )
+    },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
          {
@@ -147,9 +163,15 @@ const Tickets = () => {
                 return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
             }
         },
-        { header: 'TITLE', accessor: 'passengerTitle' },
-        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
-        { header: 'LAST NAME', accessor: 'passengerLastName' },
+         { 
+        header: 'PASSENGER DETAILS', 
+        accessor: 'passenger_details', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
+            </div>
+        )
+    },
     ];
     const passportColumns=[
          { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
@@ -163,10 +185,26 @@ const Tickets = () => {
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
-        { header: 'BANK TITLE', accessor: 'bank_title' },
-        { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
-        { header: 'PAYABLE TO VENDOR', accessor: 'payable_to_vendor' },
-        { header: 'VENDOR NAME', accessor: 'vendor_name' },
+     { 
+        header: 'BANK & PAID IN BANK', 
+        accessor: 'bank_paid', 
+        render: (cellValue, row) => (
+            <div>
+                <div style={{ color: '#666' }}>{row?.bank_title || ''}</div>
+                <div >{row?.paid_in_bank || ''}</div>
+            </div>
+        )
+    },
+         { 
+        header: 'VENDOR & PAYABLE', 
+        accessor: 'vendor_payable', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.vendor_name || ''}</div>
+                <div >{row?.payable_to_vendor || ''}</div>
+            </div>
+        )
+    },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
     ];
@@ -174,13 +212,13 @@ const Tickets = () => {
         header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
             <>
                 <button
-                    className="text-blue-500 hover:text-blue-700 mr-3"
+                    className="text-blue-500 hover:text-blue-700 pr-1 text-[8px]"
                     onClick={() => handleUpdate(index)}
                 >
                     <i className="fas fa-edit"></i>
                 </button>
                 <button
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 text-[8px]"
                     onClick={() => openDeleteModal(index)}
                 >
                     <i className="fas fa-trash"></i>

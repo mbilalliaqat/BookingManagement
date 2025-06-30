@@ -30,16 +30,15 @@ const Protector = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
-            const formattedData = data.protectors.map((protector,index) => ({
+            const formattedData = data.protectors.map((protector) => ({
                 ...protector,
-                serialNo: index + 1,
                 mcb_fee_6000_date: formatDate(protector.mcb_fee_6000_date),
                 ncb_fee_6700_date: formatDate(protector.ncb_fee_6700_date),
                 ncb_fee_500_date: formatDate(protector.ncb_fee_500_date),
                 protector_date: formatDate(protector.protector_date)
             }));
 
-            setEntries(formattedData);
+            setEntries(formattedData.reverse());
         } catch (error) {
             console.log("Error Fetching data", error);
             setError('Failed to load data. Please try again later.');
@@ -53,7 +52,7 @@ const Protector = () => {
     },[]);
 
     const columns = [
-        { header: 'Entry', accessor: 'serialNo' },
+        { header: 'Entry', accessor: 'entry' },
         {header:'EMPLOYEE',accessor:'employee'},
         { header: 'NAME', accessor: 'name' },
         {header:'FILE_NO',accessor:'file_no'},
@@ -70,13 +69,13 @@ const Protector = () => {
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i>
                     </button>
                     <button
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 text-[8px]"
                         onClick={() => openDeleteModal(index)}
                     >
                         <i className="fas fa-trash"></i>
@@ -92,10 +91,10 @@ const Protector = () => {
         )
     );
 
-    const formatDate = (dateString) => {
+     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
-        return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+        return date.toLocaleDateString('en-GB'); // Format as day/month/year
     };
 
     const handleCancel = () => {

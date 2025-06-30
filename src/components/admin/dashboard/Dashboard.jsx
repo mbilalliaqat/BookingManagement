@@ -259,7 +259,7 @@ export default function Dashboard() {
           remaining_amount: 0, 
           booking_date: new Date(protector.protector_date).toLocaleDateString(),
           withdraw: parseFloat(protector.withdraw || 0), // Use the withdraw field from protector
-          passengerName: null, // No passport detail for this type
+          passengerName: protector.name || null, // No passport detail for this type
         }));
         const expensesBookings = expensesData.expenses.map(expenses => ({
           type: 'Expenses',
@@ -281,7 +281,7 @@ export default function Dashboard() {
           remaining_amount: 0, 
           booking_date: new Date(refund.date).toLocaleDateString(), // Changed from refund.refunded_date
           withdraw: parseFloat(refund.withdraw || 0),
-          passengerName: null, // No passport detail for this type
+          passengerName:refund.name || null, // No passport detail for this type
         }));
           const venderBookings = (venderData.vender || []).map(vender => ({
           type: 'Vender',

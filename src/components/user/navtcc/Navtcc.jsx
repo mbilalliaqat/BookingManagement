@@ -29,7 +29,7 @@ const Navtcc = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
-            const formattedData = data.navtcc?.map((navtcc,index) => {
+            const formattedData = data.navtcc?.map((navtcc) => {
                 let passportDetails = {};
                 try {
                     if (typeof navtcc.passport_detail === 'string') {
@@ -42,23 +42,23 @@ const Navtcc = () => {
                 }
                 return {
                     ...navtcc,
-                    serialNo: index + 1,
-                    created_at: new Date(navtcc.created_at).toLocaleDateString('en-US'),
+                    
+                    created_at: new Date(navtcc.created_at).toLocaleDateString('en-GB'),
                     // Add formatted passport details for display
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString() : '',
+                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
                     passengerNationality: passportDetails.nationality || '',
                     documentType: passportDetails.documentType || '',
                     documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString() : '',
+                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                     documentIssueCountry: passportDetails.issueCountry || '',
                     // Keep the original passport detail for editing
                     passport_detail: navtcc.passport_detail
                 };
             });
-            setEntries(formattedData);
+            setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Failed to load data. Please try again later.');
@@ -74,7 +74,7 @@ const Navtcc = () => {
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'serialNo' },
+        { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'PROFESSION/KEY', accessor: 'profession_key' },
@@ -98,13 +98,13 @@ const Navtcc = () => {
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i>
                     </button>
                     <button
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 text-[8px]"
                         onClick={() => openDeleteModal(index)}
                     >
                         <i className="fas fa-trash"></i>

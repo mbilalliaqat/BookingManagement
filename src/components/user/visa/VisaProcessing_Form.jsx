@@ -4,6 +4,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts } from '../../ui/api';
 
 // Auto-calculation component for visa processing form
 const AutoCalculate = () => {
@@ -40,10 +41,17 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
+     const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `vi${entryNumber}/t${totalEntries}`;
+};
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
         file_number: '',
+         entry: '0/0',
         reference: '',
         sponsor_name: '',
         visa_number: '',
@@ -111,6 +119,41 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         // remaining_amount: Yup.number()
     });
 
+     useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const visaCounts = counts.find(c => c.form_type === 'visa');
+                if (visaCounts) {
+                    setEntryNumber(visaCounts.current_count + 1);
+                    setTotalEntries(visaCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+
+        setFormInitialValues(prev => ({
+            ...prev,
+            employee_name: user?.username || '',
+            entry:formatEntry(entryNumber, totalEntries) // Set initial entry value
+        }));
+    }, [editEntry, user]);
+
+      useEffect(() => {
+        setFormInitialValues(prev => ({
+            ...prev,
+            entry: formatEntry(entryNumber, totalEntries) 
+        }));
+    }, [entryNumber, totalEntries]);
+
+    
+
     useEffect(() => {
         if (editEntry) {
             // Parse passport details if it's stored as a JSON string or structured object
@@ -131,7 +174,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             }
 
             // Format dates properly for the form fields
-            const formatDate = (dateStr) => {
+           const formatDate = (dateStr) => {
                 if (!dateStr) return '';
                 const date = new Date(dateStr);
                 return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
@@ -140,6 +183,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
                 file_number: editEntry.file_number || '',
+                 entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
                 reference: editEntry.reference || '',
                 sponsor_name: editEntry.sponsor_name || '',
                 visa_number: editEntry.visa_number || '',
@@ -196,6 +240,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const requestData = {
             employee_name: values.employee_name,
             file_number: values.file_number,
+            entry:  formatEntry(entryNumber, totalEntries),
             reference: values.reference,
             sponsor_name: values.sponsor_name,
             visa_number: values.visa_number,
@@ -273,6 +318,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '',icon: 'hashtag', readOnly: true }, 
         { name: 'file_number', label: 'File No.', type: 'text', placeholder: 'Enter file number', icon: 'file-alt' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'sponsor_name', label: 'Sponsor Name', type: 'text', placeholder: 'Enter sponsor name', icon: 'user-tie' },
@@ -351,17 +397,17 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         readOnly={field.readOnly}
                     />
                 )}
-                <ErrorMessage 
-                    name={field.name} 
-                    component="p" 
-                    className="mt-1 text-sm text-red-500 flex items-center"
-                >
-                    {(msg) => (
-                        <span className="flex items-center">
-                            <i className="fas fa-exclamation-circle mr-1"></i> {msg}
-                        </span>
-                    )}
-                </ErrorMessage>
+              <ErrorMessage 
+    name={field.name} 
+    component="p" 
+    className="mt-1 text-sm text-red-500 flex items-center !text-red-500"
+>
+    {(msg) => (
+        <span className="flex items-center text-red-500">
+            <i className="fas fa-exclamation-circle mr-1 text-red-500"></i> {msg}
+        </span>
+    )}
+</ErrorMessage>
             </div>
         </motion.div>
     );

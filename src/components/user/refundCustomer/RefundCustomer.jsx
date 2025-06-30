@@ -33,13 +33,13 @@ const RefundCustomer = () => {
                 const data=response.data;
                 console.log("Fetched data:", data);
                 
-                const formattedData = data.refundCustomers?.map((entry,index) => ({
+                const formattedData = data.refundCustomers?.map((entry) => ({
                     ...entry,
-                     serialNo: index + 1,
-                    date: new Date(entry.date).toLocaleDateString(),
+                    date: new Date(entry.date).toLocaleDateString('en-GB'),
                     
                 }));
-                setEntries(formattedData);
+                setEntries(formattedData.reverse());
+
                 
             }
             catch(error){
@@ -59,7 +59,7 @@ const RefundCustomer = () => {
 
     const columns = [
         { header: 'EMPLOYEE', accessor: 'employee'},
-        { header: 'Entry', accessor: 'serialNo' },
+        { header: 'Entry', accessor: 'entry' },
         { header: 'NAME', accessor: 'name' },
         { header: 'DATE', accessor: 'date' },
         { header: 'PASSPORT', accessor: 'passport' },
@@ -79,13 +79,13 @@ const RefundCustomer = () => {
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
-                        className="text-blue-500 hover:text-blue-700 mr-3"
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i> 
                     </button>
                     <button
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 text-[8px]"
                         onClick={() => openDeleteModal(index)}
                     >
                         <i className="fas fa-trash"></i> 

@@ -38,8 +38,9 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/admin/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/admin/officeAccount', icon: 'fa-building', label: 'Office Accounts' },
     { path: '/admin/vender', icon: 'fa-store', label: 'Vender' },
-    { path: '/admin/employee', icon: 'fa-user-check', label: 'Employees' },
     { path: '/admin/agent', icon: 'fa-user-tie', label: 'Agent' },
+    { path: '/admin/employee', icon: 'fa-user-check', label: 'Employees' },
+   
   ];
 
   const userLinks = [

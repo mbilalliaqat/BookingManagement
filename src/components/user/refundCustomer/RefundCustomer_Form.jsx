@@ -4,6 +4,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
+import { fetchEntryCounts } from '../../ui/api';
 
 // Auto-calculation component for refund customer form
 const AutoCalculate = () => {
@@ -41,10 +42,17 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
     const [vendorNames, setVendorNames] = useState([]);
+       const [entryNumber, setEntryNumber] = useState(0);
+    const [totalEntries, setTotalEntries] = useState(0);
+
+    const formatEntry = (entryNumber, totalEntries) => {
+    return `rc${entryNumber}/t${totalEntries}`;
+};
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee: user?.username || '',
         name: '',
+        entry: '0/0',
         date: '',
         passport: '',
         reference: '',
@@ -104,7 +112,8 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const newValues = {
                 employee: editEntry.employee || user?.username || '',
-                name: editEntry.name || '',
+                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+                name: editEntry.name ||  formatEntry(entryNumber, totalEntries),
                 date: formatDate(editEntry.date),
                 passport: editEntry.passport || '',
                 reference: editEntry.reference || '',
@@ -125,9 +134,39 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     }, [editEntry, user]);
 
+      useEffect(() => {
+        const getCounts = async () => {
+            const counts = await fetchEntryCounts(); // Assume this function is available
+            if (counts) {
+                const refundCounts = counts.find(c => c.form_type === 'refund');
+                if (refundCounts) {
+                    setEntryNumber(refundCounts.current_count + 1);
+                    setTotalEntries(refundCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+            } else {
+                setEntryNumber(1);
+                setTotalEntries(1);
+            }
+        };
+        getCounts();
+    }, []);
+
+    // Update entry field when entry numbers change
+    useEffect(() => {
+        setFormInitialValues(prev => ({
+            ...prev,
+            employee: user?.username || '',
+            entry:  formatEntry(entryNumber, totalEntries)
+        }));
+    }, [entryNumber, totalEntries, user]);
+
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         const requestData = {
             employee: values.employee,
+            entry:  formatEntry(entryNumber, totalEntries),
             name: values.name,
             date: values.date,
             passport: values.passport,
@@ -205,6 +244,7 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'employee', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
         { name: 'name', label: 'Customer Name', type: 'text', placeholder: 'Enter customer name', icon: 'user-circle' },
         { name: 'date', label: 'Date', type: 'date', placeholder: 'Enter date', icon: 'calendar-alt' },
         { name: 'passport', label: 'Passport Number', type: 'text', placeholder: 'Enter passport number', icon: 'passport' },
@@ -276,7 +316,7 @@ const renderField = (field) => (
                 className="mt-1 text-sm text-red-500 flex items-center"
             >
                 {(msg) => (
-                    <span className="flex items-center">
+                    <span className="flex items-center text-red-500">
                         <i className="fas fa-exclamation-circle mr-1"></i> {msg}
                     </span>
                 )}
