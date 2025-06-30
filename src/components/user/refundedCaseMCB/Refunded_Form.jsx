@@ -10,9 +10,6 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const { user } = useAppContext();
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `rm${entryNumber}/t${totalEntries}`;
-};
 
     const [data, setData] = useState({
         employee: user?.username || '',
@@ -68,7 +65,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setData(prev => ({
             ...prev,
             employee: user?.username || '',
-            entry: formatEntry(entryNumber, totalEntries)
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -76,7 +73,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         if (editEntry) {
             setData({
                 employee: editEntry.employee || user?.username || '',
-                entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
+                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
                 date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
                 name: editEntry.name || '',
                 passport: editEntry.passport || '',
@@ -174,7 +171,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             setIsSubmitting(true);
             const requestData = {
                 employee: data.employee,
-                entry: formatEntry(entryNumber, totalEntries),
+                entry: data.entry,
                 date: data.date,
                 name: data.name,
                 passport: data.passport,

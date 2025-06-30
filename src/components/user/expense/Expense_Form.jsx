@@ -8,10 +8,6 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `ex${entryNumber}/t${totalEntries}`;
-};
     
     const [data, setData] = useState({
         user_name: user?.username || '',
@@ -59,7 +55,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setData(prev => ({
             ...prev,
             user_name: user?.username || '',
-            entry: formatEntry(entryNumber, totalEntries)
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -67,7 +63,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         if (editEntry) {
             setData({
                 user_name: editEntry.user_name || user?.username || '',
-                entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
+                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
                 date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
                 detail: editEntry.detail || '',
                 total_amount: editEntry.total_amount || '',
@@ -130,7 +126,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             
             const requestData = {
                 user_name: data.user_name,
-                entry: formatEntry(entryNumber, totalEntries),
+                entry: data.entry,
                 date: data.date,
                 detail: data.detail,
                 total_amount: parseInt(data.total_amount),

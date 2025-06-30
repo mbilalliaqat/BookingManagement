@@ -55,9 +55,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     return null;
 };
 
-const formatEntry = (entryNumber, totalEntries) => {
-    return `um${entryNumber}/t${totalEntries}`;
-};
+
 
 
     const [formInitialValues, setFormInitialValues] = useState({
@@ -149,14 +147,14 @@ const formatEntry = (entryNumber, totalEntries) => {
         setFormInitialValues(prev =>({
             ...prev,
             userName :user?.username || '',
-            entry: formatEntry(entryNumber, totalEntries)
+            entry:`${entryNumber}/${totalEntries}`
         }))
     },[editEntry,user]);
 
      useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: formatEntry(entryNumber, totalEntries),
+            entry: `${entryNumber}/${totalEntries}` // Update entry value on state change
         }));
     }, [entryNumber, totalEntries]);
 
@@ -186,7 +184,7 @@ const formatEntry = (entryNumber, totalEntries) => {
                 userName: editEntry.userName || user?.username || '',
                 customerAdd: editEntry.customerAdd || '',
                 reference: editEntry.reference || '',
-                entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
+                entry: editEntry.entry || '0/0',
                 packageDetail: editEntry.packageDetail || '',
                 depart_date: formatDate(editEntry.depart_date),
                 return_date: formatDate(editEntry.return_date),
@@ -247,7 +245,7 @@ const formatEntry = (entryNumber, totalEntries) => {
             userName: values.userName,
             customerAdd: values.customerAdd,
             reference: values.reference,
-             entry: formatEntry(entryNumber, totalEntries),
+             entry: values.entry,
             packageDetail: values.packageDetail || null,
             depart_date: new Date(values.depart_date),
             return_date: new Date(values.return_date),

@@ -40,14 +40,10 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
      const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
 
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `Ga${entryNumber}/t${totalEntries}`;
-};
-
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
         customer_add: '',
-        entry: formatEntry(entryNumber, totalEntries),
+      entry: `${entryNumber}/${totalEntries}`,
         reference: '',
         country: '',
         // Structured passport fields
@@ -116,7 +112,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setFormInitialValues(prev => ({
             ...prev,
             employee_name: user?.username || '',
-            entry: formatEntry(entryNumber, totalEntries),
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -148,7 +144,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
-                entry: editEntry.entry || formatEntry(entryNumber, totalEntries), 
+                entry: editEntry.entry || `${entryNumber}/${totalEntries}`, 
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 country: editEntry.country || '',

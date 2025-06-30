@@ -43,10 +43,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [activeSection, setActiveSection] = useState(1);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `nv${entryNumber}/t${totalEntries}`;
-};
+    
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
@@ -123,7 +120,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setFormInitialValues(prev => ({
             ...prev,
             employee_name: user?.username || '',
-            entry:  formatEntry(entryNumber, totalEntries) 
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -157,7 +154,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
-                entry: editEntry.entry ||  formatEntry(entryNumber, totalEntries) ,
+                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 profession_key:editEntry.profession_key || '',
@@ -204,7 +201,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const requestData = {
             employee_name: values.employee_name,
             customer_add: values.customer_add,
-            entry:  formatEntry(entryNumber, totalEntries),
+            entry: values.entry,
             reference: values.reference,
            profession_key:values.profession_key,
             passport_detail: passportDetail,

@@ -40,16 +40,13 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [activeSection, setActiveSection] = useState(1);
      const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `se${entryNumber}/t${totalEntries}`;
-};
+    
 
     // Memoize initial values to avoid re-creation on every render
     const initialValues = useMemo(() => {
         const base = {
             user_name: user?.username || '',
-             entry: formatEntry(entryNumber, totalEntries),
+             entry: `${entryNumber}/${totalEntries}`,
             customer_add: '',
             booking_date: '',
             specific_detail: '',
@@ -72,7 +69,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             return {
                 ...base,
                 user_name: editEntry.user_name || user?.username || '',
-                 entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
+                 entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
                 customer_add: editEntry.customer_add || '',
                 booking_date: formatDate(editEntry.booking_date),
                 specific_detail: editEntry.specific_detail || '',
@@ -104,7 +101,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         const requestData = {
             user_name: values.user_name,
-            entry: formatEntry(entryNumber, totalEntries),
+            entry: values.entry,
             customer_add: values.customer_add,
             booking_date: values.booking_date,
             specific_detail: values.specific_detail,

@@ -62,16 +62,12 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { value: "MCB", label: "MCB (FIT MANPOWER)" }
     ];
 
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `ti${entryNumber}/t${totalEntries}`;
-};
-
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
         agent_name: '',
         customer_add: '',
         reference: '',
-        entry: formatEntry(entryNumber, totalEntries),
+        entry: '0/0',
         depart_date: '',
         return_date: '',
         sector: '',
@@ -181,7 +177,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 agent_name: editEntry.agent_name || '',
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
-                entry: editEntry.entry || formatEntry(entryNumber, totalEntries), 
+                entry: editEntry.entry || '0/0',
                 depart_date: formatDate(editEntry.depart_date),
                 return_date: formatDate(editEntry.return_date),
                 sector: editEntry.sector || '',
@@ -236,7 +232,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: formatEntry(entryNumber, totalEntries)
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries]);
 

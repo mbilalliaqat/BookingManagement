@@ -10,10 +10,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     // Add state for entry numbers
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `ac${entryNumber}/t${totalEntries}`;
-};
+    
 
     const [data, setData] = useState({
         bank_name: '',
@@ -64,7 +61,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         setData(prev => ({
             ...prev,
             employee_name: user?.username || '',
-            entry:  formatEntry(entryNumber, totalEntries)
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -74,7 +71,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             setData({
                 id: editingEntry.id,
                 employee_name: editingEntry.employee_name || '',
-                entry: editingEntry.entry ||  formatEntry(entryNumber, totalEntries), // Update entry field
+                entry: editingEntry.entry || `${entryNumber}/${totalEntries}`, // Update entry field
                 bank_name: editingEntry.bank_name || '',
                 date: editingEntry.date || '',
                 detail: editingEntry.detail || '',
@@ -152,7 +149,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             const submitData = {
                 bank_name: data.bank_name,
                 employee_name: data.employee_name,
-                entry:  formatEntry(entryNumber, totalEntries),
+                entry: data.entry, // Include entry in request data
                 date: data.date || new Date().toISOString().split('T')[0],
                 detail: data.detail,
             };
@@ -201,7 +198,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             setData({
                 bank_name: '',
                 employee_name: user?.username || '',
-                entry: formatEntry(entryNumber, totalEntries),
+                entry: '0/0',
                 date: new Date().toISOString().split('T')[0],
                 detail: '',
                 credit: '',

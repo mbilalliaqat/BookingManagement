@@ -18,15 +18,12 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const isEditing = !!editingEntry;
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `ag${entryNumber}/t${totalEntries}`;
-};
 
     const initialValues = {
         agent_name: editingEntry?.agent_name || '',
         date: editingEntry?.date || '',
         employee: editingEntry?.employee || user?.username || '', 
-        entry: editingEntry?.entry ||  formatEntry(entryNumber, totalEntries), 
+        entry: editingEntry?.entry || `${entryNumber}/${totalEntries}`, 
         detail: editingEntry?.detail || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
         debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
@@ -218,7 +215,7 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                         className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
                                         disabled
                                         readOnly
-                                        value={formatEntry(entryNumber, totalEntries)} 
+                                        value={`${entryNumber}/${totalEntries}`} 
                                     />
                                     <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>

@@ -44,9 +44,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
      const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
 
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `vi${entryNumber}/t${totalEntries}`;
-};
+    
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
@@ -141,14 +139,14 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setFormInitialValues(prev => ({
             ...prev,
             employee_name: user?.username || '',
-            entry:formatEntry(entryNumber, totalEntries) // Set initial entry value
+            entry: `${entryNumber}/${totalEntries}` // Set initial entry value
         }));
     }, [editEntry, user]);
 
       useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: formatEntry(entryNumber, totalEntries) 
+            entry: `${entryNumber}/${totalEntries}` // Update entry value on state change
         }));
     }, [entryNumber, totalEntries]);
 
@@ -183,7 +181,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
                 file_number: editEntry.file_number || '',
-                 entry: editEntry.entry || formatEntry(entryNumber, totalEntries),
+                 entry: editEntry.entry || '0/0',
                 reference: editEntry.reference || '',
                 sponsor_name: editEntry.sponsor_name || '',
                 visa_number: editEntry.visa_number || '',
@@ -240,7 +238,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const requestData = {
             employee_name: values.employee_name,
             file_number: values.file_number,
-            entry:  formatEntry(entryNumber, totalEntries),
+            entry: values.entry,
             reference: values.reference,
             sponsor_name: values.sponsor_name,
             visa_number: values.visa_number,

@@ -44,10 +44,7 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [vendorNames, setVendorNames] = useState([]);
        const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `rc${entryNumber}/t${totalEntries}`;
-};
+    
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee: user?.username || '',
@@ -113,7 +110,7 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const newValues = {
                 employee: editEntry.employee || user?.username || '',
                 entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
-                name: editEntry.name ||  formatEntry(entryNumber, totalEntries),
+                name: editEntry.name || '',
                 date: formatDate(editEntry.date),
                 passport: editEntry.passport || '',
                 reference: editEntry.reference || '',
@@ -159,14 +156,14 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setFormInitialValues(prev => ({
             ...prev,
             employee: user?.username || '',
-            entry:  formatEntry(entryNumber, totalEntries)
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         const requestData = {
             employee: values.employee,
-            entry:  formatEntry(entryNumber, totalEntries),
+            entry: values.entry,
             name: values.name,
             date: values.date,
             passport: values.passport,

@@ -9,9 +9,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-    const formatEntry = (entryNumber, totalEntries) => {
-    return `pr${entryNumber}/t${totalEntries}`;
-};
 
     const [data, setData] = useState({
         name: '',
@@ -72,7 +69,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             setData(prev => ({
                 ...prev,
                 employee: user?.username || '',
-                entry: formatEntry(entryNumber, totalEntries)
+                entry: `${entryNumber}/${totalEntries}`
             }));
         }
     }, [entryNumber, totalEntries, user, editEntry]);
@@ -106,7 +103,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 ncb_fee_500_date: formatDateForInput(editEntry.ncb_fee_500_date),
                 protector_date: formatDateForInput(editEntry.protector_date),
                 additional_charges: editEntry.additional_charges || '',
-                entry: editEntry.entry ||  formatEntry(entryNumber, totalEntries)
+                entry: editEntry.entry || `${entryNumber}/${totalEntries}`
             });
             
             if (editEntry.entry) {
@@ -209,7 +206,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 ncb_fee_500_date: data.ncb_fee_500_date,
                 protector_date: data.protector_date,
                 additional_charges: parseInt(data.additional_charges),
-                entry:  formatEntry(entryNumber, totalEntries)
+                entry: data.entry
             };
 
             // Debug: Log the request data to verify file_no is included
