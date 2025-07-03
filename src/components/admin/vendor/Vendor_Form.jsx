@@ -16,11 +16,18 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const isEditing = !!editingEntry;
-
+   const formatDate = (date) => {
+    if (!date) return '';
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return date;
+    }
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+};
     // Initial values for Formik form
     const initialValues = {
         vender_name: editingEntry?.vender_name || '', 
-        date: editingEntry?.date ? new Date(editingEntry.date).toISOString().split('T')[0] : '',
+        date: formatDate(editingEntry?.date),
         entry: editingEntry?.entry || `${entryNumber}/${totalEntries}`,
         detail: editingEntry?.detail || '', 
         bank_title: editingEntry?.bank_title || '',
@@ -33,7 +40,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         vender_name: Yup.string().required('Vendor name is required'),
         date: Yup.date().required('Date is required'),
         entry: Yup.string().required('Entry is required'),
-        detail: Yup.string().required('Detail is required'),
+        // detail: Yup.string().required('Detail is required'),
         bank_title: Yup.string().required('Bank Title is required'),
         credit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Credit must be positive').nullable(),
         debit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Debit must be positive').nullable(),
@@ -211,12 +218,11 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
                                 disabled
                                 readOnly
-                                value={`${entryNumber}/${totalEntries}`} // Always show updated entry
-                            />
+                                                            />
                             <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                         </div>
 
-                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                {/* <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Detail</label>
                                     <Field
                                         type="text"
@@ -225,7 +231,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                         disabled={isSubmitting}
                                     />
                                     <ErrorMessage name="detail" component="div" className="text-red-500 text-sm mt-1" />
-                                </div>
+                                </div> */}
 
                                 <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Bank Title</label>
@@ -238,7 +244,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                     <ErrorMessage name="bank_title" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>
 
-                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                {/* <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Credit</label>
                                     <Field
                                         type="number"
@@ -247,7 +253,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                         disabled={isSubmitting}
                                     />
                                     <ErrorMessage name="credit" component="div" className="text-red-500 text-sm mt-1" />
-                                </div>
+                                </div> */}
 
                                 <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Debit</label>

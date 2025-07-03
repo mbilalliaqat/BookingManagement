@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
+import axios from 'axios';
 
 // Create a component to handle automatic calculation of remaining amount
 
@@ -21,6 +22,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [showPassengerSlider,setShowPassengerSlider]=useState(false);
     const [entryNumber, setEntryNumber]=useState(0);
     const [totalEntries,setTotalEntries]=useState(0);
+     const [vendorNames, setVendorNames] = useState([]);
 
     const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
@@ -54,6 +56,15 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     
     return null;
 };
+
+ const bankOptions = [
+        { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
+        { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
+        { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
+        { value: "MCB", label: "MCB (FIT MANPOWER)" }
+    ];
 
 
 
@@ -124,6 +135,20 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         profit: Yup.number(),
         remainingAmount: Yup.number()
     });
+
+     useEffect(() => {
+        const fetchVendorNames = async () => {
+            try {
+                const response = await axios.get(`${BASE_URL}/vender-names/existing`);
+                if (response.data.status === 'success') {
+                    setVendorNames(response.data.vendorNames || []);
+                }
+            } catch (error) {
+                console.error('Error fetching vendor names:', error);
+            }
+        };
+        fetchVendorNames();
+    }, [BASE_URL]);
 
     useEffect(()=>{
         const getCounts = async ()=>{
@@ -362,21 +387,21 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
+         { name: 'documentNo', label: 'Passport No.', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
         { name: 'passengerDob', label: 'Date of Birth', type: 'date', placeholder: 'Select date of birth', icon: 'calendar' },
         { name: 'passengerNationality', label: 'Nationality', type: 'text', placeholder: 'Enter nationality', icon: 'flag' },
         { name: 'documentType', label: 'Document Type', type: 'select', options: ['Passport'], placeholder: 'Select document type', icon: 'id-card' },
-        { name: 'documentNo', label: 'Document No', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
         { name: 'documentExpiry', label: 'Expiry Date', type: 'date', placeholder: 'Select expiry date', icon: 'calendar-times' },
         { name: 'documentIssueCountry', label: 'Issue Country', type: 'text', placeholder: 'Enter issue country', icon: 'globe' },
     ];
 
-    const section3Fields = [
+      const section3Fields = [
         { name: 'receivableAmount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
         { name: 'paidCash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'bank_title', label: 'Bank Title', type: 'text', placeholder: 'Enter Bank title', icon: 'store' },
+        { name: 'bank_title', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paidInBank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'payableToVendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
-        { name: 'vendorName', label: 'Vendor Name', type: 'text', placeholder: 'Enter vendor name', icon: 'store' },
+        { name: 'vendorName', label: 'Vendor Name', type: 'select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Enter profit', icon: 'chart-line', readOnly: true},
         { name: 'remainingAmount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];

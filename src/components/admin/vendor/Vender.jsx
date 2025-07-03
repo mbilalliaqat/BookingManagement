@@ -204,8 +204,8 @@ const Vender = () => {
       { header: 'DATE', accessor: 'date' },
       { header: 'ENTRY', accessor: 'entry' },
       { header: 'BANK TITLE', accessor: 'bank_title' },
-      { header: 'DETAIL', accessor: 'detail' },
-     { header: 'CREDIT', accessor: 'credit' },
+    //   { header: 'DETAIL', accessor: 'detail' },
+    //  { header: 'CREDIT', accessor: 'credit' },
         { header: 'DEBIT', accessor: 'debit' },
         { header: 'BALANCE', accessor: 'remaining_amount' },
      ...(user.role === 'admin'

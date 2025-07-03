@@ -87,6 +87,15 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         remaining_amount: Yup.number()
     });
 
+     const bankOptions = [
+        { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
+        { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
+        { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
+        { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
+        { value: "MCB", label: "MCB (FIT MANPOWER)" }
+    ];
+
      useEffect(() => {
         const getCounts = async () => {
             const counts = await fetchEntryCounts();
@@ -276,7 +285,8 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section3Fields = [
         { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'paid_from_bank', label: 'Paid From Bank', type: 'text', placeholder: 'Enter bank title' },
+        // { name: 'paid_from_bank', label: 'Paid From Bank', type: 'text', placeholder: 'Enter bank title' },
+         { name: 'paid_from_bank', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Enter profit amount', icon: 'chart-line' },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }

@@ -78,13 +78,29 @@ const Umrah = () => {
 
      const baseColumns = [
         { header: 'BOOKING DATE', accessor: 'createdAt' },
-        { header: 'EMPLOYEE NAME', accessor: 'userName' },
-        { header: 'ENTRY', accessor: 'entry' },
+        { 
+        header: 'EMPLOYEE & ENTRY', 
+        accessor: 'employee_entry', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.userName || ''}</div>
+                <div>{row?.entry || ''}</div>
+            </div>
+        )
+    },
         { header: 'CUSTOMER ADD', accessor: 'customerAdd' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'PACKAGE DETAIL', accessor: 'packageDetail' },
-        { header: 'DEPART DATE', accessor: 'depart_date' },
-        { header: 'RETURN DATE', accessor: 'return_date' },
+        { 
+        header: 'DEPART & RETURN DATE', 
+        accessor: 'depart_return_date', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.depart_date || ''}</div>
+                <div>{row?.return_date || ''}</div>
+            </div>
+        )
+    },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
         {
@@ -98,9 +114,15 @@ const Umrah = () => {
                 return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
             }
         },
-        { header: 'TITLE', accessor: 'passengerTitle' },
-        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
-        { header: 'LAST NAME', accessor: 'passengerLastName' },
+        { 
+        header: 'PASSENGER DETAILS', 
+        accessor: 'passenger_details', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
+            </div>
+        )
+    },
     ];
        const passportColumns = [
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
@@ -115,11 +137,27 @@ const Umrah = () => {
     const financialColumns = [
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivableAmount' },
         { header: 'PAID CASH', accessor: 'paidCash' },
-        { header: 'BANK TITLE', accessor: 'bank_title' },
-        { header: 'PAID IN BANK', accessor: 'paidInBank' },
+        { 
+        header: 'BANK & PAID IN BANK', 
+        accessor: 'bank_paid', 
+        render: (cellValue, row) => (
+            <div>
+                <div style={{ color: '#666' }}>{row?.bank_title || ''}</div>
+                <div>{row?.paidInBank || ''}</div>
+            </div>
+        )
+    },
         { header: 'REMAINING AMOUNT', accessor: 'remainingAmount' },
-        { header: 'VENDOR NAME', accessor: 'vendorName' },
-        { header: 'PAYABLE TO VENDOR', accessor: 'payableToVendor' },
+        { 
+        header: 'VENDOR & PAYABLE', 
+        accessor: 'vendor_payable', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.vendorName || ''}</div>
+                <div>{row?.payableToVendor || ''}</div>
+            </div>
+        )
+    },
         { header: 'PROFIT', accessor: 'profit' },
     ];
        

@@ -118,14 +118,28 @@ const GamcaToken = () => {
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
-        { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'entry' },
+        { 
+        header: 'EMPLOYEE & ENTRY', 
+        accessor: 'employee_entry', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.employee_name || ''}</div>
+                <div>{row?.entry || ''}</div>
+            </div>
+        )
+    },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'COUNTRY', accessor: 'country' },
-        { header: 'TITLE', accessor: 'passengerTitle' },
-        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
-        { header: 'LAST NAME', accessor: 'passengerLastName' },
+        { 
+        header: 'PASSENGER DETAILS', 
+        accessor: 'passenger_details', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
+            </div>
+        )
+    },
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
         { header: 'NATIONALITY', accessor: 'passengerNationality' },
         { header: 'DOCUMENT TYPE', accessor: 'documentType' },
@@ -134,8 +148,16 @@ const GamcaToken = () => {
         { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
-        { header: 'PAID FROM BANK', accessor: 'paid_from_bank' },
-        { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
+          { 
+        header: 'PAID FROM & IN BANK', 
+        accessor: 'paid_bank', 
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.paid_from_bank || ''}</div>
+                <div>{row?.paid_in_bank || ''}</div>
+            </div>
+        )
+    },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
         ...(user.role === 'admin' ? [{

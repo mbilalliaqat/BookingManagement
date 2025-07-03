@@ -151,6 +151,7 @@ export default function Dashboard() {
           return {
               type: 'Umrah',
               employee_name: booking.userName || booking.reference,
+               entry: booking.entry,
               receivable_amount: booking.receivableAmount,
               paid_cash: booking.paidCash,
               paid_in_bank: booking.paidInBank,
@@ -177,6 +178,7 @@ export default function Dashboard() {
               type: 'Ticket',
               employee_name: ticket.employee_name || ticket.reference,
               receivable_amount: ticket.receivable_amount,
+               entry: ticket.entry,
               paid_cash: ticket.paid_cash,
               paid_in_bank: ticket.paid_in_bank,
               remaining_amount: ticket.remaining_amount,
@@ -202,6 +204,7 @@ export default function Dashboard() {
               type: 'Visa',
               employee_name: visa.employee_name || visa.reference,
               receivable_amount: visa.receivable_amount,
+               entry: visa.entry,
               paid_cash: visa.paid_cash,
               paid_in_bank: visa.paid_in_bank,
               remaining_amount: visa.remaining_amount,
@@ -227,6 +230,7 @@ export default function Dashboard() {
               type: 'Gamca Token',
               employee_name: token.employee_name || token.reference,
               receivable_amount: token.receivable_amount,
+               entry: token.entry,
               paid_cash: token.paid_cash,
               paid_in_bank: token.paid_in_bank,
               remaining_amount: token.remaining_amount,
@@ -241,6 +245,7 @@ export default function Dashboard() {
           type: 'Services',
           employee_name: services.user_name,
           receivable_amount: services.receivable_amount,
+           entry: services.entry,
           paid_cash: services.paid_cash,
           paid_in_bank: services.paid_in_bank,
           remaining_amount: services.remaining_amount,
@@ -253,6 +258,7 @@ export default function Dashboard() {
         const protectorBookings = protectorData.protectors.map(protector => ({
           type: 'Protector',
           employee_name: protector.employee,
+           entry: protector.entry,
           receivable_amount: 0, 
           paid_cash: 0, 
           paid_in_bank: 0, 
@@ -264,6 +270,7 @@ export default function Dashboard() {
         const expensesBookings = expensesData.expenses.map(expenses => ({
           type: 'Expenses',
           employee_name: expenses.user_name,
+           entry: expenses.entry,
           receivable_amount: 0, 
           paid_cash: 0, 
           paid_in_bank: 0, 
@@ -275,6 +282,7 @@ export default function Dashboard() {
         const refundedBookings = (refundedData.refunded || []).map(refund => ({
           type: 'Refunded',
           employee_name: refund.employee,
+           entry: refund.entry,
           receivable_amount: 0, 
           paid_cash: 0, 
           paid_in_bank: 0, 
@@ -285,7 +293,8 @@ export default function Dashboard() {
         }));
           const venderBookings = (venderData.vender || []).map(vender => ({
           type: 'Vender',
-          employee_name: vender.user_name, // Changed from vender.employee
+          employee_name: vender.user_name, 
+           entry: vender.entry,
           receivable_amount: 0, 
           paid_cash: 0, 
           paid_in_bank: 0, 
@@ -314,24 +323,19 @@ export default function Dashboard() {
         );
 
         let runningCashInOffice = 0;
-        // Calculate running cash in office for each booking
         const bookingsWithCashInOffice = sortedForRunningTotal.map(booking => {
-          // Add paid_cash if it's a type that generates cash
           runningCashInOffice += parseFloat(booking.paid_cash || 0);
-          // Subtract withdraw if it's a type that involves withdrawal
           runningCashInOffice -= parseFloat(booking.withdraw || 0);
           
           return {
             ...booking,
-            cash_in_office_running: runningCashInOffice, // Store the running balance
+            cash_in_office_running: runningCashInOffice,
           };
         });
 
-        // No re-sorting by date (most recent first) for display,
-        // so the table will display in chronological order (oldest to newest)
-        const finalCombinedBookings = bookingsWithCashInOffice; 
+        
+        const finalCombinedBookings = bookingsWithCashInOffice.slice().reverse(); 
 
-        // Calculate total protector withdraw
         const totalProtectorWithdraw = protectorBookings.reduce((sum, entry) => {
           return sum + entry.withdraw;
         }, 0);
@@ -420,6 +424,7 @@ export default function Dashboard() {
   const columns = [
     { header: 'DATE', accessor: 'booking_date' },
     { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
+     { header: 'ENTRY', accessor: 'entry' },
     { header: 'TYPE', accessor: 'type' },
     { header: 'NAME', accessor: 'passengerName' }, // New NAME column
     { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
@@ -685,7 +690,9 @@ export default function Dashboard() {
                     <tr key={index}>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.booking_date}</td>
                        <td className="px-3 py-2 whitespace-nowrap text-sm  text-gray-700">{booking.employee_name}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{booking.type}</td>   
+                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
+                             {booking.entry ? booking.entry : '--'} </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{booking.type}</td>    
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
                         {booking.passengerName ? booking.passengerName : '--'}
                       </td> {/* Updated to show '--' for empty names */}
