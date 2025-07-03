@@ -30,40 +30,37 @@ const Tickets = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
-            
+
             // Sort by ID to maintain consistent order
             const sortedTickets = data.ticket.sort((a, b) => a.id - b.id);
-            
+
             const formattedData = sortedTickets.map((ticket) => {
-                let passportDetails = {};
+                let parsedPassengerDetails = [];
                 try {
                     if (typeof ticket.passport_detail === 'string') {
-                        passportDetails = JSON.parse(ticket.passport_detail);
+                        const parsed = JSON.parse(ticket.passport_detail);
+                        if (Array.isArray(parsed)) {
+                            parsedPassengerDetails = parsed;
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                            parsedPassengerDetails = [parsed]; // Wrap single object in an array for consistency
+                        }
+                    } else if (Array.isArray(ticket.passport_detail)) {
+                        parsedPassengerDetails = ticket.passport_detail;
                     } else if (typeof ticket.passport_detail === 'object' && ticket.passport_detail !== null) {
-                        passportDetails = ticket.passport_detail;
+                        parsedPassengerDetails = [ticket.passport_detail]; // Wrap single object in an array
                     }
                 } catch (e) {
                     console.error("Error parsing passport details:", e);
+                    parsedPassengerDetails = []; // Ensure it's an empty array on error
                 }
+
                 return {
                     ...ticket,
                     depart_date: new Date(ticket.depart_date).toLocaleDateString('en-GB'),
                     return_date: new Date(ticket.return_date).toLocaleDateString('en-GB'),
                     created_at: new Date(ticket.created_at).toLocaleDateString('en-GB'),
-                    // Add formatted passport details for display
-                    passengerTitle: passportDetails.title || '',
-                    passengerFirstName: passportDetails.firstName || '',
-                    passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
-                    passengerNationality: passportDetails.nationality || '',
-                    documentType: passportDetails.documentType || '',
-                    documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
-                    documentIssueCountry: passportDetails.issueCountry || '',
-                    // Keep the original passport detail for editing
-                    passport_detail: ticket.passport_detail
+                    allPassengerDetails: parsedPassengerDetails, // This now holds the array of all passenger objects
                 };
-
             });
             setEntries(formattedData.reverse());
         } catch (error) {
@@ -74,50 +71,44 @@ const Tickets = () => {
         }
     };
 
-    // Alternative: Update single entry without full refetch
     const updateSingleEntry = async (updatedTicket) => {
         try {
-            // Find the index of the updated entry
             const entryIndex = entries.findIndex(entry => entry.id === updatedTicket.id);
             if (entryIndex === -1) return;
 
-            // Format the updated ticket data
-            let passportDetails = {};
+            let parsedPassengerDetails = [];
             try {
                 if (typeof updatedTicket.passport_detail === 'string') {
-                    passportDetails = JSON.parse(updatedTicket.passport_detail);
+                    const parsed = JSON.parse(updatedTicket.passport_detail);
+                    if (Array.isArray(parsed)) {
+                        parsedPassengerDetails = parsed;
+                    } else if (typeof parsed === 'object' && parsed !== null) {
+                        parsedPassengerDetails = [parsed];
+                    }
+                } else if (Array.isArray(updatedTicket.passport_detail)) {
+                    parsedPassengerDetails = updatedTicket.passport_detail;
                 } else if (typeof updatedTicket.passport_detail === 'object' && updatedTicket.passport_detail !== null) {
-                    passportDetails = updatedTicket.passport_detail;
+                    parsedPassengerDetails = [updatedTicket.passport_detail];
                 }
             } catch (e) {
                 console.error("Error parsing passport details:", e);
+                parsedPassengerDetails = [];
             }
 
             const formattedTicket = {
                 ...updatedTicket,
-                serialNo: entries[entryIndex].serialNo, // Keep original serial number
+                serialNo: entries[entryIndex].serialNo,
                 depart_date: new Date(updatedTicket.depart_date).toLocaleDateString('en-GB'),
                 return_date: new Date(updatedTicket.return_date).toLocaleDateString('en-GB'),
                 created_at: new Date(updatedTicket.created_at).toLocaleDateString('en-GB'),
-                passengerTitle: passportDetails.title || '',
-                passengerFirstName: passportDetails.firstName || '',
-                passengerLastName: passportDetails.lastName || '',
-                passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
-                passengerNationality: passportDetails.nationality || '',
-                documentType: passportDetails.documentType || '',
-                documentNo: passportDetails.documentNo || '',
-                documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
-                documentIssueCountry: passportDetails.issueCountry || '',
-                passport_detail: updatedTicket.passport_detail
+                allPassengerDetails: parsedPassengerDetails, // Ensure this is also updated
             };
 
-            // Update the specific entry in place
             const updatedEntries = [...entries];
             updatedEntries[entryIndex] = formattedTicket;
             setEntries(updatedEntries);
         } catch (error) {
             console.error('Error updating single entry:', error);
-            // Fallback to full refetch if single update fails
             fetchTickets();
         }
     };
@@ -128,66 +119,148 @@ const Tickets = () => {
 
     const baseColumns=[
          { header: 'BOOKING DATE', accessor: 'created_at' },
-         { 
-        header: 'EMPLOYEE & ENTRY', 
-        accessor: 'employee_entry', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.employee_name || ''}</div>
-                <div style={{ }}>{row?.entry || ''}</div>
-            </div>
-        )
-    },
+         {
+            header: 'EMPLOYEE & ENTRY',
+            accessor: 'employee_entry',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.employee_name || ''}</div>
+                    <div style={{ }}>{row?.entry || ''}</div>
+                </div>
+            )
+        },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
-  { 
-        header: 'DEPART & RETURN DATE', 
-        accessor: 'depart_return_date', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.depart_date || ''}</div>
-                <div style={{  }}>{row?.return_date || ''}</div>
-            </div>
-        )
-    },
+        {
+            header: 'DEPART & RETURN DATE',
+            accessor: 'depart_return_date',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.depart_date || ''}</div>
+                    <div style={{  }}>{row?.return_date || ''}</div>
+                </div>
+            )
+        },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
-         {
+        {
             header: 'PASSENGERS',
             accessor: 'passengerCount',
             render: (row,index) => {
-                // Ensure default values are used if properties are undefined
                 const adults = index.adults === undefined ? 0 : index.adults;
                 const children = index.children === undefined ? 0 : index.children;
                 const infants = index.infants === undefined ? 0 : index.infants;
                 return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
             }
         },
-         { 
-        header: 'PASSENGER DETAILS', 
-        accessor: 'passenger_details', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
-            </div>
-        )
-    },
+        {
+            header: 'PASSENGER DETAILS',
+            accessor: 'passenger_details',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.length > 0 ? (
+                        row.allPassengerDetails.map((passenger, idx) => (
+                            <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                                <p className="font-semibold text-gray-800">
+                                    {passenger.title || ''} {passenger.firstName || ''} {passenger.lastName || ''}
+                                </p>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-gray-500">No passenger details</p>
+                    )}
+                </div>
+            )
+        },
     ];
+
     const passportColumns=[
-         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-        { header: 'NATIONALITY', accessor: 'passengerNationality' },
-        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
-        { header: 'DOCUMENT NO', accessor: 'documentNo' },
-        { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
-        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
+        {
+            header: 'DATE OF BIRTH',
+            accessor: 'passengerDob', // You can change this accessor, it's not strictly necessary with render
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.dob ? new Date(p.dob).toLocaleDateString('en-GB') : ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'NATIONALITY',
+            accessor: 'passengerNationality', // You can change this accessor
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.nationality || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'DOCUMENT TYPE',
+            accessor: 'documentType', // You can change this accessor
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.documentType || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'DOCUMENT NO',
+            accessor: 'documentNo', // You can change this accessor
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.documentNo || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'EXPIRY DATE',
+            accessor: 'documentExpiry', // You can change this accessor
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.documentExpiry ? new Date(p.documentExpiry).toLocaleDateString('en-GB') : ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'ISSUE COUNTRY',
+            accessor: 'documentIssueCountry', // You can change this accessor
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.issueCountry || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
     ];
     const financialColumns=[
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
-     { 
-        header: 'BANK & PAID IN BANK', 
-        accessor: 'bank_paid', 
+     {
+        header: 'BANK & PAID IN BANK',
+        accessor: 'bank_paid',
         render: (cellValue, row) => (
             <div>
                 <div style={{ color: '#666' }}>{row?.bank_title || ''}</div>
@@ -195,9 +268,9 @@ const Tickets = () => {
             </div>
         )
     },
-         { 
-        header: 'VENDOR & PAYABLE', 
-        accessor: 'vendor_payable', 
+         {
+        header: 'VENDOR & PAYABLE',
+        accessor: 'vendor_payable',
         render: (cellValue, row) => (
             <div>
                 <div>{row?.vendor_name || ''}</div>
@@ -232,7 +305,7 @@ const Tickets = () => {
         ...financialColumns,
         ...actionColumns
     ];
-   
+
     const filteredData = entries.filter((index) =>
         Object.values(index).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
@@ -244,13 +317,10 @@ const Tickets = () => {
         setEditEntry(null);
     };
 
-    // Modified to accept updated ticket data and preserve position
     const handleFormSubmit = (updatedTicket = null) => {
         if (updatedTicket && editEntry) {
-            // If we have the updated ticket data, update in place
             updateSingleEntry(updatedTicket);
         } else {
-            // For new entries, refetch all data
             fetchTickets();
         }
         setShowForm(false);
@@ -298,7 +368,6 @@ const Tickets = () => {
         closeDeleteModal();
     };
 
-    // Confirmation modal component
     const DeleteConfirmationModal = () => {
         if (!showDeleteModal) return null;
 
@@ -366,12 +435,11 @@ const Tickets = () => {
                                 />
                                 <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
-                            
-                            {/* Toggle button for passport fields */}
+
                             <button
                                 className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
-                                    showPassportFields 
-                                        ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                    showPassportFields
+                                        ? 'bg-purple-600 text-white hover:bg-purple-700'
                                         : 'bg-white text-gray-700 hover:bg-gray-100'
                                 }`}
                                 onClick={() => setShowPassportFields(!showPassportFields)}
