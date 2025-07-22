@@ -41,7 +41,7 @@ const Agent = () => {
                 ...entry,
                 date: formatDate(entry.date),
             }))
-            .sort((a, b) => a.id - b.id) || [];
+            .sort((a, b) => b.id - a.id) || [];
             
             setData(formattedData);
         } catch (error) {
@@ -183,8 +183,11 @@ const Agent = () => {
         { header: 'EMPLOYEE', accessor: 'employee' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'DETAIL', accessor: 'detail' },
-        { header: 'CREDIT', accessor: 'credit' },
-        { header: 'DEBIT', accessor: 'debit' },
+        { header: 'RECEIVED', accessor: 'credit' },
+        { header: 'PAYED CASH', accessor: 'debit' },
+        { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
+        { header: 'PAID CASH', accessor: 'paid_cash' },
+        { header: 'PAID BANK', accessor: 'paid_bank' },
         { header: 'BALANCE', accessor: 'balance' },
         ...(user.role === 'admin'
             ? [

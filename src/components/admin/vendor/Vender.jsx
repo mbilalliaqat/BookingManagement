@@ -28,7 +28,7 @@ const Vender = () => {
   if (!dateString) return '';
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-GB'); // Format as day/month/year
+  return date.toLocaleDateString('en-GB'); 
 };
 
   const fetchData = async () => {
@@ -204,9 +204,9 @@ const Vender = () => {
       { header: 'DATE', accessor: 'date' },
       { header: 'ENTRY', accessor: 'entry' },
       { header: 'BANK TITLE', accessor: 'bank_title' },
-    //   { header: 'DETAIL', accessor: 'detail' },
-    //  { header: 'CREDIT', accessor: 'credit' },
-        { header: 'DEBIT', accessor: 'debit' },
+      { header: 'DETAIL', accessor: 'detail' },
+     { header: 'PAYABLE', accessor: 'credit' },
+        { header: 'PAYED', accessor: 'debit' },
         { header: 'BALANCE', accessor: 'remaining_amount' },
      ...(user.role === 'admin'
                  ? [

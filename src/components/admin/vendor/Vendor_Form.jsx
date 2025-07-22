@@ -11,7 +11,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [isLoadingNames, setIsLoadingNames] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [entryNumber, setEntryNumber] = useState(0); // Add entryNumber state
+    const [entryNumber, setEntryNumber] = useState(0); 
     const [totalEntries, setTotalEntries] = useState(0);
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
@@ -24,7 +24,6 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const d = new Date(date);
     return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
 };
-    // Initial values for Formik form
     const initialValues = {
         vender_name: editingEntry?.vender_name || '', 
         date: formatDate(editingEntry?.date),
@@ -35,14 +34,13 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
     };
 
-    // Validation schema using Yup
     const validationSchema = Yup.object({
         vender_name: Yup.string().required('Vendor name is required'),
         date: Yup.date().required('Date is required'),
         entry: Yup.string().required('Entry is required'),
-        // detail: Yup.string().required('Detail is required'),
+        detail: Yup.string().required('Detail is required'),
         bank_title: Yup.string().required('Bank Title is required'),
-        credit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Credit must be positive').nullable(),
+        // credit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Credit must be positive').nullable(),
         debit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Debit must be positive').nullable(),
     }).test('credit-debit-test', 'Either Credit or Debit is required, but not both', (values) => {
         const hasCredit = parseFloat(values.credit) > 0;
@@ -50,7 +48,6 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         return (hasCredit && !hasDebit) || (!hasCredit && hasDebit);
     });
 
-    // Fetch existing vendor names
     const fetchVendorNames = async () => {
         try {
             setIsLoadingNames(true);
@@ -60,7 +57,6 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             }
         } catch (error) {
             console.error('Error fetching vendor names:', error);
-            // Optionally set an error state here to display to the user
         } finally {
             setIsLoadingNames(false);
         }
@@ -76,7 +72,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             if (counts) {
                 const vendorCounts = counts.find(c => c.form_type === 'vender');
                 if (vendorCounts) {
-                    setEntryNumber(vendorCounts.current_count+1); // Use counts as-is
+                    setEntryNumber(vendorCounts.current_count+1); 
                     setTotalEntries(vendorCounts.global_count +1);
                 } else {
                     setEntryNumber(1);
@@ -92,32 +88,30 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
 
      useEffect(() => {
         if (!isEditing) {
-            // Update entry field in form when counts change
-            setVendorNames(prev => [...prev]); // Trigger re-render if needed
+            setVendorNames(prev => [...prev]); 
         }
     }, [entryNumber, totalEntries, isEditing]);
 
-    // Handler for when a new vendor name is added via the modal
     const handleVendorAdded = async (newVendorName) => {
         if (newVendorName && !vendorNames.includes(newVendorName)) {
             setVendorNames(prev => [...prev, newVendorName].sort());
         }
-        return Promise.resolve(); // Return a promise as AgentForm's handleAgentAdded does
+        return Promise.resolve(); 
     };
 
     const onSubmit = async (values, { setSubmitting, resetForm }) => {
         try {
             setIsSubmitting(true);
-            setSubmitting(true); // Formik's own submitting state
+            setSubmitting(true); 
 
             const submitData = {
                 vender_name: values.vender_name,
                 date: values.date,
-                entry: values.entry, // This maps to the 'entry' field in your backend
-                detail: values.detail, // This maps to the 'detail' field in your backend
+                entry: values.entry, 
+                detail: values.detail, 
                 bank_title: values.bank_title,
-                credit: parseFloat(values.credit) || null, // Ensure null for 0 or empty string
-                debit: parseFloat(values.debit) || null,   // Ensure null for 0 or empty string
+                credit: parseFloat(values.credit) || null, 
+                debit: parseFloat(values.debit) || null, 
             };
 
             let response;
@@ -130,9 +124,9 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             if (response.data.status === 'success') {
                 console.log(`Vendor entry ${isEditing ? 'updated' : 'created'} successfully:`, response.data);
                 resetForm();
-                onSubmitSuccess(); // Call success callback
+                onSubmitSuccess(); 
             } else {
-                // Handle backend errors
+                
                 alert(`Failed to ${isEditing ? 'update' : 'save'} vendor entry: ${response.data.message}`);
             }
         } catch (error) {
@@ -140,7 +134,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             alert(`Failed to ${isEditing ? 'update' : 'save'} vendor entry: ${error.response?.data?.message || error.message}`);
         } finally {
             setIsSubmitting(false);
-            setSubmitting(false); // Reset Formik's submitting state
+            setSubmitting(false); 
         }
     };
 
@@ -222,7 +216,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                             <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                         </div>
 
-                                {/* <div className="w-full sm:w-[calc(50%-10px)]">
+                                <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Detail</label>
                                     <Field
                                         type="text"
@@ -231,7 +225,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                         disabled={isSubmitting}
                                     />
                                     <ErrorMessage name="detail" component="div" className="text-red-500 text-sm mt-1" />
-                                </div> */}
+                                </div>
 
                                 <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Bank Title</label>
@@ -245,7 +239,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                 </div>
 
                                 {/* <div className="w-full sm:w-[calc(50%-10px)]">
-                                    <label className="block font-medium mb-1">Credit</label>
+                                    <label className="block font-medium mb-1">Payable</label>
                                     <Field
                                         type="number"
                                         name="credit"
@@ -256,7 +250,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                 </div> */}
 
                                 <div className="w-full sm:w-[calc(50%-10px)]">
-                                    <label className="block font-medium mb-1">Debit</label>
+                                    <label className="block font-medium mb-1">Payed</label>
                                     <Field
                                         type="number"
                                         name="debit"

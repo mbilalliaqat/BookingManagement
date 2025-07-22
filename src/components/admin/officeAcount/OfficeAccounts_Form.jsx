@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner'; // Import the spinner component
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api'; // Import the fetchEntryCounts function
+import axios from 'axios';
 
 const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const { user } = useAppContext();
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     
-    // Add state for entry numbers
+    const [vendorNames, setVendorNames] =useState([]);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
     
@@ -17,6 +18,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         employee_name: user?.username || '',
         entry: '0/0', // Add entry field
         date: '',
+        vendor_name:'',
         detail: '',
         credit: '',
         debit: '',
@@ -89,6 +91,21 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         }
     }, [editingEntry, entryNumber, totalEntries]);
 
+     useEffect(() => {
+        const fetchVendorNames = async () => {
+            try {
+                const response = await axios.get(`${BASE_URL}/vender-names/existing`);
+                if (response.data.status === 'success') {
+                    setVendorNames(response.data.vendorNames || []);
+                }
+            } catch (error) {
+                console.error('Error fetching vendor names:', error);
+            }
+        };
+
+        fetchVendorNames();
+    }, []);
+
     const handleCheckboxChange = (e) => {
         // Don't allow changing to "Opening Balance" mode when editing
         if (isEditing) return;
@@ -114,10 +131,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         let newErrors = {};
         let isValid = true;
 
-        if (!data.bank_name) {
-            newErrors.bank_name = 'Select a Bank';
-            isValid = false;
-        }
+       
 
         if (!data.detail) {
             newErrors.detail = 'Enter Detail';
@@ -149,7 +163,8 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             const submitData = {
                 bank_name: data.bank_name,
                 employee_name: data.employee_name,
-                entry: data.entry, // Include entry in request data
+                vendor_name:data.vendor_name,
+                entry: data.entry,
                 date: data.date || new Date().toISOString().split('T')[0],
                 detail: data.detail,
             };
@@ -205,6 +220,26 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                 debit: '',
                 balance: '',
             });
+
+if (data.vendor_name) {
+    const vendorData = {
+        vender_name: data.vendor_name,  
+        detail: `Office Cash Entry by ${data.employee_name}`,
+        debit: parseFloat(data.debit) || 0,
+        credit: 0,
+        date: new Date().toISOString().split('T')[0],
+        entry: data.entry,
+        bank_title: data.bank_name,
+    };
+    try {
+        const response = await axios.post(`${BASE_URL}/vender`, vendorData);
+        if (response.data.status !== 'success') {
+            console.error('Failed to store vendor debit:', response.data.message);
+        }
+    } catch (error) {
+        console.error('Error storing vendor debit:', error);
+    }
+}
             setHideFields(false);
             onSubmitSuccess();
         } catch (error) {
@@ -249,16 +284,33 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                 onChange={handleChange}
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             >
-                                <option value="">Select a Bank</option>
-                                <option value="UNITED BANK (ubl1)">UNITED BANK (M ALI RAZA)</option>
-                                <option value="UNITED BANK (ubl2)">UNITED BANK (FAIZAN E RAZA TRAVEL)</option>
-                                <option value="HABIB BANK (HBL1)">HABIB BANK (M ALI RAZA)</option>
-                                <option value="HABIB BANK (HBL2)">HABIB BANK (FAIZAN E RAZA TRAVEL)</option>
-                                <option value="JAZZCASH">JAZZCASH (M ALI RAZA)</option>
-                                <option value="MCB">MCB (FIT MANPOWER) (FIT MANPOWER)</option>
+                             <option value="">Select a Bank</option>
+                             <option value="UBL M.A.R">UBL M.A.R</option>
+                             <option value="UBL F.Z">UBL F.Z</option>
+                             <option value="HBL M.A.R">HBL M.A.R</option>
+                             <option value="HBL F.Z">HBL F.Z</option>
+                             <option value="JAZ C">JAZ C</option>
+                             <option value="MCB FIT">MCB FIT</option>
                             </select>
                             {prevError.bank_name && <span className="text-red-500">{prevError.bank_name}</span>}
                         </div>
+
+    <div className="w-full sm:w-[calc(50%-10px)]">
+        <label className="block font-medium mb-1">Vendor Name</label>
+        <select
+            name="vendor_name"
+            value={data.vendor_name}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+        >
+            <option value="">Select a Vendor</option>
+            {vendorNames.map(vendor => (
+                <option key={vendor} value={vendor}>{vendor}</option>
+            ))}
+        </select>
+        {prevError.vendor_name && <span className="text-red-500">{prevError.vendor_name}</span>}
+    </div>
+
 
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Employee</label>

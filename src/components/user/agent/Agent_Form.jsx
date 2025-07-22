@@ -27,6 +27,8 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         detail: editingEntry?.detail || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
         debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
+            paid_cash: editingEntry?.paid_cash ? editingEntry.paid_cash.toString() : '', 
+    paid_bank: editingEntry?.paid_bank ? editingEntry.paid_bank.toString() : '', 
     };
 
     const validationSchema = Yup.object({
@@ -37,6 +39,8 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         detail: Yup.string().required('Detail is required'),
         credit: Yup.number().min(0, 'Credit must be positive'),
         debit: Yup.number().min(0, 'Debit must be positive'),
+            paid_cash: Yup.number().min(0, 'Paid Cash must be positive'),  // Added
+    paid_bank: Yup.number().min(0, 'Paid Bank must be positive'),
     }).test('credit-debit-test', 'Either Credit or Debit is required', (values) => {
         return values.credit || values.debit;
     });
@@ -108,6 +112,8 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                 detail: values.detail,
                 credit: parseFloat(values.credit) || 0,
                 debit: parseFloat(values.debit) || 0,
+                 paid_cash: parseFloat(values.paid_cash) || 0,  // Added
+            paid_bank: parseFloat(values.paid_bank) || 0,
             };
 
             let response;
@@ -249,6 +255,27 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                     />
                                     <ErrorMessage name="debit" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>
+
+                                 <div className="w-full sm:w-[calc(50%-10px)]">
+                        <label className="block font-medium mb-1">Paid Cash</label>
+                        <Field
+                            type="number"
+                            name="paid_cash"
+                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        />
+                        <ErrorMessage name="paid_cash" component="div" className="text-red-500 text-sm mt-1" />
+                    </div>
+
+                    {/* New Paid Bank field */}
+                    <div className="w-full sm:w-[calc(50%-10px)]">
+                        <label className="block font-medium mb-1">Paid Bank</label>
+                        <Field
+                            type="number"
+                            name="paid_bank"
+                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        />
+                        <ErrorMessage name="paid_bank" component="div" className="text-red-500 text-sm mt-1" />
+                    </div>
                             </div>
 
                             <div className="mt-10 flex justify-center">

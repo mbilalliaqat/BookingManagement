@@ -38,22 +38,24 @@ const OfficeAccounts = () => {
     }
 }, []);
 
-    const formatDateForInput = useCallback((dateString) => {
-        if (!dateString) return '';
-        try {
-            const parts = dateString.split('/');
-            if (parts.length === 3) {
-                return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-            }
-            
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return ''; 
-            return date.toISOString().split('T')[0];
-        } catch (error) {
-            console.error('Error formatting date for input:', dateString, error);
-            return '';
+   const formatDateForInput = useCallback((dateString) => {
+    if (!dateString) return '';
+    try {
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+            // Fix: parts[0] is day, parts[1] is month, parts[2] is year
+            // Convert from dd/mm/yyyy to yyyy-mm-dd
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         }
-    }, []);
+        
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return ''; 
+        return date.toISOString().split('T')[0];
+    } catch (error) {
+        console.error('Error formatting date for input:', dateString, error);
+        return '';
+    }
+}, []);
 
     // Enhanced fetch entries with caching
     const fetchEntries = useCallback(async () => {
@@ -109,6 +111,7 @@ const OfficeAccounts = () => {
         { header: 'DATE', accessor: 'date' },
         {header:'ENTRY', accessor:'entry'},
         {header:'EMPLOYEE',accessor:'employee_name'},
+        { header: 'VENDOR', accessor: 'vendor_name' },
         { header: 'DETAIL', accessor: 'detail' },
         { header: 'CREDIT', accessor: 'credit' },
         { header: 'DEBIT', accessor: 'debit' },
@@ -222,15 +225,15 @@ const OfficeAccounts = () => {
     }, [selectedBank, entries, closeDeleteModal, fetchEntries]);
 
     // Memoize bank options to avoid recreating on each render
-    const bankOptions = useMemo(() => [
-        { value: "", label: "Select Bank" },
-        { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
-        { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
-        { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
-        { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
-        { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
-        { value: "MCB", label: "MCB (FIT MANPOWER)" }
-    ], []);
+  const bankOptions = useMemo(() => [
+    { value: "", label: "Select Bank" },
+    { value: "UBL M.A.R", label: "UBL M.A.R" },
+    { value: "UBL F.Z", label: "UBL F.Z" },
+    { value: "HBL M.A.R", label: "HBL M.A.R" },
+    { value: "HBL F.Z", label: "HBL F.Z" },
+    { value: "JAZ C", label: "JAZ C" },
+    { value: "MCB FIT", label: "MCB FIT" }
+], []);
 
     return (
         <div className="h-full flex flex-col">

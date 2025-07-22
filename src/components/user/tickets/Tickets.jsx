@@ -263,7 +263,7 @@ const Tickets = () => {
         accessor: 'bank_paid',
         render: (cellValue, row) => (
             <div>
-                <div style={{ color: '#666' }}>{row?.bank_title || ''}</div>
+                <div>{row?.bank_title || ''}</div>
                 <div >{row?.paid_in_bank || ''}</div>
             </div>
         )

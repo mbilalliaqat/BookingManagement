@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Formik, Form, Field, ErrorMessage, useFormikContext } from 'formik';
 import * as Yup from 'yup';
 import { motion } from 'framer-motion';
@@ -7,19 +7,18 @@ import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts, incrementFormEntry } from '../../ui/api';
 import axios from 'axios';
 
-// --- Constants & Utilities ---
 const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
 const PASSENGER_TITLE_OPTIONS = ['Mr', 'Mrs', 'Ms', 'Dr'];
 const DOCUMENT_TYPE_OPTIONS = ['Passport', 'National ID'];
 
 const BANK_OPTIONS = [
-    { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
-    { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
-    { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
-    { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
-    { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
-    { value: "MCB", label: "MCB (FIT MANPOWER)" }
+    { value: "UBL M.A.R", label: "UBL M.A.R" },
+    { value: "UBL F.Z", label: "UBL F.Z" },
+    { value: "HBL M.A.R", label: "HBL M.A.R" },
+    { value: "HBL F.Z", label: "HBL F.Z" },
+    { value: "JAZ C", label: "JAZ C" },
+    { value: "MCB FIT", label: "MCB FIT" }
 ];
 
 const DEFAULT_PASSENGER_DETAIL = {
@@ -35,7 +34,10 @@ const DEFAULT_PASSENGER_DETAIL = {
 };
 
 const formatDateForInput = (dateStr) => {
-    if (!dateStr) return '';
+    // Treat null, undefined, empty string, or common "zero" date strings as empty
+    if (!dateStr || String(dateStr).trim() === '' || dateStr === '0000-00-00' || String(dateStr).startsWith('1970-01-01')) {
+        return '';
+    }
     const date = new Date(dateStr);
     return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
 };
@@ -92,7 +94,6 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => (
     >
         <h4 className="text-lg font-semibold mb-3 text-purple-700">Passenger {index + 1} Details</h4>
 
-        {/* Reusable Field Renderer */}
         {([
             { label: 'Title', name: 'title', as: 'select', options: PASSENGER_TITLE_OPTIONS, placeholder: 'Select title' },
             { label: 'First Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
@@ -215,13 +216,14 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [totalEntries, setTotalEntries] = useState(0);
     const [agentNames, setAgentNames] = useState([]);
     const [vendorNames, setVendorNames] = useState([]);
+    const [customerNames,setCustomerNames] = useState([]);
 
     // Form field definitions
     const formFields = {
         section1: [
             { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
             { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
-            { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
+            { name: 'customer_add', label: 'Add Customer', type: 'select',options:customerNames, placeholder: 'Select Customer Name', icon: 'address-card' },
             { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
             { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
             { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter return date', icon: 'calendar-alt' },
@@ -235,8 +237,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'receivable_amount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
             { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
             { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-            { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
-            { name: 'paid_in_bank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank payment details', icon: 'university' },
+            { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.value), placeholder: 'Select bank title', icon: 'university' },
+            { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
             { name: 'payable_to_vendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
             { name: 'vendor_name', label: 'Vendor Name', type: 'select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
             { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
@@ -287,10 +289,10 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 lastName: Yup.string().required('Last Name is required'),
                 documentType: Yup.string().required('Document Type is required'),
                 documentNo: Yup.string().required('Document Number is required'),
-                dob: Yup.date().required('Date of Birth is required').typeError('Invalid date'),
-                nationality: Yup.string().required('Nationality is required'),
-                documentExpiry: Yup.date().required('Document Expiry is required').typeError('Invalid date'),
-                issueCountry: Yup.string().required('Issue Country is required'),
+                // dob: Yup.date().required('Date of Birth is required').typeError('Invalid date'),
+                // nationality: Yup.string().required('Nationality is required'),
+                // documentExpiry: Yup.date().required('Document Expiry is required').typeError('Invalid date'),
+                // issueCountry: Yup.string().required('Issue Country is required'),
             })
         ).test(
             'has-passenger-details',
@@ -306,8 +308,12 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
         payable_to_vendor: Yup.number().required('Payable To Vendor is required').typeError('Payable To Vendor must be a number'),
+        bank_title: Yup.string().required('Bank Title is required'),
+        paid_in_bank: Yup.number().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
         profit: Yup.number(),
-        remaining_amount: Yup.number()
+        remaining_amount: Yup.number(),
+         reference: Yup.string(),  // no .required()
+    return_date: Yup.date().nullable().notRequired().typeError('Invalid date'),
     });
 
     // Fetch Agent and Vendor Names (Combined Effect)
@@ -330,6 +336,22 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         };
         fetchData();
     }, []);
+
+    useEffect(()=>{
+        const fetchCustomers = async ()=>{
+            try {
+                const response = await axios.get(`${BASE_URL}/customers`);
+                if(response.data.status === 'success'){
+                    setCustomerNames(response.data.customers.map(c=>c.name))
+                } else {
+                    console.error('Failed to fetch customers',response.data.message)
+                }
+            } catch (error) {
+                console.error('Error fetching customers', error)
+            }
+        };
+        fetchCustomers();
+    },[])
 
     // Initialize Form Values for Edit or New Entry
     useEffect(() => {
@@ -354,7 +376,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 documentExpiry: formatDateForInput(detail.documentExpiry)
             }));
 
-            const [current, total] = editEntry.entry ? editEntry.entry.split('/').map(Number) : [0, 0];
+            const entryString = editEntry.entry || '0/0';
+            const [current, total] = entryString.includes('/') ? entryString.split('/').map(Number) : [0, 0];
             setEntryNumber(current);
             setTotalEntries(total);
 
@@ -364,9 +387,9 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 agent_name: editEntry.agent_name || '',
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
-                entry: editEntry.entry || '0/0',
-                depart_date: formatDateForInput(editEntry.depart_date),
-                return_date: formatDateForInput(editEntry.return_date),
+                entry: entryString,
+                depart_date: editEntry? formatDateForInput(editEntry.depart_date):'',
+                return_date:editEntry? formatDateForInput(editEntry.return_date) :'',
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
                 adults: editEntry.adults || 0,
@@ -402,13 +425,13 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 passengers: []
             }));
         }
-    }, [editEntry, user, BASE_URL]);
+    }, [editEntry, user]);
 
     // Update entry string when counts change
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: `${entryNumber}/${totalEntries}`
+            entry: `Ticket ${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries]);
 
@@ -422,16 +445,16 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         })));
 
         try {
-            const entryValueToSubmit = editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`;
-            const parsedEntryNumber = parseInt(entryValueToSubmit.split('/')[0]);
+            const entryValueToSubmit = editEntry ? editEntry.entry : `Ticket ${entryNumber}/${totalEntries}`;
+            const parsedEntryNumber = parseInt(entryValueToSubmit.replace('Ticket ', '').split('/')[0]);
 
             const requestData = {
                 employee_name: values.employee_name, agent_name: values.agent_name, customer_add: values.customer_add,
-                reference: values.reference, entry: entryValueToSubmit, depart_date: values.depart_date,
-                return_date: values.return_date, sector: values.sector, airline: values.airline,
+                reference: values.reference || null, entry: entryValueToSubmit, depart_date: values.depart_date || null,
+                return_date: values.return_date || null, sector: values.sector, airline: values.airline,
                 adults: values.adults, children: values.children, infants: values.infants,
                 passport_detail: passportDetail, receivable_amount: parseInt(values.receivable_amount),
-                paid_cash: parseInt(values.paid_cash), bank_title: values.bank_title, paid_in_bank: values.paid_in_bank,
+                paid_cash: parseInt(values.paid_cash), bank_title: values.bank_title, paid_in_bank: parseFloat(values.paid_in_bank),
                 payable_to_vendor: parseInt(values.payable_to_vendor), vendor_name: values.vendor_name,
                 profit: parseInt(values.profit), remaining_amount: parseInt(values.remaining_amount)
             };
@@ -448,17 +471,19 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             if (!editEntry) {
                 await incrementFormEntry('ticket', parsedEntryNumber);
 
-                const commonDetail = JSON.stringify({
-                    sector: values.sector, depart_date: values.depart_date, return_date: values.return_date,
-                    airline: values.airline, passengerFirstName: values.passengers[0]?.firstName || '',
-                    passengerLastName: values.passengers[0]?.lastName || ''
-                });
+              const commonDetail = [
+    values.sector || '',
+    values.depart_date || '',
+    values.return_date || '',
+    values.airline || '',
+    `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`.trim()
+].join(',');
 
                 // Vendor data submission
                 const vendorData = {
                     vender_name: values.vendor_name, detail: commonDetail,
-                    debit: parseInt(values.payable_to_vendor), date: new Date().toISOString().split('T')[0],
-                    entry: '', bank_title: values.bank_title, credit: null
+                    credit: parseInt(values.payable_to_vendor), date: new Date().toISOString().split('T')[0],
+                    entry: '', bank_title: values.bank_title, debit: null
                 };
                 const vendorResponse = await fetch(`${BASE_URL}/vender`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vendorData),
@@ -466,15 +491,47 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 if (!vendorResponse.ok) console.error('Vendor submission failed:', vendorResponse.status);
 
                 // Agent data submission
+                const agentCredit = (parseInt(values.paid_cash) || 0) + (parseFloat(values.paid_in_bank) || 0);
+                
                 const agentData = {
                     agent_name: values.agent_name, employee: values.employee_name, detail: commonDetail,
-                    credit: parseInt(values.receivable_amount), date: new Date().toISOString().split('T')[0],
-                    entry: '', bank_title: values.bank_title, debit: null
+                    receivable_amount:parseInt(values.receivable_amount) || 0,
+                    paid_cash:parseInt(values.paid_cash) || 0,
+                    paid_bank:parseFloat(values.paid_in_bank) || 0,
+
+                    credit: agentCredit, date: new Date().toISOString().split('T')[0],
+                    entry: entryValueToSubmit, bank_title: values.bank_title, debit: null
                 };
                 const agentResponse = await fetch(`${BASE_URL}/agent`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(agentData),
                 });
                 if (!agentResponse.ok) console.error('Agent submission failed:', agentResponse.status);
+
+                // Submit to Office Accounts
+                if (values.bank_title && (parseFloat(values.paid_in_bank) || 0) > 0) {
+                    const officeAccountDetail = `Customer: ${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}, Ref: ${values.reference || 'N/A'}, Agent: ${values.agent_name || 'N/A'}`;
+
+                    const officeAccountData = {
+                        bank_name: values.bank_title,
+                        employee_name: values.employee_name,
+                        entry: entryValueToSubmit, // Use Ticket 13/56 format
+                        date: new Date().toISOString().split('T')[0],
+                        detail: officeAccountDetail,
+                        credit: parseFloat(values.paid_in_bank) || 0,
+                        debit: 0,
+                    };
+
+                    try {
+                        const officeAccountResponse = await axios.post(`${BASE_URL}/accounts`, officeAccountData);
+                        if (officeAccountResponse.status !== 200 && officeAccountResponse.status !== 201) {
+                            console.error('Office Account submission failed with status:', officeAccountResponse.status, officeAccountResponse.data);
+                        } else {
+                            console.log('Office Account submitted successfully:', officeAccountResponse.data);
+                        }
+                    } catch (officeAccountError) {
+                        console.error('Error submitting Office Account data:', officeAccountError.response ? officeAccountError.response.data : officeAccountError.message);
+                    }
+                }
             }
 
             resetForm();
@@ -614,8 +671,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                         Cancel
                                     </motion.button>
                                     {activeSection < 3 ? (
-                                        <motion.button type="button" onClick={() => setActiveSection(activeSection + 1)} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center shadow-md hover:shadow-lg transition-all" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                                            Next <i className="fas fa-arrow-right ml-2"></i>
+                                        <motion.button >
+                                           
                                         </motion.button>
                                     ) : (
                                         <motion.button type="submit" className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition-all" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={isSubmitting}>

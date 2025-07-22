@@ -40,7 +40,7 @@ function Table({ data, columns, maxHeight = '400px' }) {
                       {columns?.map((col, colIndex) => (
                         <td
                           key={colIndex}
-                          className="p-4 text-[4px] md:text-[9px] text-black"
+                          className="p-1 font-medium text-[6px] md:text-[12px] text-black border border-black/40"
                         >
                           {col.render ? col.render(row[col.accessor], row) : row[col.accessor] || '-'}
                         </td>
