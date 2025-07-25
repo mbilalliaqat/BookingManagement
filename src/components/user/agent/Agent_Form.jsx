@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useAppContext } from '../../contexts/AppContext';
 import AgentNameModal from '../../ui/AgentNameModal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
-import { fetchEntryCounts } from '../../ui/api';
+import { fetchEntryCounts,incrementFormEntry  } from '../../ui/api';
 
 const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const { user } = useAppContext();
@@ -23,7 +23,7 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         agent_name: editingEntry?.agent_name || '',
         date: editingEntry?.date || '',
         employee: editingEntry?.employee || user?.username || '', 
-        entry: editingEntry?.entry || `${entryNumber}/${totalEntries}`, 
+        entry: editingEntry?.entry || `AG ${entryNumber}/${totalEntries}`, 
         detail: editingEntry?.detail || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
         debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
@@ -103,12 +103,13 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         try {
             setIsSubmitting(true);
             setSubmitting(true);
+             const entryValue = isEditing ? values.entry : `AG ${entryNumber}/${totalEntries}`;
 
             const submitData = {
                 agent_name: values.agent_name,
                 date: values.date,
                 employee: values.employee,
-                entry: values.entry,
+                entry: entryValue,
                 detail: values.detail,
                 credit: parseFloat(values.credit) || 0,
                 debit: parseFloat(values.debit) || 0,
@@ -123,6 +124,9 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             } else {
                 // Create new entry
                 response = await axios.post(`${BASE_URL}/agent`, submitData);
+                if (response.data.status === 'success') {
+                    await incrementFormEntry('agent', entryNumber);
+                }
             }
 
             if (response.data.status === 'success') {
@@ -221,7 +225,8 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                         className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
                                         disabled
                                         readOnly
-                                        value={`${entryNumber}/${totalEntries}`} 
+                                        value={isEditing ? formik.values.entry : `AG ${entryNumber}/${totalEntries}`}
+
                                     />
                                     <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>

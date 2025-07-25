@@ -165,14 +165,27 @@ export default function Dashboard() {
         // Process Tickets data
         const ticketBookings = ticketsData.ticket.map(ticket => {
           let passportDetails = {};
+          let passengerName = '';
           try {
               if (typeof ticket.passport_detail === 'string') {
                   passportDetails = JSON.parse(ticket.passport_detail);
               } else if (typeof ticket.passport_detail === 'object' && ticket.passport_detail !== null) {
                   passportDetails = ticket.passport_detail;
               }
+                 if (Array.isArray(passportDetails)) {
+      // If it's an array, take the first passenger's details
+      passportDetails = passportDetails[0];
+    }
+    
+    passengerName = `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim();
+    
+    // Fallback to other fields if passport details don't have the name
+    if (!passengerName) {
+      passengerName = ticket.customer_name || ticket.reference || 'N/A';
+    }
           } catch (e) {
               console.error("Error parsing passport details for Ticket:", e);
+                passengerName = ticket.customer_name || ticket.reference || 'N/A';
           }
           return {
               type: 'Ticket',
@@ -184,7 +197,7 @@ export default function Dashboard() {
               remaining_amount: ticket.remaining_amount,
               booking_date: new Date(ticket.created_at).toLocaleDateString(),
               withdraw: 0,
-              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
+             passengerName: passengerName, 
           };
         });
 

@@ -4,7 +4,7 @@ import * as Yup from 'yup';
 import axios from 'axios';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import VenderNameModal from '../../ui/VenderNameModal'; 
-import { fetchEntryCounts } from '../../ui/api';
+import { fetchEntryCounts,incrementFormEntry } from '../../ui/api';
 
 const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [vendorNames, setVendorNames] = useState([]);
@@ -27,7 +27,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const initialValues = {
         vender_name: editingEntry?.vender_name || '', 
         date: formatDate(editingEntry?.date),
-        entry: editingEntry?.entry || `${entryNumber}/${totalEntries}`,
+        entry: editingEntry?.entry || `VD ${entryNumber}/${totalEntries}`,
         detail: editingEntry?.detail || '', 
         bank_title: editingEntry?.bank_title || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
@@ -104,10 +104,12 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             setIsSubmitting(true);
             setSubmitting(true); 
 
+             const entryValue = isEditing ? values.entry : `VD ${entryNumber}/${totalEntries}`;
+
             const submitData = {
                 vender_name: values.vender_name,
                 date: values.date,
-                entry: values.entry, 
+                entry: entryValue, 
                 detail: values.detail, 
                 bank_title: values.bank_title,
                 credit: parseFloat(values.credit) || null, 
@@ -119,6 +121,9 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                 response = await axios.put(`${BASE_URL}/vender/${editingEntry.id}`, submitData);
             } else {
                 response = await axios.post(`${BASE_URL}/vender`, submitData);
+                if (response.data.status === 'success') {
+                    await incrementFormEntry('vender', entryNumber);
+                }
             }
 
             if (response.data.status === 'success') {
@@ -212,6 +217,8 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
                                 disabled
                                 readOnly
+                                value={isEditing ? formik.values.entry : `VD ${entryNumber}/${totalEntries}`}
+
                                                             />
                             <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                         </div>

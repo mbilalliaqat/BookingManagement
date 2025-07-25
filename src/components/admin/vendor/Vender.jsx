@@ -47,7 +47,7 @@ const Vender = () => {
           remaining_amount: Number(entry.remaining_amount) || 0, 
           bank_title: entry.bank_title || '',
         }))
-        .sort((a, b) => a.id - b.id) || [];
+        .sort((a, b) => b.id - a.id) || [];
         
         setData(formattedData);
       } else {

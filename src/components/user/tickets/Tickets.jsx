@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Table from '../../ui/Table';
 import { useAppContext } from '../../contexts/AppContext';
 import Tickets_Form from './Tickets_Form';
+import RemainingPay from '../paymentHistory/RemainingPay'; // Import the RemainingPay component
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import ButtonSpinner from '../../ui/ButtonSpinner';
@@ -17,6 +18,10 @@ const Tickets = () => {
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showPassportFields, setShowPassportFields] = useState(false);
+    // New state for remaining pay modal
+    const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
+    const [selectedTicketForPay, setSelectedTicketForPay] = useState(null);
+    
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -116,6 +121,24 @@ const Tickets = () => {
     useEffect(() => {
         fetchTickets();
     }, []);
+
+    // Function to handle remaining pay button click
+    const handleRemainingPay = (ticket) => {
+        setSelectedTicketForPay(ticket);
+        setShowRemainingPayModal(true);
+    };
+
+    // Function to close remaining pay modal
+    const closeRemainingPayModal = () => {
+        setShowRemainingPayModal(false);
+        setSelectedTicketForPay(null);
+    };
+
+    // Function to handle successful payment
+    const handlePaymentSuccess = () => {
+        // Optionally refresh tickets data or update UI
+        fetchTickets();
+    };
 
     const baseColumns=[
          { header: 'BOOKING DATE', accessor: 'created_at' },
@@ -279,7 +302,22 @@ const Tickets = () => {
         )
     },
         { header: 'PROFIT', accessor: 'profit' },
-        { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
+        {
+            header: 'REMAINING AMOUNT',
+            accessor: 'remaining_amount',
+            render: (cellValue, row) => (
+                <div className="flex flex-col items-center">
+                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <button
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        onClick={() => handleRemainingPay(row)}
+                        title="Add Payment"
+                    >
+                        <i className="fas fa-plus"></i> Pay
+                    </button>
+                </div>
+            )
+        },
     ];
     const actionColumns = user.role === 'admin' ? [{
         header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
@@ -413,6 +451,52 @@ const Tickets = () => {
         );
     };
 
+    // Remaining Pay Modal Component
+    const RemainingPayModal = () => {
+        if (!showRemainingPayModal || !selectedTicketForPay) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold">Payment Details</h2>
+                        <button
+                            onClick={closeRemainingPayModal}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <i className="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    {/* Display Ticket Info */}
+                    <div className="bg-gray-100 p-4 rounded mb-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <strong>Ticket ID:</strong> {selectedTicketForPay.id}
+                            </div>
+                            <div>
+                                <strong>Customer:</strong> {selectedTicketForPay.customer_add}
+                            </div>
+                            <div>
+                                <strong>Reference:</strong> {selectedTicketForPay.reference}
+                            </div>
+                            <div>
+                                <strong>Remaining Amount:</strong> {selectedTicketForPay.remaining_amount || '0'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RemainingPay Component */}
+                    <RemainingPay
+                        ticketId={selectedTicketForPay.id}
+                        onClose={closeRemainingPayModal}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className='h-full flex flex-col'>
             {showForm ? (
@@ -470,6 +554,7 @@ const Tickets = () => {
                         )}
                     </div>
                     <DeleteConfirmationModal />
+                    <RemainingPayModal />
                 </div>
             )}
         </div>

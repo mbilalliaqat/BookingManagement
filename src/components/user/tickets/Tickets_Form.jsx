@@ -483,7 +483,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 const vendorData = {
                     vender_name: values.vendor_name, detail: commonDetail,
                     credit: parseInt(values.payable_to_vendor), date: new Date().toISOString().split('T')[0],
-                    entry: '', bank_title: values.bank_title, debit: null
+                    entry: entryValueToSubmit, bank_title: values.bank_title, debit: null
                 };
                 const vendorResponse = await fetch(`${BASE_URL}/vender`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vendorData),
