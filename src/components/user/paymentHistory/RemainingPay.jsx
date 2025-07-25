@@ -142,7 +142,7 @@ const addPayment = async () => {
                                 />
                             </div>
                             
-                            <div>
+                            {/* <div>
                                 <label className="block text-sm font-medium mb-1">Remaining Amount</label>
                                 <input
                                     type="number"
@@ -151,7 +151,7 @@ const addPayment = async () => {
                                     placeholder="Enter remaining amount"
                                     className="w-full border rounded px-3 py-2"
                                 />
-                            </div>
+                            </div> */}
                             
                             <div>
                                 <label className="block text-sm font-medium mb-1">Cash Paid</label>
@@ -164,8 +164,8 @@ const addPayment = async () => {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Bank Title</label>
+                            {/* <div>
+                                <label className="block text-sm font-medium mb-1"></label>
                                 <input
                                     type="text"
                                     value={newPayment.bank_title}
@@ -173,7 +173,7 @@ const addPayment = async () => {
                                     placeholder="Enter bank name (optional)"
                                     className="w-full border rounded px-3 py-2"
                                 />
-                            </div>
+                            </div> */}
 
                             <div>
                                 <label className="block text-sm font-medium mb-1">Recorded By *</label>

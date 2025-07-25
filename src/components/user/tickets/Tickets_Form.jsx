@@ -377,7 +377,9 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             }));
 
             const entryString = editEntry.entry || '0/0';
-            const [current, total] = entryString.includes('/') ? entryString.split('/').map(Number) : [0, 0];
+            // const [current, total] = entryString.includes('/') ? entryString.split('/').map(Number) : [0, 0];
+            const numbers = entryString.match(/\d+/g) || ['0', '0']; // Extract all numbers
+const [current, total] = numbers.map(num => parseInt(num, 10));
             setEntryNumber(current);
             setTotalEntries(total);
 

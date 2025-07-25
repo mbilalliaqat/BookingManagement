@@ -79,13 +79,13 @@ const RefundCustomer = () => {
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
-                        className="text-blue-500 hover:text-blue-700 mr-1 text-[8px]"
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
                         onClick={() => handleUpdate(index)}
                     >
                         <i className="fas fa-edit"></i> 
                     </button>
                     <button
-                        className="text-red-500 hover:text-red-700 text-[8px]"
+                        className="text-red-500 hover:text-red-700 text-[13px]"
                         onClick={() => openDeleteModal(index)}
                     >
                         <i className="fas fa-trash"></i> 
