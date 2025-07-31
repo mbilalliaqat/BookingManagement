@@ -18,7 +18,8 @@ const BANK_OPTIONS = [
     { value: "HBL M.A.R", label: "HBL M.A.R" },
     { value: "HBL F.Z", label: "HBL F.Z" },
     { value: "JAZ C", label: "JAZ C" },
-    { value: "MCB FIT", label: "MCB FIT" }
+    { value: "MCB FIT", label: "MCB FIT" },
+    { value: "Cash Office", label: "Cash Office" }
 ];
 
 const DEFAULT_PASSENGER_DETAIL = {
@@ -34,7 +35,6 @@ const DEFAULT_PASSENGER_DETAIL = {
 };
 
 const formatDateForInput = (dateStr) => {
-    // Treat null, undefined, empty string, or common "zero" date strings as empty
     if (!dateStr || String(dateStr).trim() === '' || dateStr === '0000-00-00' || String(dateStr).startsWith('1970-01-01')) {
         return '';
     }
@@ -56,21 +56,20 @@ const ErrorText = ({ name }) => (
     </ErrorMessage>
 );
 
-// --- Formik Auto-calculation Component ---
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
 
     useEffect(() => {
-        const receivable = parseInt(values.receivable_amount) || 0;
-        const cashPaid = parseInt(values.paid_cash) || 0;
+        const receivable = parseFloat(values.receivable_amount) || 0;
+        const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
-        const payableToVendor = parseInt(values.payable_to_vendor) || 0;
+        const payableToVendor = parseFloat(values.payable_to_vendor) || 0;
 
         const remaining = receivable - cashPaid - bankPaid;
-        setFieldValue('remaining_amount', remaining);
+        setFieldValue('remaining_amount', remaining.toFixed(2));
 
         const profit = payableToVendor > 0 ? receivable - payableToVendor : '';
-        setFieldValue('profit', profit);
+        setFieldValue('profit', profit ? profit.toFixed(2) : '');
     }, [
         values.receivable_amount,
         values.paid_cash,
@@ -82,7 +81,6 @@ const AutoCalculate = () => {
     return null;
 };
 
-// --- Passenger Details Sub-Component ---
 const PassengerDetailsFields = ({ index, fieldPrefix }) => (
     <motion.div
         key={index}
@@ -93,7 +91,6 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => (
         className="border p-4 rounded-md mb-4 bg-gray-50"
     >
         <h4 className="text-lg font-semibold mb-3 text-purple-700">Passenger {index + 1} Details</h4>
-
         {([
             { label: 'Title', name: 'title', as: 'select', options: PASSENGER_TITLE_OPTIONS, placeholder: 'Select title' },
             { label: 'First Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
@@ -136,7 +133,6 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => (
     </motion.div>
 );
 
-// --- Passenger Count Slider Component ---
 const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider }) => {
     const handleCountChange = useCallback((type, delta) => {
         const newCount = Math.max(0, (values[type] || 0) + delta);
@@ -160,29 +156,6 @@ const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider })
         setFieldValue('passengers', updatedPassengers);
     }, [values, setFieldValue]);
 
-    const PassengerCounter = ({ label, type }) => (
-        <div className="flex justify-between items-center mb-3">
-            <span className="text-gray-700">{label}</span>
-            <div className="flex items-center">
-                <button
-                    type="button"
-                    className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                    onClick={() => handleCountChange(type, -1)}
-                >
-                    <i className="fas fa-minus"></i>
-                </button>
-                <span className="mx-3 font-semibold">{values[type]}</span>
-                <button
-                    type="button"
-                    className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100"
-                    onClick={() => handleCountChange(type, 1)}
-                >
-                    <i className="fas fa-plus"></i>
-                </button>
-            </div>
-        </div>
-    );
-
     return (
         <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -191,15 +164,44 @@ const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider })
             transition={{ duration: 0.2 }}
             className="absolute z-10 bg-white border border-gray-300 rounded-md shadow-lg p-4 mt-1 w-64 right-0"
         >
-            <PassengerCounter label="Adults (12+ yrs)" type="adults" />
-            <PassengerCounter label="Children (2-12 yrs)" type="children" />
-            <PassengerCounter label="Infant (Under 2 yrs)" type="infants" />
+            <div className="flex justify-between items-center mb-3">
+                <span className="text-gray-700">Adults (12+ yrs)</span>
+                <div className="flex items-center">
+                    <button type="button" className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100" onClick={() => handleCountChange('adults', -1)}>
+                        <i className="fas fa-minus"></i>
+                    </button>
+                    <span className="mx-3 font-semibold">{values.adults}</span>
+                    <button type="button" className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100" onClick={() => handleCountChange('adults', 1)}>
+                        <i className="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div className="flex justify-between items-center mb-3">
+                <span className="text-gray-700">Children (2-12 yrs)</span>
+                <div className="flex items-center">
+                    <button type="button" className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100" onClick={() => handleCountChange('children', -1)}>
+                        <i className="fas fa-minus"></i>
+                    </button>
+                    <span className="mx-3 font-semibold">{values.children}</span>
+                    <button type="button" className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100" onClick={() => handleCountChange('children', 1)}>
+                        <i className="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div className="flex justify-between items-center mb-3">
+                <span className="text-gray-700">Infant (Under 2 yrs)</span>
+                <div className="flex items-center">
+                    <button type="button" className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100" onClick={() => handleCountChange('infants', -1)}>
+                        <i className="fas fa-minus"></i>
+                    </button>
+                    <span className="mx-3 font-semibold">{values.infants}</span>
+                    <button type="button" className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100" onClick={() => handleCountChange('infants', 1)}>
+                        <i className="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
             <div className="text-right mt-4">
-                <button
-                    type="button"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                    onClick={() => setShowPassengerSlider(false)}
-                >
+                <button type="button" className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600" onClick={() => setShowPassengerSlider(false)}>
                     Done
                 </button>
             </div>
@@ -207,7 +209,6 @@ const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider })
     );
 };
 
-// --- Main Tickets_Form Component ---
 const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
@@ -216,14 +217,14 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [totalEntries, setTotalEntries] = useState(0);
     const [agentNames, setAgentNames] = useState([]);
     const [vendorNames, setVendorNames] = useState([]);
-    const [customerNames,setCustomerNames] = useState([]);
+    const [customerNames, setCustomerNames] = useState([]);
+    const [originalPayments, setOriginalPayments] = useState({ paid_cash: 0, paid_in_bank: 0 });
 
-    // Form field definitions
     const formFields = {
         section1: [
             { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
             { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
-            { name: 'customer_add', label: 'Add Customer', type: 'select',options:customerNames, placeholder: 'Select Customer Name', icon: 'address-card' },
+            { name: 'customer_add', label: 'Add Customer', type: 'select', options: customerNames, placeholder: 'Select Customer Name', icon: 'address-card' },
             { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
             { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
             { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter return date', icon: 'calendar-alt' },
@@ -234,12 +235,12 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'passengerCount', label: 'Passenger', type: 'custom_passenger', icon: 'users' },
         ],
         section3: [
-            { name: 'receivable_amount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
+            { name: 'receivable_amount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd',readOnly: !!editEntry },
             { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
-            { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
+            { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave',readOnly: !!editEntry },
             { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.value), placeholder: 'Select bank title', icon: 'university' },
-            { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
-            { name: 'payable_to_vendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
+            { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university',readOnly: !!editEntry },
+            { name: 'payable_to_vendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie',readOnly: !!editEntry },
             { name: 'vendor_name', label: 'Vendor Name', type: 'select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
             { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
             { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
@@ -272,7 +273,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const [formInitialValues, setFormInitialValues] = useState(initialValuesTemplate);
 
-    // Validation Schema
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
         customer_add: Yup.string().required('Customer Address is required'),
@@ -289,10 +289,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 lastName: Yup.string().required('Last Name is required'),
                 documentType: Yup.string().required('Document Type is required'),
                 documentNo: Yup.string().required('Document Number is required'),
-                // dob: Yup.date().required('Date of Birth is required').typeError('Invalid date'),
-                // nationality: Yup.string().required('Nationality is required'),
-                // documentExpiry: Yup.date().required('Document Expiry is required').typeError('Invalid date'),
-                // issueCountry: Yup.string().required('Issue Country is required'),
             })
         ).test(
             'has-passenger-details',
@@ -308,27 +304,31 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
         payable_to_vendor: Yup.number().required('Payable To Vendor is required').typeError('Payable To Vendor must be a number'),
-        bank_title: Yup.string().required('Bank Title is required'),
+        paid_cash: Yup.number().min(0, 'Paid Cash cannot be negative').typeError('Paid Cash must be a number'),
         paid_in_bank: Yup.number().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
+        bank_title: Yup.string(),
         profit: Yup.number(),
         remaining_amount: Yup.number(),
-         reference: Yup.string(),  // no .required()
-    return_date: Yup.date().nullable().notRequired().typeError('Invalid date'),
+        reference: Yup.string(),
+        return_date: Yup.date().nullable().notRequired().typeError('Invalid date'),
     });
 
-    // Fetch Agent and Vendor Names (Combined Effect)
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [agentRes, vendorRes] = await Promise.all([
+                const [agentRes, vendorRes, customerRes] = await Promise.all([
                     axios.get(`${BASE_URL}/agent-names/existing`),
-                    axios.get(`${BASE_URL}/vender-names/existing`)
+                    axios.get(`${BASE_URL}/vender-names/existing`),
+                    axios.get(`${BASE_URL}/customers`)
                 ]);
                 if (agentRes.data.status === 'success') {
                     setAgentNames(agentRes.data.agentNames || []);
                 }
                 if (vendorRes.data.status === 'success') {
                     setVendorNames(vendorRes.data.vendorNames || []);
+                }
+                if (customerRes.data.status === 'success') {
+                    setCustomerNames(customerRes.data.customers.map(c => c.name) || []);
                 }
             } catch (error) {
                 console.error('Error fetching names:', error);
@@ -337,23 +337,6 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         fetchData();
     }, []);
 
-    useEffect(()=>{
-        const fetchCustomers = async ()=>{
-            try {
-                const response = await axios.get(`${BASE_URL}/customers`);
-                if(response.data.status === 'success'){
-                    setCustomerNames(response.data.customers.map(c=>c.name))
-                } else {
-                    console.error('Failed to fetch customers',response.data.message)
-                }
-            } catch (error) {
-                console.error('Error fetching customers', error)
-            }
-        };
-        fetchCustomers();
-    },[])
-
-    // Initialize Form Values for Edit or New Entry
     useEffect(() => {
         if (editEntry) {
             let parsedPassengerDetails = [];
@@ -377,11 +360,15 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             }));
 
             const entryString = editEntry.entry || '0/0';
-            // const [current, total] = entryString.includes('/') ? entryString.split('/').map(Number) : [0, 0];
-            const numbers = entryString.match(/\d+/g) || ['0', '0']; // Extract all numbers
-const [current, total] = numbers.map(num => parseInt(num, 10));
+            const numbers = entryString.match(/\d+/g) || ['0', '0'];
+            const [current, total] = numbers.map(num => parseInt(num, 10));
             setEntryNumber(current);
             setTotalEntries(total);
+
+            setOriginalPayments({
+                paid_cash: parseFloat(editEntry.paid_cash) || 0,
+                paid_in_bank: parseFloat(editEntry.paid_in_bank) || 0
+            });
 
             setFormInitialValues({
                 ...initialValuesTemplate,
@@ -390,8 +377,8 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 entry: entryString,
-                depart_date: editEntry? formatDateForInput(editEntry.depart_date):'',
-                return_date:editEntry? formatDateForInput(editEntry.return_date) :'',
+                depart_date: editEntry ? formatDateForInput(editEntry.depart_date) : '',
+                return_date: editEntry ? formatDateForInput(editEntry.return_date) : '',
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
                 adults: editEntry.adults || 0,
@@ -429,7 +416,6 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
         }
     }, [editEntry, user]);
 
-    // Update entry string when counts change
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
@@ -437,7 +423,6 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
         }));
     }, [entryNumber, totalEntries]);
 
-    // Handles form submission
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         setSubmitting(true);
         const passportDetail = JSON.stringify(values.passengers.map(p => ({
@@ -451,93 +436,134 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
             const parsedEntryNumber = parseInt(entryValueToSubmit.replace('Ticket ', '').split('/')[0]);
 
             const requestData = {
-                employee_name: values.employee_name, agent_name: values.agent_name, customer_add: values.customer_add,
-                reference: values.reference || null, entry: entryValueToSubmit, depart_date: values.depart_date || null,
-                return_date: values.return_date || null, sector: values.sector, airline: values.airline,
-                adults: values.adults, children: values.children, infants: values.infants,
-                passport_detail: passportDetail, receivable_amount: parseInt(values.receivable_amount),
-                paid_cash: parseInt(values.paid_cash), bank_title: values.bank_title, paid_in_bank: parseFloat(values.paid_in_bank),
-                payable_to_vendor: parseInt(values.payable_to_vendor), vendor_name: values.vendor_name,
-                profit: parseInt(values.profit), remaining_amount: parseInt(values.remaining_amount)
+                employee_name: values.employee_name,
+                agent_name: values.agent_name,
+                customer_add: values.customer_add,
+                reference: values.reference || null,
+                entry: entryValueToSubmit,
+                depart_date: values.depart_date || null,
+                return_date: values.return_date || null,
+                sector: values.sector,
+                airline: values.airline,
+                adults: values.adults,
+                children: values.children,
+                infants: values.infants,
+                passport_detail: passportDetail,
+                receivable_amount: parseFloat(values.receivable_amount) || 0,
+                paid_cash: parseFloat(values.paid_cash) || 0,
+                bank_title: values.bank_title || null,
+                paid_in_bank: parseFloat(values.paid_in_bank) || 0,
+                payable_to_vendor: parseFloat(values.payable_to_vendor) || 0,
+                vendor_name: values.vendor_name || null,
+                profit: parseFloat(values.profit) || 0,
+                remaining_amount: parseFloat(values.remaining_amount) || 0
             };
 
             const url = editEntry ? `${BASE_URL}/ticket/${editEntry.id}` : `${BASE_URL}/ticket`;
             const method = editEntry ? 'PUT' : 'POST';
 
             const ticketResponse = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestData),
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData),
             });
 
             if (!ticketResponse.ok) throw new Error(`HTTP error! status: ${ticketResponse.status}`);
+            const ticketData = await ticketResponse.json();
 
             if (!editEntry) {
                 await incrementFormEntry('ticket', parsedEntryNumber);
 
-              const commonDetail = [
-    values.sector || '',
-    values.depart_date || '',
-    values.return_date || '',
-    values.airline || '',
-    `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`.trim()
-].join(',');
+                const commonDetail = [
+                    values.sector || '',
+                    values.depart_date || '',
+                    values.return_date || '',
+                    values.airline || '',
+                    `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`.trim()
+                ].join(',');
 
-                // Vendor data submission
                 const vendorData = {
-                    vender_name: values.vendor_name, detail: commonDetail,
-                    credit: parseInt(values.payable_to_vendor), date: new Date().toISOString().split('T')[0],
-                    entry: entryValueToSubmit, bank_title: values.bank_title, debit: null
+                    vender_name: values.vendor_name,
+                    detail: commonDetail,
+                    credit: parseFloat(values.payable_to_vendor) || 0,
+                    date: new Date().toISOString().split('T')[0],
+                    entry: entryValueToSubmit,
+                    bank_title: values.bank_title,
+                    debit: null
                 };
                 const vendorResponse = await fetch(`${BASE_URL}/vender`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vendorData),
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(vendorData),
                 });
                 if (!vendorResponse.ok) console.error('Vendor submission failed:', vendorResponse.status);
 
-                // Agent data submission
-                const agentCredit = (parseInt(values.paid_cash) || 0) + (parseFloat(values.paid_in_bank) || 0);
-                
+                const agentCredit = (parseFloat(values.paid_cash) || 0) + (parseFloat(values.paid_in_bank) || 0);
                 const agentData = {
-                    agent_name: values.agent_name, employee: values.employee_name, detail: commonDetail,
-                    receivable_amount:parseInt(values.receivable_amount) || 0,
-                    paid_cash:parseInt(values.paid_cash) || 0,
-                    paid_bank:parseFloat(values.paid_in_bank) || 0,
-
-                    credit: agentCredit, date: new Date().toISOString().split('T')[0],
-                    entry: entryValueToSubmit, bank_title: values.bank_title, debit: null
+                    agent_name: values.agent_name,
+                    employee: values.employee_name,
+                    detail: commonDetail,
+                    receivable_amount: parseFloat(values.receivable_amount) || 0,
+                    paid_cash: parseFloat(values.paid_cash) || 0,
+                    paid_bank: parseFloat(values.paid_in_bank) || 0,
+                    credit: agentCredit,
+                    date: new Date().toISOString().split('T')[0],
+                    entry: entryValueToSubmit,
+                    bank_title: values.bank_title,
+                    debit: null
                 };
                 const agentResponse = await fetch(`${BASE_URL}/agent`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(agentData),
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(agentData),
                 });
                 if (!agentResponse.ok) console.error('Agent submission failed:', agentResponse.status);
 
-                // Submit to Office Accounts
                 if (values.bank_title && (parseFloat(values.paid_in_bank) || 0) > 0) {
                     const officeAccountDetail = `Customer: ${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}, Ref: ${values.reference || 'N/A'}, Agent: ${values.agent_name || 'N/A'}`;
-
                     const officeAccountData = {
                         bank_name: values.bank_title,
                         employee_name: values.employee_name,
-                        entry: entryValueToSubmit, // Use Ticket 13/56 format
+                        entry: entryValueToSubmit,
                         date: new Date().toISOString().split('T')[0],
                         detail: officeAccountDetail,
                         credit: parseFloat(values.paid_in_bank) || 0,
                         debit: 0,
                     };
-
                     try {
                         const officeAccountResponse = await axios.post(`${BASE_URL}/accounts`, officeAccountData);
                         if (officeAccountResponse.status !== 200 && officeAccountResponse.status !== 201) {
-                            console.error('Office Account submission failed with status:', officeAccountResponse.status, officeAccountResponse.data);
-                        } else {
-                            console.log('Office Account submitted successfully:', officeAccountResponse.data);
+                            console.error('Office Account submission failed:', officeAccountResponse.status);
                         }
                     } catch (officeAccountError) {
-                        console.error('Error submitting Office Account data:', officeAccountError.response ? officeAccountError.response.data : officeAccountError.message);
+                        console.error('Error submitting Office Account data:', officeAccountError.response?.data || officeAccountError.message);
+                    }
+                }
+            } else {
+                // Handle additional payments during edit
+                const newCash = parseFloat(values.paid_cash) || 0;
+                const newBank = parseFloat(values.paid_in_bank) || 0;
+                const oldCash = parseFloat(originalPayments.paid_cash) || 0;
+                const oldBank = parseFloat(originalPayments.paid_in_bank) || 0;
+
+                if (newCash !== oldCash || newBank !== oldBank) {
+                    const paymentAmount = (newCash - oldCash) + (newBank - oldBank);
+                    if (paymentAmount > 0) {
+                        const paymentData = {
+                            ticket_id: editEntry.id,
+                            payment_date: new Date().toISOString().split('T')[0],
+                            payment_amount: paymentAmount.toString(),
+                            paid_bank: newBank > oldBank ? (newBank - oldBank).toString() : null,
+                            bank_title: values.bank_title || null,
+                            recorded_by: values.employee_name
+                        };
+                        await axios.post(`${BASE_URL}/ticket_payments`, paymentData);
                     }
                 }
             }
 
             resetForm();
-            onSubmitSuccess();
+            onSubmitSuccess(ticketData.ticket);
         } catch (error) {
             console.error('Submission error:', error);
             setErrors({ general: 'Failed to submit form. Please try again later.' });
@@ -546,7 +572,6 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
         }
     };
 
-    // Reusable Field Rendering Logic
     const renderField = (field, values, setFieldValue) => (
         <motion.div key={field.name} className="mb-4" variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } } }}>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={field.name}>
@@ -604,7 +629,6 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
                     Please fill in the ticket details
                 </motion.p>
             </div>
-
             <div className="px-8 pt-6">
                 <div className="flex justify-between mb-8">
                     {[1, 2, 3].map((step) => (
@@ -628,7 +652,6 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
                     ))}
                 </div>
             </div>
-
             <div className="px-8 pb-8">
                 <Formik
                     initialValues={formInitialValues}
@@ -639,7 +662,6 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
                     {({ isSubmitting, errors, values, setFieldValue }) => (
                         <Form>
                             <AutoCalculate />
-
                             <motion.div key={`section-${activeSection}`} variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } } }} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                                 {activeSection === 1 && formFields.section1.map(field => renderField(field, values, setFieldValue))}
                                 {activeSection === 2 && (
@@ -652,13 +674,11 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
                                 )}
                                 {activeSection === 3 && formFields.section3.map(field => renderField(field, values, setFieldValue))}
                             </motion.div>
-
                             {errors.general && (
                                 <motion.div className="text-red-600 mt-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
                                     {errors.general}
                                 </motion.div>
                             )}
-
                             <motion.div className="flex justify-between mt-8 pt-4 border-t border-gray-200" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
                                 <div>
                                     {activeSection > 1 && (
@@ -667,14 +687,13 @@ const [current, total] = numbers.map(num => parseInt(num, 10));
                                         </motion.button>
                                     )}
                                 </div>
-
                                 <div className="flex space-x-3">
                                     <motion.button type="button" onClick={onCancel} className="px-5 py-2 border bg-gray-400 border-gray-300 rounded-lg text-black hover:bg-blue-600 transition-colors" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={isSubmitting}>
                                         Cancel
                                     </motion.button>
                                     {activeSection < 3 ? (
-                                        <motion.button >
-                                           
+                                        <motion.button type="button" onClick={() => setActiveSection(activeSection + 1)} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition-all" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                                            Next <i className="fas fa-arrow-right ml-2"></i>
                                         </motion.button>
                                     ) : (
                                         <motion.button type="submit" className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition-all" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} disabled={isSubmitting}>

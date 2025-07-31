@@ -229,7 +229,7 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
 
                                     />
                                     <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
-                                </div>
+                                </div>  
 
                                 <div className="w-full">
                                     <label className="block font-medium mb-1">Detail</label>

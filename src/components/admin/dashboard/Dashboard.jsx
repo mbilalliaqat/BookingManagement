@@ -394,14 +394,24 @@ export default function Dashboard() {
         setIsLoading(false);
       }
     };
+    const handlePaymentUpdate = () => {
+      cache.data.clear();
+        cache.timestamp.clear();
+        fetchDashboardData(); // Refresh dashboard data
+    };
+    
+    window.addEventListener('paymentUpdated', handlePaymentUpdate);
+    
     
     fetchDashboardData();
     
     // Clean-up function (optional)
     return () => {
-      // Any cleanup if needed
+      window.removeEventListener('paymentUpdated', handlePaymentUpdate);
     };
   }, [fetchWithCache]);
+
+  
 
   // Extract counts for individual booking types
   const booking = dashboardData.bookingsByType || [];

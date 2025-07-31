@@ -135,10 +135,27 @@ const Tickets = () => {
     };
 
     // Function to handle successful payment
-    const handlePaymentSuccess = () => {
-        // Optionally refresh tickets data or update UI
-        fetchTickets();
-    };
+   
+    // In Tickets.jsx
+
+// Function to handle successful payment
+const handlePaymentSuccess = (paymentData) => {
+    setEntries(prevEntries => prevEntries.map(ticket => {
+        if (ticket.id === paymentData.ticketId) {
+            return {
+                ...ticket,
+                paid_cash: parseFloat(ticket.paid_cash || 0) + paymentData.cashAmount,
+                paid_in_bank: parseFloat(ticket.paid_in_bank || 0) + paymentData.bankAmount,
+                remaining_amount: parseFloat(ticket.remaining_amount || 0) - (paymentData.cashAmount)
+            };
+        }
+        return ticket;
+    }));
+
+    // Close the modal
+    closeRemainingPayModal();
+    fetchTickets();
+};
 
     const baseColumns=[
          { header: 'BOOKING DATE', accessor: 'created_at' },
