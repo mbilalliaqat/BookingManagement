@@ -26,55 +26,78 @@ const Tickets = () => {
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-    const fetchTickets = async () => {
-        setIsLoading(true);
-        try {
-            const response = await axios.get(`${BASE_URL}/ticket`);
-            if (response.status !== 200) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = response.data;
-            console.log("Fetched data:", data);
+   // Improved fetchTickets function in Tickets.jsx
 
-            // Sort by ID to maintain consistent order
-            const sortedTickets = data.ticket.sort((a, b) => a.id - b.id);
-
-            const formattedData = sortedTickets.map((ticket) => {
-                let parsedPassengerDetails = [];
-                try {
-                    if (typeof ticket.passport_detail === 'string') {
-                        const parsed = JSON.parse(ticket.passport_detail);
-                        if (Array.isArray(parsed)) {
-                            parsedPassengerDetails = parsed;
-                        } else if (typeof parsed === 'object' && parsed !== null) {
-                            parsedPassengerDetails = [parsed]; // Wrap single object in an array for consistency
-                        }
-                    } else if (Array.isArray(ticket.passport_detail)) {
-                        parsedPassengerDetails = ticket.passport_detail;
-                    } else if (typeof ticket.passport_detail === 'object' && ticket.passport_detail !== null) {
-                        parsedPassengerDetails = [ticket.passport_detail]; // Wrap single object in an array
-                    }
-                } catch (e) {
-                    console.error("Error parsing passport details:", e);
-                    parsedPassengerDetails = []; // Ensure it's an empty array on error
-                }
-
-                return {
-                    ...ticket,
-                    depart_date: new Date(ticket.depart_date).toLocaleDateString('en-GB'),
-                    return_date: new Date(ticket.return_date).toLocaleDateString('en-GB'),
-                    created_at: new Date(ticket.created_at).toLocaleDateString('en-GB'),
-                    allPassengerDetails: parsedPassengerDetails, // This now holds the array of all passenger objects
-                };
-            });
-            setEntries(formattedData.reverse());
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            setError('Failed to load data. Please try again later.');
-        } finally {
-            setIsLoading(false);
+const fetchTickets = async () => {
+    setIsLoading(true);
+    try {
+        const response = await axios.get(`${BASE_URL}/ticket`);
+        if (response.status !== 200) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    };
+        const data = response.data;
+        console.log("Fetched data:", data);
+
+        // Sort by ID to maintain consistent order
+        const sortedTickets = data.ticket.sort((a, b) => a.id - b.id);
+
+        const formattedData = sortedTickets.map((ticket) => {
+            let parsedPassengerDetails = [];
+            try {
+                if (typeof ticket.passport_detail === 'string') {
+                    const parsed = JSON.parse(ticket.passport_detail);
+                    if (Array.isArray(parsed)) {
+                        parsedPassengerDetails = parsed;
+                    } else if (typeof parsed === 'object' && parsed !== null) {
+                        parsedPassengerDetails = [parsed];
+                    }
+                } else if (Array.isArray(ticket.passport_detail)) {
+                    parsedPassengerDetails = ticket.passport_detail;
+                } else if (typeof ticket.passport_detail === 'object' && ticket.passport_detail !== null) {
+                    parsedPassengerDetails = [ticket.passport_detail];
+                }
+            } catch (e) {
+                console.error("Error parsing passport details:", e);
+                parsedPassengerDetails = [];
+            }
+
+            // Calculate total payments from payment history if available
+            let totalCashPaid = parseFloat(ticket.paid_cash || 0);
+            let totalBankPaid = parseFloat(ticket.paid_in_bank || 0);
+            
+            // If there are additional payments, we need to get the original amounts
+            // The initial amounts should be the base amounts from when the ticket was first created
+            const initialCash = ticket.initial_paid_cash !== undefined 
+                ? parseFloat(ticket.initial_paid_cash) 
+                : parseFloat(ticket.paid_cash || 0);
+            const initialBank = ticket.initial_paid_in_bank !== undefined 
+                ? parseFloat(ticket.initial_paid_in_bank) 
+                : parseFloat(ticket.paid_in_bank || 0);
+
+            return {
+                ...ticket,
+                // Store original payment amounts
+                initial_paid_cash: initialCash,
+                initial_paid_in_bank: initialBank,
+                
+                // Current total payments (original + additional)
+                paid_cash: totalCashPaid,
+                paid_in_bank: totalBankPaid,
+                
+                depart_date: new Date(ticket.depart_date).toLocaleDateString('en-GB'),
+                return_date: new Date(ticket.return_date).toLocaleDateString('en-GB'),
+                created_at: new Date(ticket.created_at).toLocaleDateString('en-GB'),
+                allPassengerDetails: parsedPassengerDetails,
+            };
+        });
+        setEntries(formattedData.reverse());
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to load data. Please try again later.');
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const updateSingleEntry = async (updatedTicket) => {
         try {
@@ -144,6 +167,9 @@ const handlePaymentSuccess = (paymentData) => {
         if (ticket.id === paymentData.ticketId) {
             return {
                 ...ticket,
+                 initial_paid_cash: ticket.initial_paid_cash || ticket.paid_cash,
+                initial_paid_in_bank: ticket.initial_paid_in_bank || ticket.paid_in_bank,
+                
                 paid_cash: parseFloat(ticket.paid_cash || 0) + paymentData.cashAmount,
                 paid_in_bank: parseFloat(ticket.paid_in_bank || 0) + paymentData.bankAmount,
                 remaining_amount: parseFloat(ticket.remaining_amount || 0) - (paymentData.cashAmount)
@@ -297,14 +323,25 @@ const handlePaymentSuccess = (paymentData) => {
     const financialColumns=[
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'AGENT NAME', accessor: 'agent_name' },
-        { header: 'PAID CASH', accessor: 'paid_cash' },
+       
      {
+        header: 'PAID CASH',
+        accessor: 'paid_cash_details',
+        render: (cellValue, row) => (
+            <div>
+                <div> {row.initial_paid_cash || '0'}</div>
+                <div>{row.paid_cash || '0'}</div>
+            </div>
+        )
+    },
+    {
         header: 'BANK & PAID IN BANK',
         accessor: 'bank_paid',
         render: (cellValue, row) => (
             <div>
                 <div>{row?.bank_title || ''}</div>
-                <div >{row?.paid_in_bank || ''}</div>
+                <div>Initial: {row.initial_paid_in_bank || row.paid_in_bank}</div>
+                <div>Total: {row.paid_in_bank}</div>
             </div>
         )
     },

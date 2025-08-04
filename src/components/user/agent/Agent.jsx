@@ -183,7 +183,7 @@ const Agent = () => {
         { header: 'EMPLOYEE', accessor: 'employee' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'DETAIL', accessor: 'detail' },
-        { header: 'RECEIVED', accessor: 'credit' },
+        { header: 'REMAINING', accessor: 'credit' },
         { header: 'PAYED CASH', accessor: 'debit' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },

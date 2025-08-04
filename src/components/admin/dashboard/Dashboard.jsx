@@ -66,6 +66,37 @@ export default function Dashboard() {
     return response.data;
   }, []);
 
+  const safeTimestamp = (dateValue) => {
+  if (!dateValue) {
+    return Date.now(); // Use current time if no date provided
+  }
+  
+  const date = new Date(dateValue);
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    console.warn('Invalid date detected:', dateValue);
+    return Date.now(); // Fallback to current time
+  }
+  
+  return date.getTime();
+};
+
+const safeLocaleDateString = (dateValue) => {
+  if (!dateValue) {
+    return new Date().toLocaleDateString();
+  }
+  
+  const date = new Date(dateValue);
+  
+  if (isNaN(date.getTime())) {
+    console.warn('Invalid date detected:', dateValue);
+    return new Date().toLocaleDateString();
+  }
+  
+  return date.toLocaleDateString();
+};
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
@@ -156,7 +187,8 @@ export default function Dashboard() {
               paid_cash: booking.paidCash,
               paid_in_bank: booking.paidInBank,
               remaining_amount: booking.remainingAmount,
-              booking_date: new Date(booking.createdAt).toLocaleDateString(),
+          booking_date: safeLocaleDateString(booking.createdAt), // SAFE DATE
+             timestamp: safeTimestamp(booking.createdAt),
               withdraw: 0, 
               passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
           };
@@ -195,7 +227,8 @@ export default function Dashboard() {
               paid_cash: ticket.paid_cash,
               paid_in_bank: ticket.paid_in_bank,
               remaining_amount: ticket.remaining_amount,
-              booking_date: new Date(ticket.created_at).toLocaleDateString(),
+               booking_date: safeLocaleDateString(ticket.created_at), // SAFE DATE
+    timestamp: safeTimestamp(ticket.created_at),
               withdraw: 0,
              passengerName: passengerName, 
           };
@@ -221,7 +254,8 @@ export default function Dashboard() {
               paid_cash: visa.paid_cash,
               paid_in_bank: visa.paid_in_bank,
               remaining_amount: visa.remaining_amount,
-              booking_date: new Date(visa.created_at).toLocaleDateString(),
+              booking_date: safeLocaleDateString(visa.created_at), // SAFE DATE
+    timestamp: safeTimestamp(visa.created_at),
               withdraw: 0,
               passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
           };
@@ -247,7 +281,8 @@ export default function Dashboard() {
               paid_cash: token.paid_cash,
               paid_in_bank: token.paid_in_bank,
               remaining_amount: token.remaining_amount,
-              booking_date: new Date(token.created_at).toLocaleDateString(),
+              booking_date: safeLocaleDateString(token.created_at), // SAFE DATE
+    timestamp: safeTimestamp(token.created_at),
               withdraw: 0, // Initialize withdraw for non-protector types
               passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(),
           };
@@ -262,7 +297,8 @@ export default function Dashboard() {
           paid_cash: services.paid_cash,
           paid_in_bank: services.paid_in_bank,
           remaining_amount: services.remaining_amount,
-          booking_date: new Date(services.booking_date).toLocaleDateString(),
+           booking_date: safeLocaleDateString(services.booking_date), // SAFE DATE
+    timestamp: safeTimestamp(services.booking_date),
           withdraw: 0, // Initialize withdraw for non-protector types
           passengerName: null, // No passport detail for this type
         }));
@@ -276,7 +312,8 @@ export default function Dashboard() {
           paid_cash: 0, 
           paid_in_bank: 0, 
           remaining_amount: 0, 
-          booking_date: new Date(protector.protector_date).toLocaleDateString(),
+           booking_date: safeLocaleDateString(protector.protector_date), // SAFE DATE
+    timestamp: safeTimestamp(protector.protector_date),
           withdraw: parseFloat(protector.withdraw || 0), // Use the withdraw field from protector
           passengerName: protector.name || null, // No passport detail for this type
         }));
@@ -288,7 +325,8 @@ export default function Dashboard() {
           paid_cash: 0, 
           paid_in_bank: 0, 
           remaining_amount: 0, 
-          booking_date: new Date(expenses.date).toLocaleDateString(),
+          booking_date: safeLocaleDateString(expenses.date), // SAFE DATE
+    timestamp: safeTimestamp(expenses.date),
           withdraw: parseFloat(expenses.withdraw || 0), // Use the withdraw field from expenses
           passengerName: null, // No passport detail for this type
         }));
@@ -300,7 +338,8 @@ export default function Dashboard() {
           paid_cash: 0, 
           paid_in_bank: 0, 
           remaining_amount: 0, 
-          booking_date: new Date(refund.date).toLocaleDateString(), // Changed from refund.refunded_date
+          booking_date: safeLocaleDateString(refund.date), // SAFE DATE
+    timestamp: safeTimestamp(refund.date),
           withdraw: parseFloat(refund.withdraw || 0),
           passengerName:refund.name || null, // No passport detail for this type
         }));
@@ -312,7 +351,8 @@ export default function Dashboard() {
           paid_cash: 0, 
           paid_in_bank: 0, 
           remaining_amount: 0, 
-          booking_date: new Date(vender.date).toLocaleDateString(), // Changed from vender.vender_date
+          booking_date: safeLocaleDateString(vender.date), // SAFE DATE
+    timestamp: safeTimestamp(vender.date),
           withdraw: parseFloat(vender.withdraw || 0),
           passengerName: null, // No passport detail for this type
         }));
@@ -330,24 +370,40 @@ export default function Dashboard() {
           ...venderBookings, 
         ];
 
-        // Sort bookings by date (oldest first) to calculate running cash in office
-        const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => 
-          new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()
-        );
+     
+        const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => {
+  const timestampA = typeof a.timestamp === 'number' ? a.timestamp : 0;
+  const timestampB = typeof b.timestamp === 'number' ? b.timestamp : 0;
+  return timestampA - timestampB;
+});
 
-        let runningCashInOffice = 0;
-        const bookingsWithCashInOffice = sortedForRunningTotal.map(booking => {
-          runningCashInOffice += parseFloat(booking.paid_cash || 0);
-          runningCashInOffice -= parseFloat(booking.withdraw || 0);
-          
-          return {
-            ...booking,
-            cash_in_office_running: runningCashInOffice,
-          };
-        });
+let runningCashInOffice = 0;
+const bookingsWithCashInOffice = sortedForRunningTotal.map(booking => {
+  runningCashInOffice += parseFloat(booking.paid_cash || 0);
+  runningCashInOffice -= parseFloat(booking.withdraw || 0);
 
-        
-        const finalCombinedBookings = bookingsWithCashInOffice.slice().reverse(); 
+  return {
+    ...booking,
+    cash_in_office_running: runningCashInOffice,
+  };
+});
+
+// Final sort (newest first for display)
+const finalCombinedBookings = bookingsWithCashInOffice.sort((a, b) => {
+  const timestampA = typeof a.timestamp === 'number' ? a.timestamp : 0;
+  const timestampB = typeof b.timestamp === 'number' ? b.timestamp : 0;
+  return timestampB - timestampA; // Newest first
+});
+
+console.log('Final bookings sorted - sample:', 
+  finalCombinedBookings.slice(0, 3).map(b => ({ 
+    type: b.type, 
+    date: b.booking_date, 
+    timestamp: b.timestamp 
+  }))
+);
+         
+  
 
         const totalProtectorWithdraw = protectorBookings.reduce((sum, entry) => {
           return sum + entry.withdraw;

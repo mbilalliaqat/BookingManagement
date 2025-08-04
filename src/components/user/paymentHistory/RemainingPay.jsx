@@ -90,8 +90,8 @@ const fetchTicketDetails = async () => {
             const response = await axios.post(`${BASE_URL}/ticket_payments`, {
                 ticket_id: ticketId,
                 payment_date: newPayment.payment_date,
-                payment_amount: newPayment.payed_cash,
-                paid_bank: newPayment.paid_bank || null,
+                payment_amount: cashAmount,
+                paid_bank: bankAmount,
                 bank_title: newPayment.bank_title || null,
                 recorded_by: newPayment.recorded_by
             });

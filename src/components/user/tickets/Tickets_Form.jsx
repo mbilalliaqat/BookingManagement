@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts, incrementFormEntry } from '../../ui/api';
+import VenderNameModal from '../../ui/VenderNameModal';
 import axios from 'axios';
 
 const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -19,8 +20,9 @@ const BANK_OPTIONS = [
     { value: "HBL F.Z", label: "HBL F.Z" },
     { value: "JAZ C", label: "JAZ C" },
     { value: "MCB FIT", label: "MCB FIT" },
-    { value: "Cash Office", label: "Cash Office" }
+    
 ];
+
 
 const DEFAULT_PASSENGER_DETAIL = {
     title: '',
@@ -32,6 +34,7 @@ const DEFAULT_PASSENGER_DETAIL = {
     documentNo: '',
     documentExpiry: '',
     issueCountry: '',
+    mobileNo: ''
 };
 
 const formatDateForInput = (dateStr) => {
@@ -97,10 +100,12 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => (
             { label: 'Last Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
             { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
             { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
+                        { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
             { label: 'Date of Birth', name: 'dob', type: 'date', placeholder: 'Select date of birth' },
             { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'Enter nationality' },
             { label: 'Expiry Date', name: 'documentExpiry', type: 'date', placeholder: 'Select expiry date' },
             { label: 'Issue Country', name: 'issueCountry', type: 'text', placeholder: 'Enter issue country' },
+            
         ]).map(field => (
             <div className="mb-4" key={field.name}>
                 <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${fieldPrefix}.${field.name}`}>
@@ -218,13 +223,24 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [agentNames, setAgentNames] = useState([]);
     const [vendorNames, setVendorNames] = useState([]);
     const [customerNames, setCustomerNames] = useState([]);
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
     const [originalPayments, setOriginalPayments] = useState({ paid_cash: 0, paid_in_bank: 0 });
 
     const formFields = {
         section1: [
             { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
             { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
-            { name: 'customer_add', label: 'Add Customer', type: 'select', options: customerNames, placeholder: 'Select Customer Name', icon: 'address-card' },
+           {
+      name: 'customer_add',
+      label: 'Add Customer',
+      type: 'select',
+      options: customerNames.map((c) => ({
+        value: c.name,
+        label: `${c.name} (${c.mobile_number})`,
+      })),
+      placeholder: 'Select Customer Name',
+      icon: 'address-card',
+    },
             { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
             { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
             { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter return date', icon: 'calendar-alt' },
@@ -241,7 +257,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.value), placeholder: 'Select bank title', icon: 'university' },
             { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university',readOnly: !!editEntry },
             { name: 'payable_to_vendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie',readOnly: !!editEntry },
-            { name: 'vendor_name', label: 'Vendor Name', type: 'select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
+            { name: 'vendor_name', label: 'Vendor Name', type: 'vendor_select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
             { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
             { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
         ]
@@ -313,29 +329,48 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         return_date: Yup.date().nullable().notRequired().typeError('Invalid date'),
     });
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [agentRes, vendorRes, customerRes] = await Promise.all([
-                    axios.get(`${BASE_URL}/agent-names/existing`),
-                    axios.get(`${BASE_URL}/vender-names/existing`),
-                    axios.get(`${BASE_URL}/customers`)
-                ]);
-                if (agentRes.data.status === 'success') {
-                    setAgentNames(agentRes.data.agentNames || []);
-                }
-                if (vendorRes.data.status === 'success') {
-                    setVendorNames(vendorRes.data.vendorNames || []);
-                }
-                if (customerRes.data.status === 'success') {
-                    setCustomerNames(customerRes.data.customers.map(c => c.name) || []);
-                }
-            } catch (error) {
-                console.error('Error fetching names:', error);
-            }
-        };
-        fetchData();
-    }, []);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const [agentRes, vendorRes, customerRes] = await Promise.all([
+        axios.get(`${BASE_URL}/agent-names/existing`),
+        axios.get(`${BASE_URL}/vender-names/existing`),
+        axios.get(`${BASE_URL}/customers`),
+      ]);
+      if (agentRes.data.status === 'success') {
+        setAgentNames(agentRes.data.agentNames || []);
+      }
+      if (vendorRes.data.status === 'success') {
+        setVendorNames(vendorRes.data.vendorNames || []);
+      }
+      if (customerRes.data.status === 'success') {
+        // Log the response to debug the data structure
+        console.log('Customer API Response:', customerRes.data);
+        // Ensure customers is an array and map to name and mobile_number
+        const customers = Array.isArray(customerRes.data.customers)
+          ? customerRes.data.customers.map((c) => ({
+              name: c.name || 'Unknown Customer',
+              mobile_number: c.mobile_number || 'N/A', // Fallback if mobile_number is missing
+            }))
+          : [];
+        setCustomerNames(customers);
+      } else {
+        console.error('Customer API failed:', customerRes.data);
+        setCustomerNames([]);
+      }
+    } catch (error) {
+      console.error('Error fetching names:', error);
+      setCustomerNames([]);
+    }
+  };
+  fetchData();
+}, []);
+
+    const handleVendorAdded = async (newVendorName) => {
+    if (newVendorName && !vendorNames.includes(newVendorName)) {
+        setVendorNames(prev => [...prev, newVendorName].sort());
+    }
+};
 
     useEffect(() => {
         if (editEntry) {
@@ -428,7 +463,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const passportDetail = JSON.stringify(values.passengers.map(p => ({
             title: p.title, firstName: p.firstName, lastName: p.lastName, dob: p.dob,
             nationality: p.nationality, documentType: p.documentType, documentNo: p.documentNo,
-            documentExpiry: p.documentExpiry, issueCountry: p.issueCountry,
+            documentExpiry: p.documentExpiry, issueCountry: p.issueCountry,mobileNo: p.mobileNo
         })));
 
         try {
@@ -498,7 +533,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 });
                 if (!vendorResponse.ok) console.error('Vendor submission failed:', vendorResponse.status);
 
-                const agentCredit = (parseFloat(values.paid_cash) || 0) + (parseFloat(values.paid_in_bank) || 0);
+                // const agentCredit = (parseFloat(values.paid_cash) || 0) + (parseFloat(values.paid_in_bank) || 0);
                 const agentData = {
                     agent_name: values.agent_name,
                     employee: values.employee_name,
@@ -506,7 +541,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     receivable_amount: parseFloat(values.receivable_amount) || 0,
                     paid_cash: parseFloat(values.paid_cash) || 0,
                     paid_bank: parseFloat(values.paid_in_bank) || 0,
-                    credit: agentCredit,
+                    credit: parseFloat(values.remaining_amount) || 0,
                     date: new Date().toISOString().split('T')[0],
                     entry: entryValueToSubmit,
                     bank_title: values.bank_title,
@@ -573,50 +608,79 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     };
 
     const renderField = (field, values, setFieldValue) => (
-        <motion.div key={field.name} className="mb-4" variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } } }}>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={field.name}>
-                {field.label}
-            </label>
-            <div className="relative">
-                {field.type === 'select' ? (
-                    <Field
-                        as="select"
-                        id={field.name}
-                        name={field.name}
-                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        disabled={field.readOnly}
-                    >
-                        <option value="">{field.placeholder}</option>
-                        {field.options?.map(option => (
-                            <option key={option} value={option}>{option}</option>
-                        ))}
-                    </Field>
-                ) : field.type === 'custom_passenger' ? (
-                    <div
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
-                        onClick={() => setShowPassengerSlider(!showPassengerSlider)}
-                    >
-                        <span>{`${values.adults} Adults, ${values.children} Children, ${values.infants} Infants`}</span>
-                        <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
-                    </div>
-                ) : (
-                    <Field
-                        id={field.name}
-                        type={field.type}
-                        name={field.name}
-                        placeholder={field.placeholder}
-                        className={`w-full border border-gray-300 rounded-md px-3 py-1 ${field.readOnly ? 'bg-gray-100' : ''}`}
-                        disabled={field.readOnly}
-                        readOnly={field.readOnly}
-                    />
-                )}
-                {field.name === 'passengerCount' && showPassengerSlider && (
-                    <PassengerCountSlider values={values} setFieldValue={setFieldValue} setShowPassengerSlider={setShowPassengerSlider} />
-                )}
-                <ErrorText name={field.name} />
-            </div>
-        </motion.div>
-    );
+  <motion.div
+    key={field.name}
+    className="mb-4"
+    variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 20 } } }}
+  >
+    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={field.name}>
+      {field.label}
+    </label>
+    <div className="relative">
+      {field.type === 'select' ? (
+        <Field
+          as="select"
+          id={field.name}
+          name={field.name}
+          className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          disabled={field.readOnly}
+        >
+          <option value="">{field.placeholder}</option>
+          {field.options?.map((option) => (
+            <option key={option.value || option} value={option.value || option}>
+              {option.label || option}
+            </option>
+          ))}
+        </Field>
+      ) : field.type === 'custom_passenger' ? (
+        <div
+          className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
+          onClick={() => setShowPassengerSlider(!showPassengerSlider)}
+        >
+          <span>{`${values.adults} Adults, ${values.children} Children, ${values.infants} Infants`}</span>
+          <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
+        </div>
+      ) : field.type === 'vendor_select' ? (
+        <div className="flex items-center gap-2">
+          <Field
+            as="select"
+            id={field.name}
+            name={field.name}
+            className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          >
+            <option value="">{field.placeholder}</option>
+            {field.options?.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </Field>
+          <button
+            type="button"
+            onClick={() => setIsVendorModalOpen(true)}
+            className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700"
+          >
+            <i className="fas fa-plus"></i>
+          </button>
+        </div>
+      ) : (
+        <Field
+          id={field.name}
+          type={field.type}
+          name={field.name}
+          placeholder={field.placeholder}
+          className={`w-full border border-gray-300 rounded-md px-3 py-1 ${field.readOnly ? 'bg-gray-100' : ''}`}
+          disabled={field.readOnly}
+          readOnly={field.readOnly}
+        />
+      )}
+      {field.name === 'passengerCount' && showPassengerSlider && (
+        <PassengerCountSlider values={values} setFieldValue={setFieldValue} setShowPassengerSlider={setShowPassengerSlider} />
+      )}
+      <ErrorText name={field.name} />
+    </div>
+  </motion.div>
+);
 
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
@@ -707,6 +771,11 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     )}
                 </Formik>
             </div>
+            <VenderNameModal
+    isOpen={isVendorModalOpen}
+    onClose={() => setIsVendorModalOpen(false)}
+    onVenderAdded={handleVendorAdded}
+/>
         </div>
     );
 };
