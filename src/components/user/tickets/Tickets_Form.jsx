@@ -25,7 +25,7 @@ const BANK_OPTIONS = [
 
 
 const DEFAULT_PASSENGER_DETAIL = {
-    title: '',
+    title: 'Mr',
     firstName: '',
     lastName: '',
     dob: '',
@@ -273,10 +273,10 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         return_date: '',
         sector: '',
         airline: '',
-        adults: 0,
+        adults: 1,
         children: 0,
         infants: 0,
-        passengers: [],
+        passengers: [{ ...DEFAULT_PASSENGER_DETAIL }],
         receivable_amount: '',
         paid_cash: '',
         bank_title: '',
@@ -286,6 +286,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         profit: '',
         remaining_amount: '0'
     };
+
+  
 
     const [formInitialValues, setFormInitialValues] = useState(initialValuesTemplate);
 
@@ -446,7 +448,7 @@ useEffect(() => {
             setFormInitialValues(prev => ({
                 ...prev,
                 employee_name: user?.username || '',
-                passengers: []
+                passengers: [{ ...DEFAULT_PASSENGER_DETAIL }]
             }));
         }
     }, [editEntry, user]);
