@@ -280,6 +280,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 <option value="REFUND TO CUSTOMER">REFUND TO CUSTOMER</option>
                                 <option value="OFFICE EXPENSE">OFFICE EXPENSE</option>
                                 <option value="OWNER RECEIVING">OWNER RECEIVING</option>
+                                <option value="OFFICE BANK">OFFICE BANK</option>
+                                <option value="VENDER SEND">VENDER SEND</option>
                                 <option value="OTHER">OTHER</option>
                             </select>
                             {prevError.selection && <span className="text-red-500">{prevError.selection}</span>}

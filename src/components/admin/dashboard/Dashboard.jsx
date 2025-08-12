@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, Users, Plane, MapPin, FileText, CreditCard, Wallet, Landmark } from 'lucide-react'; // Added Wallet and Landmark icons
+import { CheckCircle, Users, Plane, MapPin, FileText, CreditCard, Wallet, Landmark, Shield } from 'lucide-react'; // Added Shield icon for Navtcc
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 
@@ -37,6 +37,7 @@ export default function Dashboard() {
     visa: null,
     gamcaToken: null,
     services:null,
+    navtcc: null, // Add navtcc error state
     protector: null,
     expenses:null,
     refunded:null,
@@ -110,6 +111,7 @@ const safeLocaleDateString = (dateValue) => {
           visaData,
           gamcaTokenData,
           servicesData,
+          navtccData, // Add navtcc data fetch
           protectorData, 
           expensesData,
           refundedData,
@@ -144,6 +146,11 @@ const safeLocaleDateString = (dateValue) => {
             setErrors(prev => ({...prev, services: 'Failed to load Services data'}));
             console.error('Services fetch error:', err);
             return { services: [] };
+          }),
+          fetchWithCache('/navtcc').catch(err => { // Add navtcc fetch
+            setErrors(prev => ({...prev, navtcc: 'Failed to load Navtcc data'}));
+            console.error('Navtcc fetch error:', err);
+            return { navtcc: [] };
           }),
           fetchWithCache('/protector').catch(err => { // New fetch for Protector data
             setErrors(prev => ({...prev, protector: 'Failed to load Protector data'}));
@@ -303,6 +310,33 @@ const safeLocaleDateString = (dateValue) => {
           passengerName: null, // No passport detail for this type
         }));
 
+        // Process Navtcc data (NEW)
+        const navtccBookings = navtccData.navtcc.map(navtcc => {
+          let passportDetails = {};
+          try {
+              if (typeof navtcc.passport_detail === 'string') {
+                  passportDetails = JSON.parse(navtcc.passport_detail);
+              } else if (typeof navtcc.passport_detail === 'object' && navtcc.passport_detail !== null) {
+                  passportDetails = navtcc.passport_detail;
+              }
+          } catch (e) {
+              console.error("Error parsing passport details for Navtcc:", e);
+          }
+          return {
+              type: 'Navtcc',
+              employee_name: navtcc.employee_name || navtcc.reference,
+              receivable_amount: navtcc.receivable_amount,
+              entry: navtcc.entry,
+              paid_cash: navtcc.paid_cash,
+              paid_in_bank: navtcc.paid_in_bank,
+              remaining_amount: navtcc.remaining_amount,
+              booking_date: safeLocaleDateString(navtcc.created_at), // SAFE DATE
+              timestamp: safeTimestamp(navtcc.created_at),
+              withdraw: 0, // Initialize withdraw for non-protector types
+              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(),
+          };
+        });
+
         // Process Protector data (NEW)
         const protectorBookings = protectorData.protectors.map(protector => ({
           type: 'Protector',
@@ -328,7 +362,7 @@ const safeLocaleDateString = (dateValue) => {
           booking_date: safeLocaleDateString(expenses.date), // SAFE DATE
     timestamp: safeTimestamp(expenses.date),
           withdraw: parseFloat(expenses.withdraw || 0), // Use the withdraw field from expenses
-          passengerName: null, // No passport detail for this type
+          passengerName: expenses.detail || null, // No passport detail for this type
         }));
         const refundedBookings = (refundedData.refunded || []).map(refund => ({
           type: 'Refunded',
@@ -357,13 +391,14 @@ const safeLocaleDateString = (dateValue) => {
           passengerName: null, // No passport detail for this type
         }));
 
-        // Combine all bookings
+        // Combine all bookings (INCLUDING NAVTCC)
         const combinedBookingsRaw = [
           ...umrahBookings,
           ...ticketBookings,
           ...visaBookings,
           ...gamcaTokenBookings,
           ...servicesBookings,
+          ...navtccBookings, // Add navtcc bookings here
           ...protectorBookings,
           ...expensesBookings,
           ...refundedBookings,
@@ -469,13 +504,14 @@ console.log('Final bookings sorted - sample:',
 
   
 
-  // Extract counts for individual booking types
+  // Extract counts for individual booking types (ADD NAVTCC)
   const booking = dashboardData.bookingsByType || [];
   const ticketCount = booking.find(item => item.type === 'Ticket')?.count || 0;
   const umrahCount = booking.find(item => item.type === 'Umrah')?.count || 0;
   const visaCount = booking.find(item => item.type === 'Visa Processing')?.count || 0;
   const gamcaTokenCount = booking.find(item => item.type === 'GAMCA Token')?.count || 0;
   const serviceCount = booking.find(item => item.type === 'Services')?.count || 0;
+  const navtccCount = booking.find(item => item.type === 'Navtcc')?.count || 0; // Add navtcc count
 
   // Calculate total receivable amount
   const totalReceivableAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
@@ -517,7 +553,7 @@ console.log('Final bookings sorted - sample:',
   return (
     <div className="bg-gray-50 p-2 rounded-lg  overflow-hidden">
       {/* Stats Cards Section */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-4"> {/* Changed to grid-cols-7 to accommodate navtcc */}
         {/* Total Bookings Card */}
         <div className="bg-white p-4 rounded-lg border-l-4 border-purple-500 shadow">
           <div className="flex justify-between items-center">
@@ -608,7 +644,7 @@ console.log('Final bookings sorted - sample:',
           </div>
         </div>
 
-         <div className="bg-white p-4 rounded-lg border-l-4 border-red-500 shadow">
+         <div className="bg-white p-4 rounded-lg border-l-4 border-indigo-500 shadow">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-gray-600 text-sm font-medium">Service</h2>
@@ -619,8 +655,26 @@ console.log('Final bookings sorted - sample:',
                 }
               </p>
             </div>
-            <div className="bg-red-100 p-1 sm:p-3 rounded-full">
-              <CreditCard size={18} className="text-red-500" />
+            <div className="bg-indigo-100 p-1 sm:p-3 rounded-full">
+              <CreditCard size={18} className="text-indigo-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* Navtcc Card (NEW) */}
+        <div className="bg-white p-4 rounded-lg border-l-4 border-cyan-500 shadow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-gray-600 text-sm font-medium">Navtcc</h2>
+              <p className="text-2xl font-bold text-gray-800">
+                {isLoading && !showPartialData ? 
+                  <span className="text-gray-300">--</span> : 
+                  navtccCount
+                }
+              </p>
+            </div>
+            <div className="bg-cyan-100 p-1 sm:p-3 rounded-full">
+              <Shield size={18} className="text-cyan-500" />
             </div>
           </div>
         </div>
@@ -637,9 +691,9 @@ console.log('Final bookings sorted - sample:',
                 }
               </p>
             </div>
-            <div className="bg-teal-100 p-1 sm:p-3 rounded-full">
+            {/* <div className="bg-teal-100 p-1 sm:p-3 rounded-full">
               <CreditCard size={18} className="text-teal-500" /> 
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -655,9 +709,9 @@ console.log('Final bookings sorted - sample:',
                 }
               </p>
             </div>
-            <div className="bg-indigo-100 p-1 sm:p-3 rounded-full">
+            {/* <div className="bg-indigo-100 p-1 sm:p-3 rounded-full">
               <CreditCard size={18} className="text-indigo-500" /> 
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -673,9 +727,9 @@ console.log('Final bookings sorted - sample:',
                 }
               </p>
             </div>
-            <div className="bg-orange-100 p-1 sm:p-3 rounded-full">
+            {/* <div className="bg-orange-100 p-1 sm:p-3 rounded-full">
               <CreditCard size={18} className="text-orange-500" /> 
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -691,9 +745,9 @@ console.log('Final bookings sorted - sample:',
                 }
               </p>
             </div>
-            <div className="bg-pink-100 p-1 sm:p-3 rounded-full">
+            {/* <div className="bg-pink-100 p-1 sm:p-3 rounded-full">
               <CreditCard size={18} className="text-pink-500" /> 
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -709,9 +763,9 @@ console.log('Final bookings sorted - sample:',
                 }
               </p>
             </div>
-            <div className="bg-purple-200 p-1 sm:p-3 rounded-full">
+            {/* <div className="bg-purple-200 p-1 sm:p-3 rounded-full">
               <Wallet size={18} className="text-purple-700" />
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -727,9 +781,9 @@ console.log('Final bookings sorted - sample:',
                 }
               </p>
             </div>
-            <div className="bg-cyan-100 p-1 sm:p-3 rounded-full">
+            {/* <div className="bg-cyan-100 p-1 sm:p-3 rounded-full">
               <Landmark size={18} className="text-cyan-500" />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -743,7 +797,7 @@ console.log('Final bookings sorted - sample:',
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold text-gray-700">All Bookings</h2>
-            {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken || errors.services || errors.protector) && ( 
+            {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken || errors.services || errors.navtcc || errors.protector) && ( 
               <span className="text-xs text-red-500">
                 {Object.values(errors).filter(e => e).join(', ')}
               </span>
@@ -788,7 +842,7 @@ console.log('Final bookings sorted - sample:',
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="10" className="px-3 py-4 text-center text-sm text-gray-500"> {/* Updated colspan */}
+                    <td colSpan="11" className="px-3 py-4 text-center text-sm text-gray-500"> {/* Updated colspan to 11 */}
                       No recent bookings found
                     </td>
                   </tr>

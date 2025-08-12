@@ -16,13 +16,11 @@ const AutoCalculate = () => {
         const cashPaid = parseInt(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
         
-        // Calculate remaining amount
+        
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining);
         
-        // Calculate profit (assuming some cost basis, can be modified as needed)
-        // For now, just setting profit as a field that can be manually entered
-        // You can add automatic calculation logic here if needed
+
     }, [
         values.receivable_amount,
         values.paid_cash,
@@ -67,22 +65,22 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
         customer_add: Yup.string().required('Customer Address is required'),
-        reference: Yup.string().required('Reference is required'),
+        reference: Yup.string().notRequired(),
         country: Yup.string().required('Country is required'),
         // Validation for passport fields
         passengerTitle: Yup.string().required('Title is required'),
         passengerFirstName: Yup.string().required('First Name is required'),
         passengerLastName: Yup.string().required('Last Name is required'),
-        passengerDob: Yup.date().required('Date of Birth is required').typeError('Invalid date'),
-        passengerNationality: Yup.string().required('Nationality is required'),
-        documentType: Yup.string().required('Document Type is required'),
-        documentNo: Yup.string().required('Document Number is required'),
-        documentExpiry: Yup.date().required('Expiry Date is required').typeError('Invalid date'),
-        documentIssueCountry: Yup.string().required('Issue Country is required'),
+        passengerDob: Yup.date().notRequired().typeError('Invalid date'),
+        passengerNationality: Yup.string().notRequired(),
+        documentType: Yup.string().notRequired(),
+        documentNo: Yup.string().notRequired(),
+        documentExpiry: Yup.date().notRequired().typeError('Invalid date'),
+        documentIssueCountry: Yup.string().notRequired(),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
-        paid_cash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
-        paid_from_bank: Yup.string().required('Bank Title is required'),
-        paid_in_bank: Yup.number().required('Paid In Bank is required').typeError('Paid_in_bank must be a number'),
+        paid_cash: Yup.number().notRequired().typeError('Paid Cash must be a number'),
+        paid_from_bank: Yup.string().notRequired(),
+        paid_in_bank: Yup.number().notRequired().typeError('Paid_in_bank must be a number'),
         profit: Yup.number().required('Profit is required').typeError('Profit must be a number'),
         remaining_amount: Yup.number()
     });
@@ -116,7 +114,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         getCounts();
     }, []);
 
-    // Update form initial values when entry numbers change or user changes
+    
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
@@ -127,11 +125,11 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     useEffect(() => {
         if (editEntry) {
-            // Parse passport details if it's stored as a JSON string or structured object
+            
             let parsedPassportDetails = {};
             try {
                 if (typeof editEntry.passport_detail === 'string') {
-                    // Try to parse as JSON first
+    
                     try {
                         parsedPassportDetails = JSON.parse(editEntry.passport_detail);
                     } catch {
@@ -183,7 +181,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, [editEntry, user]);
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-        // Create a structured passport details object
+        
         const passportDetail = JSON.stringify({
             title: values.passengerTitle,
             firstName: values.passengerFirstName,
@@ -238,7 +236,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-    // Animation variants
+    
     const formVariants = {
         hidden: { opacity: 0 },
         visible: { 

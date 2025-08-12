@@ -33,7 +33,7 @@ const Sidebar = ({ isAdmin }) => {
     {path:'/admin/navtcc',icon:'fa-graduation-cap',label:'Navtcc'},
     { path: '/admin/services', icon: 'fa-cogs', label: 'Services' },
     { path: '/admin/protector', icon: 'fa-shield-alt', label: 'Protector' },
-    { path: '/admin/expense', icon: 'fa-money-bill-wave', label: 'Expense' },
+    { path: '/admin/expense', icon: 'fa-money-bill-wave', label: 'Cash Expense' },
     { path: '/admin/refunded', icon: 'fa-undo', label: 'Refunded MCB' },
     { path: '/admin/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/admin/officeAccount', icon: 'fa-building', label: 'Office Accounts' },
