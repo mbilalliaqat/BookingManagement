@@ -5,6 +5,17 @@ import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
+import axios from 'axios';
+
+const BANK_OPTIONS = [
+    { value: "UBL M.A.R", label: "UBL M.A.R" },
+    { value: "UBL F.Z", label: "UBL F.Z" },
+    { value: "HBL M.A.R", label: "HBL M.A.R" },
+    { value: "HBL F.Z", label: "HBL F.Z" },
+    { value: "JAZ C", label: "JAZ C" },
+    { value: "MCB FIT", label: "MCB FIT" },
+    
+];
 
 // Auto-calculation component for visa processing form
 const AutoCalculate = () => {
@@ -12,11 +23,11 @@ const AutoCalculate = () => {
     
     useEffect(() => {
         // Get values as numbers (defaulting to 0 if empty or NaN)
-        const receivable = parseInt(values.receivable_amount) || 0;
-        const cashPaid = parseInt(values.paid_cash) || 0;
+        const receivable = parseFloat(values.receivable_amount) || 0;
+        const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
-        const additionalCharges = parseInt(values.additional_charges) || 0;
-        const payForProtector = parseInt(values.pay_for_protector) || 0;
+        const additionalCharges = parseFloat(values.additional_charges) || 0;
+        const payForProtector = parseFloat(values.pay_for_protector) || 0;
         
         // Calculate remaining amount
         const remaining = receivable - cashPaid - bankPaid;
@@ -77,6 +88,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         additional_charges: '',
         pay_for_protector: '',
         paid_cash: '',
+        bank_title: '',
         paid_in_bank: '',
         profit: '',
         remaining_amount: ''
@@ -211,6 +223,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 additional_charges: editEntry.additional_charges || '',
                 pay_for_protector: editEntry.pay_for_protector || '',
                 paid_cash: editEntry.paid_cash || '',
+                bank_title: editEntry.bank_title || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
                 profit: editEntry.profit || '',
                 remaining_amount: editEntry.remaining_amount || ''
@@ -281,6 +294,28 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             }
 
             await response.json();
+
+            if (parseFloat(values.paid_in_bank) > 0 && values.bank_title) {
+                const bankData = {
+                    bank_name: values.bank_title,
+                    employee_name: values.employee_name,
+                    detail: `Visa Sale - ${values.passenger_name} - ${values.reference_name}`,
+                    credit: parseFloat(values.paid_in_bank),
+                    debit: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    entry: values.entry,
+                };
+
+                try {
+                    const response = await axios.post(`${BASE_URL}/accounts`, bankData);
+                    if (response.data.status !== 'success') {
+                        console.error('Failed to store bank transaction:', response.data.message);
+                    }
+                } catch (error) {
+                    console.error('Error storing bank transaction:', error);
+                }
+            }
+
             resetForm();
             onSubmitSuccess();
         } catch (error) {
@@ -354,7 +389,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'additional_charges', label: 'Additional Charges', type: 'number', placeholder: 'Enter additional charges', icon: 'plus-circle' },
         { name: 'pay_for_protector', label: 'Pay For Protector', type: 'number', placeholder: 'Enter pay for protector', icon: 'shield-alt' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'paid_in_bank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank payment details', icon: 'university' },
+        { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.value), placeholder: 'Select bank title', icon: 'university' },
+        { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];

@@ -111,7 +111,7 @@ const Header = () => {
       <div className="flex items-center space-x-2">
         <button 
           onClick={toggleSidebar} 
-          className="px-2 py-1 md:px-3 md:py-1 rounded-lg hover:bg-gray-200 bg-white transition-colors duration-200"
+          className="px-2 py-1 md:px-3 md:py-1 rounded-lg hover:bg-gray-400 bg-white transition-colors duration-200 cursor-pointer"
           title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
         >
           <i className={`fas ${isSidebarOpen ? 'fa-chevron-left' : 'fa-bars md:fa-chevron-right'} text-gray-600`}></i>

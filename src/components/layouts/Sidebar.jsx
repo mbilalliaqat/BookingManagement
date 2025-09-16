@@ -101,9 +101,9 @@ const Sidebar = ({ isAdmin }) => {
               <NavLink
                 to={link.path}
                 className={({ isActive }) =>
-                  `flex items-center ${(isSidebarOpen || isMobile) ? 'justify-start' : 'justify-center'} px-4 py-1 mx-3 rounded-lg transition-all duration-400 ${
+                  `flex items-center ${(isSidebarOpen || isMobile) ? 'justify-start px-4 py-1 mx-3' : 'justify-center p-2 mx-4 my-1'}  rounded-md transition-all duration-400 ${
                     isActive
-                      ? 'rounded-md bg-[#EEF2FF] text-[#151A2D]'
+                      ? 'rounded-md bg-gray-200  text-[#151A2D]'
                       : 'text-white hover:bg-white hover:text-black'
                   }`
                 }

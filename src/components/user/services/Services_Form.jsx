@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext'; // Ensure this path is correct
 import { fetchEntryCounts } from '../../ui/api';
+import axios from 'axios';
 
 
 // --- Constants (consider moving to a separate file if used across components) ---
@@ -42,6 +43,16 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [totalEntries, setTotalEntries] = useState(0);
     
 
+    const bankOptions = [
+        { value: "UBL M.A.R", label: "UBL M.A.R" },
+        { value: "UBL F.Z", label: "UBL F.Z" },
+        { value: "HBL M.A.R", label: "HBL M.A.R" },
+        { value: "HBL F.Z", label: "HBL F.Z" },
+        { value: "JAZ C", label: "JAZ C" },
+        { value: "MCB FIT", label: "MCB FIT" },
+    ];
+
+
     // Memoize initial values to avoid re-creation on every render
     const initialValues = useMemo(() => {
         const base = {
@@ -53,6 +64,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             visa_type: '',
             receivable_amount: '',
             paid_cash: '',
+            paid_from_bank: '',
             paid_in_bank: '',
           
             profit: '',
@@ -76,6 +88,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 visa_type: editEntry.visa_type || '',
                 receivable_amount: editEntry.receivable_amount || '',
                 paid_cash: editEntry.paid_cash || '',
+                paid_from_bank: editEntry.paid_from_bank || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
               
                 profit: editEntry.profit || '',
@@ -93,7 +106,8 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         visa_type: Yup.string().required('Visa Type is required').oneOf(VISA_TYPES, 'Invalid Visa Type'),
         receivable_amount: Yup.number().typeError('Receivable Amount must be a number').required('Receivable Amount is required').min(0, 'Amount cannot be negative'),
         paid_cash: Yup.number().typeError('Paid Cash must be a number').required('Paid Cash is required').min(0, 'Amount cannot be negative'),
-        paid_in_bank:Yup.number().typeError('Paid_in_bank must be a number').required('Number is required'),
+        paid_from_bank: Yup.string().notRequired(),
+        paid_in_bank:Yup.number().typeError('Paid_in_bank must be a number').notRequired(),
         profit: Yup.number().typeError('Profit must be a number').required('Profit is required'),
         remaining_amount: Yup.number().typeError('Remaining Amount must be a number').min(0, 'Remaining amount cannot be negative')
     });
@@ -108,7 +122,8 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             visa_type: values.visa_type,
             receivable_amount: parseFloat(values.receivable_amount),
             paid_cash: parseFloat(values.paid_cash),
-            paid_in_bank: values.paid_in_bank,
+            paid_from_bank: values.paid_from_bank,
+            paid_in_bank: parseFloat(values.paid_in_bank),
             profit: parseFloat(values.profit),
             remaining_amount: parseFloat(values.remaining_amount)
         };
@@ -130,10 +145,32 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
 
-            const responseData = await response.json(); // Get the response data
+            const submittedEntry = await response.json();
+
+            if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
+                const bankData = {
+                    bank_name: values.paid_from_bank,
+                    employee_name: values.user_name,
+                    detail: `Service Sale - ${values.customer_add} - ${values.specific_detail}`,
+                    credit: parseFloat(values.paid_in_bank),
+                    debit: 0,
+                    date: values.booking_date,
+                    entry: values.entry,
+                };
+
+                try {
+                    await axios.post(`${BASE_URL}/accounts`, bankData);
+                } catch (error) {
+                    console.error('Error storing bank transaction:', error);
+                    setErrors({ general: 'An error occurred while recording the bank transaction.' });
+                    return; // Prevent form reset and success message
+                }
+            }
+
+
             resetForm();
             // Pass the updated entry back to the parent component
-            onSubmitSuccess(responseData.service || responseData); 
+            onSubmitSuccess(submittedEntry); 
         } catch (error) {
             console.error('Submission Error:', error);
             setErrors({ general: error.message || 'Failed to submit form. Please try again later.' });
@@ -207,7 +244,8 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section3Fields = [
         { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'paid_in_bank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank title', icon: 'university' },
+        { name: 'paid_from_bank', label: 'Paid From Bank', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
+        { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Enter profit amount', icon: 'chart-line' },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];

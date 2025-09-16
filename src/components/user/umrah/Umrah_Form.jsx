@@ -22,7 +22,8 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [showPassengerSlider,setShowPassengerSlider]=useState(false);
     const [entryNumber, setEntryNumber]=useState(0);
     const [totalEntries,setTotalEntries]=useState(0);
-     const [vendorNames, setVendorNames] = useState([]);
+    const [vendorNames, setVendorNames] = useState([]);
+    const [originalPayments, setOriginalPayments] = useState({ paidCash: 0, paidInBank: 0 });
 
     const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
@@ -136,19 +137,18 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         remainingAmount: Yup.number()
     });
 
-     useEffect(() => {
-        const fetchVendorNames = async () => {
+        const fetchNames = async () => {
             try {
-                const response = await axios.get(`${BASE_URL}/vender-names/existing`);
-                if (response.data.status === 'success') {
-                    setVendorNames(response.data.vendorNames || []);
+                const vendorRes = await axios.get(`${BASE_URL}/vender-names/existing`);
+
+                if (vendorRes.data.status === 'success') {
+                    setVendorNames(vendorRes.data.vendorNames || []);
                 }
             } catch (error) {
-                console.error('Error fetching vendor names:', error);
+                console.error('Error fetching names:', error);
             }
         };
-        fetchVendorNames();
-    }, [BASE_URL]);
+        fetchNames();
 
     useEffect(()=>{
         const getCounts = async ()=>{
@@ -236,12 +236,16 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 bank_title:editEntry.bank_title || '',
                 paidInBank: editEntry.paidInBank || '',
                 payableToVendor: editEntry.payableToVendor || '',
-                vendorName: editEntry.vendorName || '',
+        vendorName: editEntry.vendorName || '',
                 profit: editEntry.profit || '',
                 remainingAmount: editEntry.remainingAmount || ''
             };
             
             setFormInitialValues(newValues);
+            setOriginalPayments({
+                paidCash: parseFloat(editEntry.paidCash) || 0,
+                paidInBank: parseFloat(editEntry.paidInBank) || 0
+            });
             console.log("Loaded edit values:", newValues);
         }
     }, [editEntry, user]);
@@ -285,7 +289,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             bank_title: values.bank_title,
             paidInBank: values.paidInBank,
             payableToVendor: parseInt(values.payableToVendor),
-            vendorName: values.vendorName,
+            vendorName: values.vendorName, 
             profit: parseInt(values.profit),
             remainingAmount: parseInt(values.remainingAmount)
         };
@@ -308,24 +312,73 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             await response.json();
 
-            if(!editEntry){
-                const vendorData={
-                    user_name:values.vendorName,
-                     amount: parseInt(values.payableToVendor),
-                   date: new Date(),
-                }
-                   const vendorResponse = await fetch(`${BASE_URL}/vender`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(vendorData),
-                });
+            // Automatically insert bank data into office accounts table
+            const paidInBank_New = parseFloat(values.paidInBank) || 0;
+            const original_paidInBank = parseFloat(originalPayments.paidInBank) || 0;
+            const bankPayment_diff = paidInBank_New - original_paidInBank;
 
-                if (!vendorResponse.ok) {
-                    console.error('Vendor submission failed:', vendorResponse.status);
-                    // Log the error but don't block the form submission
-                    setErrors({ general: 'Umrah booking saved, but failed to save vendor details. Please try again later.' });
+            if (values.bank_title && bankPayment_diff > 0) {
+                const officeAccountData = {
+                    bank_name: values.bank_title,
+                    employee_name: values.userName,
+                    entry: values.entry,
+                    date: new Date().toISOString().split('T')[0],
+                    detail: `Customer: ${values.customerAdd}, Ref: ${values.reference || 'N/A'}`,
+                    credit: bankPayment_diff,
+                    debit: 0,
+                };
+                try {
+                    await fetch(`${BASE_URL}/accounts`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(officeAccountData),
+                    });
+                } catch (error) {
+                    console.error("Error submitting to office account:", error);
+                }
+            }
+
+
+
+            if (editEntry) {
+                // Logic to handle vendor payment updates in edit mode
+                const payableToVendor_New = parseFloat(values.payableToVendor) || 0;
+                const original_payableToVendor = parseFloat(editEntry.payableToVendor) || 0;
+                const vendorPayment_diff = payableToVendor_New - original_payableToVendor;
+
+                if (vendorPayment_diff !== 0) {
+                    const vendorData = {
+                        user_name: values.vendorName,
+                        amount: vendorPayment_diff,
+                        date: new Date(),
+                    };
+                    try {
+                        await fetch(`${BASE_URL}/vender`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(vendorData),
+                        });
+                    } catch (error) {
+                        console.error("Error updating vendor account:", error);
+                    }
+                }
+            } else {
+                // Original logic for new entries
+                if (values.vendorName && parseFloat(values.payableToVendor) > 0) {
+                    const vendorData = {
+                        user_name: values.vendorName,
+                        amount: parseFloat(values.payableToVendor),
+                        date: new Date(),
+                    };
+                    try {
+                        await fetch(`${BASE_URL}/vender`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(vendorData),
+                        });
+                    } catch (error) {
+                        console.error("Error submitting to vendor account:", error);
+                    }
                 }
             }
 
@@ -401,7 +454,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'bank_title', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paidInBank', label: 'Paid In Bank', type: 'text', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'payableToVendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
-        { name: 'vendorName', label: 'Vendor Name', type: 'select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
+        { name: 'vendorName', label: 'Vendor Name', type: 'select', options: vendorNames, placeholder: 'Select Vendor' , icon: 'store' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Enter profit', icon: 'chart-line', readOnly: true},
         { name: 'remainingAmount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];

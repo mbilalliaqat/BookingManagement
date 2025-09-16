@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
+import axios from 'axios';
 
 // Auto-calculation component for GAMCA token form
 const AutoCalculate = () => {
@@ -86,12 +87,12 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     });
 
      const bankOptions = [
-        { value: "UNITED BANK (ubl1)", label: "UNITED BANK (M ALI RAZA)" },
-        { value: "UNITED BANK (ubl2)", label: "UNITED BANK (FAIZAN E RAZA TRAVEL)" },
-        { value: "HABIB BANK (HBL1)", label: "HABIB BANK (M ALI RAZA)" },
-        { value: "HABIB BANK (HBL2)", label: "HABIB BANK (FAIZAN E RAZA TRAVEL)" },
-        { value: "JAZZCASH", label: "JAZZCASH (M ALI RAZA)" },
-        { value: "MCB", label: "MCB (FIT MANPOWER)" }
+        { value: "UBL M.A.R", label: "UBL M.A.R" },
+    { value: "UBL F.Z", label: "UBL F.Z" },
+    { value: "HBL M.A.R", label: "HBL M.A.R" },
+    { value: "HBL F.Z", label: "HBL F.Z" },
+    { value: "JAZ C", label: "JAZ C" },
+    { value: "MCB FIT", label: "MCB FIT" },
     ];
 
      useEffect(() => {
@@ -226,6 +227,28 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             }
 
             await response.json();
+
+            if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
+                const bankData = {
+                    bank_name: values.paid_from_bank,
+                    employee_name: values.employee_name,
+                    detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
+                    credit: parseFloat(values.paid_in_bank),
+                    debit: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    entry: values.entry,
+                };
+
+                try {
+                    const res = await axios.post(`${BASE_URL}/accounts`, bankData);
+                    if (res.data.status !== 'success') {
+                        console.error('Failed to store bank transaction:', res.data.message);
+                    }
+                } catch (error) {
+                    console.error('Error storing bank transaction:', error);
+                }
+            }
+
             resetForm();
             onSubmitSuccess();
         } catch (error) {
