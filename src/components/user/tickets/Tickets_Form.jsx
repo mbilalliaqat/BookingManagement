@@ -229,6 +229,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const formFields = {
         section1: [
             { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+            { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Enter booking date', icon: 'calendar-alt' },
             { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
            {
       name: 'customer_add',
@@ -268,6 +269,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         agent_name: '',
         customer_add: '',
         reference: '',
+        booking_date: '',
         entry: '0/0',
         depart_date: '',
         return_date: '',
@@ -293,6 +295,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
+        booking_date: Yup.date().required('Booking Date is required').typeError('Invalid date'),
         customer_add: Yup.string().required('Customer Address is required'),
         depart_date: Yup.date().required('Travel Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
@@ -414,6 +417,7 @@ useEffect(() => {
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 entry: entryString,
+                booking_date: editEntry ? formatDateForInput(editEntry.booking_date) : '',
                 depart_date: editEntry ? formatDateForInput(editEntry.depart_date) : '',
                 return_date: editEntry ? formatDateForInput(editEntry.return_date) : '',
                 sector: editEntry.sector || '',
@@ -493,7 +497,8 @@ useEffect(() => {
                 payable_to_vendor: parseFloat(values.payable_to_vendor) || 0,
                 vendor_name: values.vendor_name || null,
                 profit: parseFloat(values.profit) || 0,
-                remaining_amount: parseFloat(values.remaining_amount) || 0
+                remaining_amount: parseFloat(values.remaining_amount) || 0,
+                booking_date: values.booking_date || null,
             };
 
             const url = editEntry ? `${BASE_URL}/ticket/${editEntry.id}` : `${BASE_URL}/ticket`;

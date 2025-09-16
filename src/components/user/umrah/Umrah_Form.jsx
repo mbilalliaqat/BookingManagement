@@ -74,6 +74,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         userName: user?.username || '',
         customerAdd: '',
         reference: '',
+        booking_date: '',
         entry:'0/0',
         packageDetail: '',
         depart_date: '',
@@ -105,6 +106,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const validationSchema = Yup.object({
         userName: Yup.string().required('Employee Name is required'),
+        booking_date: Yup.date().required('Booking Date is required').typeError('Invalid date'),
         customerAdd: Yup.string().required('Customer Address is required'),
         reference: Yup.string().required('Reference is required'),
         packageDetail: Yup.string().required('Package Detail is required'),
@@ -209,6 +211,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 userName: editEntry.userName || user?.username || '',
                 customerAdd: editEntry.customerAdd || '',
                 reference: editEntry.reference || '',
+                booking_date: formatDate(editEntry.booking_date),
                 entry: editEntry.entry || '0/0',
                 packageDetail: editEntry.packageDetail || '',
                 depart_date: formatDate(editEntry.depart_date),
@@ -291,7 +294,8 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             payableToVendor: parseInt(values.payableToVendor),
             vendorName: values.vendorName, 
             profit: parseInt(values.profit),
-            remainingAmount: parseInt(values.remainingAmount)
+            remainingAmount: parseInt(values.remainingAmount),
+            booking_date: new Date(values.booking_date),
         };
 
         try {
@@ -418,6 +422,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Form fields grouped by section
     const section1Fields = [
         { name: 'userName', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+        { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Enter booking date', icon: 'calendar-alt' },
         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, // New entry field
         { name: 'customerAdd', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },

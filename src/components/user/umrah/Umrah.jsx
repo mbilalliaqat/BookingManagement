@@ -45,6 +45,7 @@ const Umrah = () => {
                 return {
                      ...booking,
                     
+                    booking_date: new Date(booking.booking_date).toLocaleDateString('en-GB'),
                     depart_date: new Date(booking.depart_date).toLocaleDateString('en-GB'),
                     return_date: new Date(booking.return_date).toLocaleDateString('en-GB'),
                     createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB'),
@@ -77,7 +78,7 @@ const Umrah = () => {
     }, []);
 
      const baseColumns = [
-        { header: 'BOOKING DATE', accessor: 'createdAt' },
+        { header: 'BOOKING DATE', accessor: 'booking_date' },
         { 
         header: 'EMPLOYEE & ENTRY', 
         accessor: 'employee_entry', 

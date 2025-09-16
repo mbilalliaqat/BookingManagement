@@ -86,7 +86,7 @@ const fetchTickets = async () => {
                 
                 depart_date: new Date(ticket.depart_date).toLocaleDateString('en-GB'),
                 return_date: new Date(ticket.return_date).toLocaleDateString('en-GB'),
-                created_at: new Date(ticket.created_at).toLocaleDateString('en-GB'),
+                booking_date: new Date(ticket.booking_date).toLocaleDateString('en-GB'),
                 allPassengerDetails: parsedPassengerDetails,
             };
         });
@@ -184,7 +184,7 @@ const handlePaymentSuccess = (paymentData) => {
 };
 
     const baseColumns=[
-         { header: 'BOOKING DATE', accessor: 'created_at' },
+         { header: 'BOOKING DATE', accessor: 'booking_date' },
          {
             header: 'EMPLOYEE & ENTRY',
             accessor: 'employee_entry',
