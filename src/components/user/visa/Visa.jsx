@@ -7,6 +7,7 @@ import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import VisaRemainingPay from './VisaRemainingPay';
 
 const Visa = () => {
     const [search, setSearch] = useState('');
@@ -19,6 +20,8 @@ const Visa = () => {
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showPassportFields, setShowPassportFields] = useState(false);
+    const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
+    const [selectedVisaForPay, setSelectedVisaForPay] = useState(null);
     const { user } = useAppContext();
 
    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -93,6 +96,32 @@ const Visa = () => {
         fetchData();
     }, []);
 
+    const handleRemainingPay = (visa) => {
+        setSelectedVisaForPay(visa);
+        setShowRemainingPayModal(true);
+    };
+
+    const closeRemainingPayModal = () => {
+        setShowRemainingPayModal(false);
+        setSelectedVisaForPay(null);
+    };
+
+    const handlePaymentSuccess = (paymentData) => {
+        setEntries(prevEntries => prevEntries.map(visa => {
+            if (visa.id === paymentData.visaId) {
+                return {
+                    ...visa,
+                    paid_cash: parseFloat(visa.paid_cash || 0) + paymentData.cash_amount,
+                    paid_in_bank: parseFloat(visa.paid_in_bank || 0) + paymentData.bank_amount,
+                    remaining_amount: parseFloat(visa.remaining_amount || 0) - (paymentData.cash_amount + paymentData.bank_amount)
+                };
+            }
+            return visa;
+        }));
+        closeRemainingPayModal();
+        fetchData();
+    };
+
    
 
      const baseColumns = [
@@ -145,7 +174,22 @@ const Visa = () => {
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
         { header: 'PROFIT', accessor: 'profit' },
-        { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
+        {
+            header: 'REMAINING AMOUNT',
+            accessor: 'remaining_amount',
+            render: (cellValue, row) => (
+                <div className="flex flex-col items-center">
+                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <button
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        onClick={() => handleRemainingPay(row)}
+                        title="Add Payment"
+                    >
+                        <i className="fas fa-plus"></i> Pay
+                    </button>
+                </div>
+            )
+        },
     ];
        
         const actionColumns = user.role === 'admin' ? [{
@@ -326,6 +370,32 @@ const Visa = () => {
                     </button>
                 </div>
             </Modal>
+            {showRemainingPayModal && (
+                <Modal
+                    isOpen={showRemainingPayModal}
+                    onClose={closeRemainingPayModal}
+                    title={`Add Payment for ${selectedVisaForPay?.customer_add}`}
+                    width="4xl"
+                >
+                    <div className="bg-gray-800 p-4 rounded mb-4 text-white">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <strong>Visa ID:</strong> {selectedVisaForPay.id}
+                            </div>
+                            <div>
+                                <strong>Customer:</strong> {selectedVisaForPay.customer_add}
+                            </div>
+                            <div>
+                                <strong>Reference:</strong> {selectedVisaForPay.reference}
+                            </div>
+                            <div>
+                                <strong>Remaining Amount:</strong> {selectedVisaForPay.remaining_amount}
+                            </div>
+                        </div>
+                    </div>
+                    <VisaRemainingPay visaId={selectedVisaForPay.id} onPaymentSuccess={handlePaymentSuccess} />
+                </Modal>
+            )}
         </div>
     );
 };

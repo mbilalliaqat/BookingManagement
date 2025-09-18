@@ -6,6 +6,7 @@ import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import GamcaTokenRemainingPay from './GamcaTokenRemainingPay';
 
 const GamcaToken = () => {
     const [search, setSearch] = useState('');
@@ -18,6 +19,8 @@ const GamcaToken = () => {
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
+    const [showRemainingPay, setShowRemainingPay] = useState(false);
+    const [selectedGamcaToken, setSelectedGamcaToken] = useState(null);
 
      const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
@@ -159,7 +162,22 @@ const GamcaToken = () => {
         )
     },
         { header: 'PROFIT', accessor: 'profit' },
-        { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
+        {
+            header: 'REMAINING AMOUNT',
+            accessor: 'remaining_amount',
+            render: (cellValue, row) => (
+                <div className="flex flex-col items-center">
+                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <button
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        onClick={() => handleRemainingPay(row)}
+                        title="Add Payment"
+                    >
+                        <i className="fas fa-plus"></i> Pay
+                    </button>
+                </div>
+            )
+        },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row,index) => (
                 <>
@@ -171,7 +189,7 @@ const GamcaToken = () => {
                     </button>
                     <button
                         className="text-red-500 hover:text-red-700 text-[13px]"
-                        onClick={() => openDeleteModal(index)}
+                        onClick={() => openDeleteModal(index.id)}
                     >
                         <i className="fas fa-trash"></i>
                     </button>
@@ -195,6 +213,11 @@ const GamcaToken = () => {
         fetchData();
         setShowForm(false);
         setEditEntry(null);
+    };
+
+    const handleRemainingPay = (gamcaToken) => {
+        setSelectedGamcaToken(gamcaToken);
+        setShowRemainingPay(true);
     };
 
     const handleUpdate = (entry) => {
@@ -308,6 +331,19 @@ const GamcaToken = () => {
                         Delete
                     </button>
                 </div>
+            </Modal>
+             <Modal
+                isOpen={showRemainingPay}
+                onClose={() => setShowRemainingPay(false)}
+                title={`Remaining Payment for Gamca Token ID: ${selectedGamcaToken?.id}`}>
+
+                <GamcaTokenRemainingPay
+                    gamcaTokenId={selectedGamcaToken?.id}
+                    onPaymentSuccess={() => {
+                        setShowRemainingPay(false);
+                        fetchData();
+                    }}
+                />
             </Modal>
         </div>
     );

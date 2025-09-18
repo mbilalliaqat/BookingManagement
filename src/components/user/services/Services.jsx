@@ -6,6 +6,7 @@ import TableSpinner from '../../ui/TableSpinner';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import Modal from '../../ui/Modal';
 import { useAppContext } from '../../contexts/AppContext';
+import ServiceRemainingPay from './ServiceRemainingPay';
 
 const Services = () => {
     const [search, setSearch] = useState('');
@@ -17,6 +18,8 @@ const Services = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showRemainingPay, setShowRemainingPay] = useState(false);
+    const [selectedService, setSelectedService] = useState(null);
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -49,6 +52,16 @@ const Services = () => {
         fetchData();
     }, []);
 
+    const handleRemainingPay = (service) => {
+        setSelectedService(service);
+        setShowRemainingPay(true);
+    };
+
+    const handlePaymentSuccess = (paymentData) => {
+        fetchData(); // Refetch data to update the UI
+        setShowRemainingPay(false);
+    };
+
     const columns = [
         { header: 'VISA TYPE', accessor: 'visa_type' },
         { header: 'BOOKING DATE', accessor: 'booking_date' },
@@ -60,21 +73,34 @@ const Services = () => {
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
         { header: 'PROFIT', accessor: 'profit' },
-        { header: ' REMAINING AMOUNT', accessor: 'remaining_amount' },
+        {
+            header: 'REMAINING AMOUNT',
+            accessor: 'remaining_amount',
+            render: (row) => (
+                <div className="flex flex-col items-center">
+                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <button
+                        onClick={() => handleRemainingPay(row)}
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        title="Add Payment"
+                    >
+                        <i className="fas fa-plus mr-1"></i> Pay
+                    </button>
+                </div>
+            )
+        },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
                         className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
-                        // Pass the entire row object to handleUpdate
-                        onClick={() => handleUpdate(index)}
+                        onClick={() => handleUpdate(row)}
                     >
                         <i className="fas fa-edit"></i>
                     </button>
                     <button
                         className="text-red-500 hover:text-red-700 text-[13px]"
-                        // Pass the row id to openDeleteModal
-                        onClick={() => openDeleteModal(index.id)}
+                        onClick={() => openDeleteModal(row.id)}
                     >
                         <i className="fas fa-trash"></i>
                     </button>
@@ -210,6 +236,14 @@ const Services = () => {
                         )}
                     </div>
                 </div>
+            )}
+            )}
+            {showRemainingPay && (
+                <ServiceRemainingPay
+                    service={selectedService}
+                    onClose={() => setShowRemainingPay(false)}
+                    onPaymentSuccess={handlePaymentSuccess}
+                />
             )}
             <Modal
                 isOpen={showDeleteModal}

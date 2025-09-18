@@ -6,6 +6,7 @@ import TableSpinner from '../../ui/TableSpinner';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import axios from 'axios';
 import Modal from '../../ui/Modal';
+import UmrahRemainingPay from './UmrahRemainingPay';
 
 const Umrah = () => {
     const [search, setSearch] = useState('');
@@ -18,6 +19,8 @@ const Umrah = () => {
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showPassportFields, setShowPassportFields] = useState(false);
+    const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
+    const [selectedUmrahForPay, setSelectedUmrahForPay] = useState(null);
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -76,6 +79,32 @@ const Umrah = () => {
     useEffect(() => {
         fetchUmrah();
     }, []);
+
+    const handleRemainingPay = (umrah) => {
+        setSelectedUmrahForPay(umrah);
+        setShowRemainingPayModal(true);
+    };
+
+    const closeRemainingPayModal = () => {
+        setShowRemainingPayModal(false);
+        setSelectedUmrahForPay(null);
+    };
+
+    const handlePaymentSuccess = (paymentData) => {
+        setEntries(prevEntries => prevEntries.map(umrah => {
+            if (umrah.id === paymentData.umrahId) {
+                return {
+                    ...umrah,
+                    paidCash: parseFloat(umrah.paidCash || 0) + paymentData.cashAmount,
+                    paidInBank: parseFloat(umrah.paidInBank || 0) + paymentData.bankAmount,
+                    remainingAmount: parseFloat(umrah.remainingAmount || 0) - (paymentData.cashAmount + paymentData.bankAmount)
+                };
+            }
+            return umrah;
+        }));
+        closeRemainingPayModal();
+        fetchUmrah();
+    };
 
      const baseColumns = [
         { header: 'BOOKING DATE', accessor: 'booking_date' },
@@ -148,7 +177,22 @@ const Umrah = () => {
             </div>
         )
     },
-        { header: 'REMAINING AMOUNT', accessor: 'remainingAmount' },
+        { 
+            header: 'REMAINING AMOUNT', 
+            accessor: 'remainingAmount',
+            render: (cellValue, row) => (
+                <div className="flex flex-col items-center">
+                    <span className="mb-1">{row?.remainingAmount || '0'}</span>
+                    <button
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        onClick={() => handleRemainingPay(row)}
+                        title="Add Payment"
+                    >
+                        <i className="fas fa-plus"></i> Pay
+                    </button>
+                </div>
+            )
+        },
         { 
         header: 'VENDOR & PAYABLE', 
         accessor: 'vendor_payable', 
@@ -339,6 +383,37 @@ const Umrah = () => {
                     </button>
                 </div>
             </Modal>
+            {showRemainingPayModal && (
+                <Modal
+                    isOpen={showRemainingPayModal}
+                    onClose={closeRemainingPayModal}
+                    title={`Add Payment for ${selectedUmrahForPay?.customerAdd}`}
+                    width="4xl"
+                >
+                    {/* Display Umrah Info */}
+                    <div className="bg-gray-800 p-4 rounded mb-4 text-white">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <strong>Umrah ID:</strong> {selectedUmrahForPay.id}
+                            </div>
+                            <div>
+                                <strong>Customer:</strong> {selectedUmrahForPay.customerAdd}
+                            </div>
+                            <div>
+                                <strong>Reference:</strong> {selectedUmrahForPay.reference}
+                            </div>
+                            <div>
+                                <strong>Remaining Amount:</strong> {selectedUmrahForPay.remainingAmount || '0'}
+                            </div>
+                        </div>
+                    </div>
+                    <UmrahRemainingPay
+                        umrahId={selectedUmrahForPay?.id}
+                        onPaymentSuccess={handlePaymentSuccess}
+                        onCancel={closeRemainingPayModal}
+                    />
+                </Modal>
+            )}
         </div>
     );
 };
