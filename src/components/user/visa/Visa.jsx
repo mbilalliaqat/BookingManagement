@@ -50,8 +50,28 @@ const Visa = () => {
                     console.error("Error parsing passport details:", e);
                 }
 
+                // Calculate total payments from payment history if available - similar to Tickets
+                let totalCashPaid = parseFloat(visa.paid_cash || 0);
+                let totalBankPaid = parseFloat(visa.paid_in_bank || 0);
+                
+                // If there are additional payments, we need to get the original amounts
+                // The initial amounts should be the base amounts from when the visa was first created
+                const initialCash = visa.initial_paid_cash !== undefined 
+                    ? parseFloat(visa.initial_paid_cash) 
+                    : parseFloat(visa.paid_cash || 0);
+                const initialBank = visa.initial_paid_in_bank !== undefined 
+                    ? parseFloat(visa.initial_paid_in_bank) 
+                    : parseFloat(visa.paid_in_bank || 0);
+
                 return {
                     ...visa,
+                    // Store original payment amounts
+                    initial_paid_cash: initialCash,
+                    initial_paid_in_bank: initialBank,
+                    
+                    // Current total payments (original + additional)
+                    paid_cash: totalCashPaid,
+                    paid_in_bank: totalBankPaid,
                   
                     created_at: new Date(visa.created_at).toLocaleDateString('en-GB'),  
                     embassy_send_date: visa.embassy_send_date
@@ -111,6 +131,10 @@ const Visa = () => {
             if (visa.id === paymentData.visaId) {
                 return {
                     ...visa,
+                    // Store initial amounts if not already stored
+                    initial_paid_cash: visa.initial_paid_cash || visa.paid_cash,
+                    initial_paid_in_bank: visa.initial_paid_in_bank || visa.paid_in_bank,
+                    
                     paid_cash: parseFloat(visa.paid_cash || 0) + paymentData.cash_amount,
                     paid_in_bank: parseFloat(visa.paid_in_bank || 0) + paymentData.bank_amount,
                     remaining_amount: parseFloat(visa.remaining_amount || 0) - (paymentData.cash_amount + paymentData.bank_amount)
@@ -166,13 +190,31 @@ const Visa = () => {
         { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
     ];
 
-    // Financial columns
+    // Financial columns - Updated to match Tickets component format
     const financialColumns = [
        { header: 'RECEIVE ABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'ADDITIONAL CHARGES', accessor: 'additional_charges' },
         { header: 'PAY FOR PROTECTOR', accessor: 'pay_for_protector' },
-        { header: 'PAID CASH', accessor: 'paid_cash' },
-        { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
+        {
+            header: 'PAID CASH',
+            accessor: 'paid_cash_details',
+            render: (cellValue, row) => (
+                <div>
+                    <div>Initial: {row.initial_paid_cash || '0'}</div>
+                    <div>Total: {row.paid_cash || '0'}</div>
+                </div>
+            )
+        },
+        {
+            header: 'PAID IN BANK',
+            accessor: 'paid_in_bank_details',
+            render: (cellValue, row) => (
+                <div>
+                    <div>Initial: {row.initial_paid_in_bank || '0'}</div>
+                    <div>Total: {row.paid_in_bank || '0'}</div>
+                </div>
+            )
+        },
         { header: 'PROFIT', accessor: 'profit' },
         {
             header: 'REMAINING AMOUNT',
@@ -370,32 +412,47 @@ const Visa = () => {
                     </button>
                 </div>
             </Modal>
-            {showRemainingPayModal && (
-                <Modal
-                    isOpen={showRemainingPayModal}
-                    onClose={closeRemainingPayModal}
-                    title={`Add Payment for ${selectedVisaForPay?.customer_add}`}
-                    width="4xl"
-                >
-                    <div className="bg-gray-800 p-4 rounded mb-4 text-white">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <strong>Visa ID:</strong> {selectedVisaForPay.id}
-                            </div>
-                            <div>
-                                <strong>Customer:</strong> {selectedVisaForPay.customer_add}
-                            </div>
-                            <div>
-                                <strong>Reference:</strong> {selectedVisaForPay.reference}
-                            </div>
-                            <div>
-                                <strong>Remaining Amount:</strong> {selectedVisaForPay.remaining_amount}
-                            </div>
+            {/* Remaining Pay Modal Component - Same as Tickets */}
+    {showRemainingPayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Payment Details</h2>
+                    <button
+                        onClick={closeRemainingPayModal}
+                        className="text-gray-500 hover:text-gray-700"
+                    >
+                        <i className="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                {/* Display Visa Info */}
+                <div className="bg-gray-100 p-4 rounded mb-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <strong>Visa ID:</strong> {selectedVisaForPay?.id}
+                        </div>
+                        <div>
+                            <strong>Customer:</strong> {selectedVisaForPay?.customer_add}
+                        </div>
+                        <div>
+                            <strong>Reference:</strong> {selectedVisaForPay?.reference}
+                        </div>
+                        <div>
+                            <strong>Remaining Amount:</strong> {selectedVisaForPay?.remaining_amount || '0'}
                         </div>
                     </div>
-                    <VisaRemainingPay visaId={selectedVisaForPay.id} onPaymentSuccess={handlePaymentSuccess} />
-                </Modal>
-            )}
+                </div>
+
+                {/* RemainingPay Component */}
+                <VisaRemainingPay
+                    visaId={selectedVisaForPay?.id}
+                    onClose={closeRemainingPayModal}
+                    onPaymentSuccess={handlePaymentSuccess}
+                />
+            </div>
+        </div>
+    )}
         </div>
     );
 };
