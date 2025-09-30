@@ -14,7 +14,6 @@ const BANK_OPTIONS = [
     { value: "HBL F.Z", label: "HBL F.Z" },
     { value: "JAZ C", label: "JAZ C" },
     { value: "MCB FIT", label: "MCB FIT" },
-    
 ];
 
 // Auto-calculation component for visa processing form
@@ -52,15 +51,13 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
-     const [entryNumber, setEntryNumber] = useState(0);
+    const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-
-    
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
         file_number: '',
-         entry: '0/0',
+        entry: '0/0',
         reference: '',
         sponsor_name: '',
         visa_number: '',
@@ -96,74 +93,43 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
-        // file_number: Yup.string().required('File Number is required'),
-        // reference: Yup.string().required('Reference is required'),
-        // sponsor_name: Yup.string().required('Sponsor Name is required'),
-        // visa_number: Yup.string().required('Visa Number is required'),
-        // id_number: Yup.string().required('ID Number is required'),
-        // embassy: Yup.string().required('Embassy is required'),
-        // e_number: Yup.string().required('E-Number is required'),
-        // customer_add: Yup.string().required('Customer Address is required'),
-        // ptn_permission: Yup.string().required('PTN/Permission is required'),
-        // embassy_send_date: Yup.date().required('Embassy Send Date is required').typeError('Invalid date'),
-        // embassy_return_date: Yup.date().required('Embassy Return Date is required').typeError('Invalid date'),
-        // protector_date: Yup.date().required('Protector Date is required').typeError('Invalid date'),
-        // expiry_medical_date:Yup.date().required('Date is required').typeError('Invalid date'),
-        // passport_deliver_date: Yup.date().required('Passport Deliver Date is required').typeError('Invalid date'),
-        // // Validation for passport fields
-        // passengerTitle: Yup.string().required('Title is required'),
-        // passengerFirstName: Yup.string().required('First Name is required'),
-        // passengerLastName: Yup.string().required('Last Name is required'),
-        // passengerDob: Yup.date().required('Date of Birth is required').typeError('Invalid date'),
-        // passengerNationality: Yup.string().required('Nationality is required'),
-        // documentType: Yup.string().required('Document Type is required'),
-        // documentNo: Yup.string().required('Document Number is required'),
-        // documentExpiry: Yup.date().required('Expiry Date is required').typeError('Invalid date'),
-        // documentIssueCountry: Yup.string().required('Issue Country is required'),
-        // receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
-        // additional_charges: Yup.number().required('Additional Charges is required').typeError('Additional Charges must be a number'),
-        // pay_for_protector: Yup.number().required('Pay For Protector is required').typeError('Pay For Protector must be a number'),
-        // paid_cash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
-        // paid_in_bank: Yup.string().required('Paid In Bank is required'),
-        // profit: Yup.number(),
-        // remaining_amount: Yup.number()
     });
 
-     useEffect(() => {
-        const getCounts = async () => {
-            const counts = await fetchEntryCounts();
-            if (counts) {
-                const visaCounts = counts.find(c => c.form_type === 'visa');
-                if (visaCounts) {
-                    setEntryNumber(visaCounts.current_count + 1);
-                    setTotalEntries(visaCounts.global_count + 1);
+    // Modified useEffect to only fetch new entry counts when creating a new entry
+    useEffect(() => {
+        // Only fetch new entry counts when creating a new entry (not editing)
+        if (!editEntry) {
+            const getCounts = async () => {
+                const counts = await fetchEntryCounts();
+                if (counts) {
+                    const visaCounts = counts.find(c => c.form_type === 'visa');
+                    if (visaCounts) {
+                        setEntryNumber(visaCounts.current_count + 1);
+                        setTotalEntries(visaCounts.global_count + 1);
+                    } else {
+                        setEntryNumber(1);
+                        setTotalEntries(1);
+                    }
                 } else {
                     setEntryNumber(1);
                     setTotalEntries(1);
                 }
-            } else {
-                setEntryNumber(1);
-                setTotalEntries(1);
-            }
-        };
-        getCounts();
+            };
+            getCounts();
+        }
+    }, [editEntry]);
 
+    // Modified useEffect to handle entry field updates properly
+    useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
             employee_name: user?.username || '',
-            entry: `${entryNumber}/${totalEntries}` // Set initial entry value
+            // Only set new entry for new records, preserve existing entry for edits
+            entry: editEntry ? (editEntry.entry || '0/0') : `${entryNumber}/${totalEntries}`
         }));
-    }, [editEntry, user]);
+    }, [user, editEntry, entryNumber, totalEntries]);
 
-      useEffect(() => {
-        setFormInitialValues(prev => ({
-            ...prev,
-            entry: `${entryNumber}/${totalEntries}` // Update entry value on state change
-        }));
-    }, [entryNumber, totalEntries]);
-
-    
-
+    // useEffect for handling edit entry data
     useEffect(() => {
         if (editEntry) {
             // Parse passport details if it's stored as a JSON string or structured object
@@ -193,7 +159,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
                 file_number: editEntry.file_number || '',
-                 entry: editEntry.entry || '0/0',
+                entry: editEntry.entry || '0/0', // Keep the original entry
                 reference: editEntry.reference || '',
                 sponsor_name: editEntry.sponsor_name || '',
                 visa_number: editEntry.visa_number || '',
@@ -580,9 +546,13 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     
                                     {activeSection < 4 ? (
                                         <motion.button
-                                           
+                                            type="button"
+                                            onClick={() => setActiveSection(activeSection + 1)}
+                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center shadow-md hover:shadow-lg transition-all"
+                                            whileHover={{ scale: 1.03 }}
+                                            whileTap={{ scale: 0.97 }}
                                         >
-                                           
+                                            Next <i className="fas fa-arrow-right ml-2"></i>
                                         </motion.button>
                                     ) : (
                                         <motion.button

@@ -7,7 +7,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
 import axios from 'axios';
 
-// Create a component to handle automatic calculation of remaining amount
+
 
 const FormikConsumer = ({ children }) => {
     const formik = useFormikContext();
@@ -181,13 +181,12 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
      useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: `${entryNumber}/${totalEntries}` // Update entry value on state change
+            entry: `${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries]);
 
     useEffect(() => {
         if (editEntry) {
-            // Parse passport details if it's stored as a JSON string
             let parsedPassportDetails = {};
             try {
                 if (typeof editEntry.passportDetail === 'string') {
@@ -197,10 +196,8 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 }
             } catch (e) {
                 console.error("Error parsing passport details:", e);
-                // In case of error, leave it as an empty object
-            }
 
-            // Format dates properly for the form fields
+            }
             const formatDate = (dateStr) => {
                 if (!dateStr) return '';
                 const date = new Date(dateStr);
@@ -223,7 +220,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 children:editEntry.children || 0,
                 infants:editEntry.infants || 0,
                 
-                // Map passport details from parsed object
+    
                 passengerTitle: parsedPassportDetails.title || '',
                 passengerFirstName: parsedPassportDetails.firstName || '',
                 passengerLastName: parsedPassportDetails.lastName || '',
@@ -258,7 +255,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-        // Create a structured passport details object
+        
         const passportDetail = JSON.stringify({
             title: values.passengerTitle,
             firstName: values.passengerFirstName,
