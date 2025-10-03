@@ -1,17 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, Plane, MapPin, FileText, CreditCard, Landmark, Shield, X, ChevronRight, DollarSign, User, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plane, MapPin, FileText, CreditCard, Landmark, Shield, X, ChevronRight, DollarSign, User } from 'lucide-react';
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import { useNavigate } from 'react-router-dom';
 
-// ====================================================================
-// ⚠️ ARCHITECTURAL NOTE: In a real-world application, move the Modal 
-// components below into separate files (e.g., Modals/EntriesModal.jsx)
-// to improve component separation and maintainability.
-// ====================================================================
-
 // --- Custom Color Palette ---
-// Using midnight blue (#1e3a8a), emerald green (#10b981), soft ivory (#f8fafc), and rose gold (#e11d48) for highlights.
 const COLOR_MAP = {
   midnight: { border: 'border-[#1e3a8a]', bg: 'bg-[#1e3a8a]/10', text: 'text-[#1e3a8a]', textBold: 'text-[#1e3a8a]', gradient: 'bg-gradient-to-br from-[#1e3a8a]/5 to-[#1e3a8a]/10' },
   emerald: { border: 'border-[#10b981]', bg: 'bg-[#10b981]/10', text: 'text-[#10b981]', textBold: 'text-[#10b981]', gradient: 'bg-gradient-to-br from-[#10b981]/5 to-[#10b981]/10' },
@@ -34,198 +27,7 @@ const cache = {
   ttl: 15 * 1000,
 };
 
-// ====================================================================
-// --- Modal Components (Extracted for Modularity) ---
-// ====================================================================
-
-const EntriesModal = ({ show, onClose, moduleBreakdown, totalBookings, onModuleClick }) => {
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-900/40 via-slate-900/60 to-indigo-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out animate-in zoom-in-95">
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-black font-inter mb-1">Bookings Overview</h2>
-              <p className="text-indigo-900 text-sm">Detailed breakdown by module</p>
-            </div>
-            <button 
-              onClick={onClose} 
-              className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-full transition-all duration-200 transform hover:rotate-90"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)] bg-gradient-to-b from-slate-50 to-white">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {moduleBreakdown.map((module, index) => {
-              const IconComponent = module.icon;
-              const color = COLOR_MAP[module.color];
-              if (!color) return null;
-              
-              // Beautiful gradient backgrounds matching module themes
-              const cardStyles = {
-                'Ticket': 'bg-gradient-to-br from-sky-400 via-blue-300 to-indigo-400',
-                'Umrah': 'bg-gradient-to-br from-emerald-200 via-teal-100 to-cyan-200',
-                'Hotel': 'bg-gradient-to-br from-amber-200 via-orange-100 to-yellow-200',
-                'Visa': 'bg-gradient-to-br from-purple-200 via-violet-100 to-fuchsia-200',
-                'Tour': 'bg-gradient-to-br from-rose-200 via-pink-100 to-red-200',
-                'Transport': 'bg-gradient-to-br from-lime-200 via-green-100 to-emerald-200',
-              };
-              
-              const cardGradient = cardStyles[module.name] || 'bg-gradient-to-br from-slate-200 via-gray-100 to-zinc-200';
-              
-              return (
-                <div
-                  key={index}
-                  className={`relative p-5 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 ${cardGradient} border-2 border-white/60 group overflow-hidden cursor-pointer`}
-                  onClick={() => onModuleClick(module.name)}
-                >
-                  <div className="absolute top-0 right-0 w-28 h-28 bg-white/40 rounded-full blur-2xl -mr-14 -mt-14"></div>
-                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-xl -ml-16 -mb-16"></div>
-                  <div className="relative flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className={`${color.bg} p-4 rounded-2xl shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
-                        <IconComponent size={28} className={color.text} />
-                      </div>
-                      <div>
-                        <h3 className="text-gray-700 text-sm font-semibold font-inter mb-1">{module.name}</h3>
-                        <p className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">{module.count}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-6 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border-2 border-indigo-200 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm text-indigo-600 font-semibold font-inter uppercase tracking-wide">Total</span>
-                <h3 className="text-2xl font-bold text-indigo-900 font-inter">All Bookings</h3>
-              </div>
-              <span className="text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">{totalBookings}</span>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 border-t border-gray-100 bg-white">
-          <button
-            onClick={onClose}
-            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-black py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300 font-semibold font-inter transform hover:scale-105 active:scale-95"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const AccountsModal = ({ show, onClose, accounts, handleAccountClick, errors, isLoading, showPartialData }) => {
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-900/40 via-slate-900/60 to-indigo-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out animate-in zoom-in-95">
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-black font-inter mb-1">Bank Accounts</h2>
-              <p className="text-indigo-900 text-sm">Select an account to view details</p>
-            </div>
-            <button 
-              onClick={onClose} 
-              className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-full transition-all duration-200 transform hover:rotate-90"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)] bg-gradient-to-b from-slate-50 to-white">
-          {isLoading && !showPartialData ? (
-            <div className="space-y-4">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="animate-pulse bg-gradient-to-r from-slate-100 to-slate-50 p-5 rounded-2xl shadow-md">
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-2">
-                      <div className="h-4 bg-slate-200 rounded w-32"></div>
-                      <div className="h-8 bg-slate-300 rounded w-24"></div>
-                    </div>
-                    <div className="h-6 w-6 bg-slate-200 rounded-full"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {accounts.map((account, index) => {
-                const colorKey = ACCOUNT_COLORS[index % ACCOUNT_COLORS.length];
-                const color = COLOR_MAP[colorKey];
-                if (!color) return null;
-
-                // Different gradient backgrounds for each account
-                const accountGradients = [
-                  'bg-gradient-to-br from-sky-200 via-blue-100 to-indigo-200',
-                  'bg-gradient-to-br from-emerald-200 via-teal-100 to-cyan-200',
-                  'bg-gradient-to-br from-amber-200 via-orange-100 to-yellow-200',
-                  'bg-gradient-to-br from-purple-200 via-violet-100 to-fuchsia-200',
-                  'bg-gradient-to-br from-rose-200 via-pink-100 to-red-200',
-                  'bg-gradient-to-br from-lime-200 via-green-100 to-emerald-200',
-                ];
-
-                return (
-                  <div
-                    key={account.name}
-                    className={`relative p-5 rounded-2xl shadow-lg cursor-pointer hover:shadow-2xl transition-all duration-300 ${accountGradients[index % accountGradients.length]} border-2 border-white/60 group overflow-hidden hover:scale-105`}
-                    onClick={() => {
-                      handleAccountClick(account);
-                      onClose();
-                    }}
-                  >
-                    <div className="absolute top-0 right-0 w-28 h-28 bg-white/40 rounded-full blur-2xl -mr-14 -mt-14"></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-xl -ml-16 -mb-16"></div>
-                    <div className="relative flex justify-between items-center">
-                      <div>
-                        <h3 className="text-gray-700 text-sm font-semibold font-inter mb-1">{account.name}</h3>
-                        <p className="text-3xl font-bold bg-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">{account.balance.toLocaleString()}</p>
-                      </div>
-                      <div className={`${color.bg} p-3 rounded-full shadow-lg group-hover:scale-110 group-hover:translate-x-2 transition-all duration-300`}>
-                        <ChevronRight size={24} className={color.text} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {errors.accounts && (
-                <div className="text-rose-600 text-sm text-center mt-4 font-inter bg-rose-50 p-3 rounded-lg border border-rose-200">{errors.accounts}</div>
-              )}
-            </div>
-          )}
-          <div className="mt-6 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border-2 border-indigo-200 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm text-indigo-600 font-semibold font-inter uppercase tracking-wide">Total</span>
-                <h3 className="text-2xl font-bold text-indigo-900 font-inter">All Accounts</h3>
-              </div>
-              <span className="text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">{accounts.length}</span>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 border-t border-gray-100 bg-white">
-          <button
-            onClick={onClose}
-            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-black py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300 font-semibold font-inter transform hover:scale-105 active:scale-95"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
+// --- Account Entries Modal ---
 const AccountEntriesModal = ({ show, onClose, accountEntries, selectedAccount, isLoadingEntries, errors }) => {
   if (!show) return null;
 
@@ -304,118 +106,7 @@ const AccountEntriesModal = ({ show, onClose, accountEntries, selectedAccount, i
   );
 };
 
-const VenderAgentModal = ({ show, onClose, data, type, errors, isLoading, showPartialData }) => {
-  if (!show) return null;
-
-  const title = type === 'Vender' ? 'Vendors' : 'Agents';
-  const nameKey = type === 'Vender' ? 'vender_name' : 'agent_name';
-  const errorKey = type === 'Vender' ? errors.vendor : errors.agent;
-
-  return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-900/40 via-slate-900/60 to-indigo-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out animate-in zoom-in-95">
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-black font-inter mb-1">{title} Overview</h2>
-              <p className="text-indigo-900 text-sm">Detailed breakdown by {title.toLowerCase()}</p>
-            </div>
-            <button 
-              onClick={onClose} 
-              className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-full transition-all duration-200 transform hover:rotate-90"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)] bg-gradient-to-b from-slate-50 to-white">
-          {isLoading && !showPartialData ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="animate-pulse bg-gradient-to-br from-slate-200 via-gray-100 to-zinc-200 p-5 rounded-2xl shadow-lg border-2 border-white/60">
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                      <div className="h-8 bg-gray-300 rounded w-1/2"></div>
-                      <div className="h-4 bg-gray-300 rounded w-1/3"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {data.map((item, index) => {
-                const colorKey = ACCOUNT_COLORS[index % ACCOUNT_COLORS.length];
-                const color = COLOR_MAP[colorKey];
-                if (!color) return null;
-
-                const status = item.remaining_amount >= 0 ? 'Payable' : 'Receivable';
-                const amount = Math.abs(item.remaining_amount).toLocaleString();
-                const isPayable = status === 'Payable';
-                
-                // Gradient styles matching EntriesModal pattern
-                const cardStyles = isPayable 
-                  ? 'bg-gradient-to-br from-rose-200 via-pink-100 to-red-200'
-                  : 'bg-gradient-to-br from-emerald-200 via-teal-100 to-cyan-200';
-
-                return (
-                  <div
-                    key={item[nameKey]}
-                    className={`relative p-5 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 ${cardStyles} border-2 border-white/60 group overflow-hidden`}
-                  >
-                    <div className="absolute top-0 right-0 w-28 h-28 bg-white/40 rounded-full blur-2xl -mr-14 -mt-14"></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-xl -ml-16 -mb-16"></div>
-                    <div className="relative">
-                      <div className="mb-3">
-                        <h3 className="text-gray-700 text-sm font-semibold font-inter mb-1">{item[nameKey]}</h3>
-                        <p className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-black">{amount}</p>
-                      </div>
-                      <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        isPayable 
-                          ? 'bg-rose-500/20 text-rose-700' 
-                          : 'bg-emerald-500/20 text-emerald-700'
-                      }`}>
-                        {status}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {errorKey && (
-                <div className="col-span-full text-rose-600 text-sm text-center mt-4 font-inter bg-rose-50 p-3 rounded-xl border border-rose-200">
-                  {errorKey}
-                </div>
-              )}
-            </div>
-          )}
-          <div className="mt-6 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border-2 border-indigo-200 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm text-indigo-600 font-semibold font-inter uppercase tracking-wide">Total</span>
-                <h3 className="text-2xl font-bold text-indigo-900 font-inter">All {title}</h3>
-              </div>
-              <span className="text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">{data.length}</span>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 border-t border-gray-100 bg-white">
-          <button
-            onClick={onClose}
-            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-black py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300 font-semibold font-inter transform hover:scale-105 active:scale-95"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ====================================================================
 // --- Main Dashboard Component ---
-// ====================================================================
-
 export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState({
     combinedBookings: [],
@@ -431,17 +122,21 @@ export default function Dashboard() {
     accounts: [],
     vendors: [],
     agents: [],
+    // Vendor Totals
+    totalVendorPayable: 0,
+    totalVendorPaid: 0,
+    // NEW: Agent Totals
+    totalAgentPayable: 0,
+    totalAgentPaid: 0,
   });
   
   const [isLoading, setIsLoading] = useState(true);
-  const [showEntriesModal, setShowEntriesModal] = useState(false);
-  const [showBankAccountsModal, setShowBankAccountsModal] = useState(false);
-  const [showVenderModal, setShowVenderModal] = useState(false);
-  const [showAgentModal, setShowAgentModal] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [accountEntries, setAccountEntries] = useState([]);
   const [isLoadingEntries, setIsLoadingEntries] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState(null); // State to track which card is hovered
+  const [delayHandler, setDelayHandler] = useState(null); // State to manage the close delay
   const navigate = useNavigate();
  
   const [errors, setErrors] = useState({
@@ -449,17 +144,36 @@ export default function Dashboard() {
     navtcc: null, protector: null, expenses: null, refunded: null, vendor: null, agent: null, accounts: null,
   });
 
+  // New unified mouse enter handler
+  const handleMouseEnter = (cardName) => {
+    // Clear any existing timeout to prevent closing
+    if (delayHandler) {
+      clearTimeout(delayHandler);
+    }
+    setHoveredCard(cardName);
+  };
+
+  // New unified mouse leave handler with a delay
+  const handleMouseLeave = () => {
+    // Set a timeout before closing the dropdown
+    const handler = setTimeout(() => {
+      setHoveredCard(null);
+    }, 200); // 200ms delay to allow mouse movement
+
+    setDelayHandler(handler);
+  };
+
   // Cached data fetching function
   const fetchWithCache = useCallback(async (endpoint) => {
     const now = Date.now();
     const cacheKey = endpoint;
     
-    if (cache.data.has(cacheKey)) {
-      const timestamp = cache.timestamp.get(cacheKey);
-      if (now - timestamp < cache.ttl) {
-        return cache.data.get(cacheKey);
-      }
-    }
+    // if (cache.data.has(cacheKey)) {
+    //   const timestamp = cache.timestamp.get(cacheKey);
+    //   if (now - timestamp < cache.ttl) {
+    //     return cache.data.get(cacheKey);
+    //   }
+    // }
     
     const response = await api.get(endpoint);
     cache.data.set(cacheKey, response.data);
@@ -468,40 +182,38 @@ export default function Dashboard() {
     return response.data;
   }, []);
 
-  const safeTimestamp = (dateValue) => {
-    if (!dateValue) return Date.now();
-    const date = new Date(dateValue);
-    return isNaN(date.getTime()) ? Date.now() : date.getTime();
-  };
+ const safeTimestamp = (dateValue) => {
+  if (!dateValue) return 0; // Changed from new Date().getTime()
+  const date = new Date(dateValue);
+  return isNaN(date.getTime()) ? 0 : date.getTime(); // Changed from new Date().getTime()
+};
 
-  const safeLocaleDateString = (dateValue) => {
-    if (!dateValue) return new Date().toLocaleDateString();
-    const date = new Date(dateValue);
-    return isNaN(date.getTime()) ? new Date().toLocaleDateString() : date.toLocaleDateString();
-  };
+const safeLocaleDateString = (dateValue) => {
+  if (!dateValue) return '--';
+  const date = new Date(dateValue);
+  return isNaN(date.getTime()) ? '--' : date.toLocaleDateString();
+};
 
   const handleModuleClick = (moduleName) => {
-  setShowEntriesModal(false); 
-  if (moduleName === 'Ticket') {
-    navigate('/admin/tickets'); 
-  }
-  if (moduleName === 'Umrah') {
-    navigate('/admin/umrah'); 
-  }
-  if (moduleName === 'Visa') {
-    navigate('/admin/visa'); 
-  }
-  if (moduleName === 'GAMCA Token') {
-    navigate('/admin/gamcaToken'); 
-  }
-  if (moduleName === 'Navtcc') {
-    navigate('/admin/navtcc'); 
-  }
-  if (moduleName === 'Services') {
-    navigate('/admin/services'); 
-  }
-  // Add more conditions for other modules if needed
-};
+    if (moduleName === 'Ticket') {
+      navigate('/admin/tickets'); 
+    }
+    if (moduleName === 'Umrah') {
+      navigate('/admin/umrah'); 
+    }
+    if (moduleName === 'Visa Processing') { // Corrected name for navigation
+      navigate('/admin/visa-processing'); 
+    }
+    if (moduleName === 'GAMCA Token') {
+      navigate('/admin/gamcaToken'); 
+    }
+    if (moduleName === 'Navtcc') {
+      navigate('/admin/navtcc'); 
+    }
+    if (moduleName === 'Services') {
+      navigate('/admin/services'); 
+    }
+  };
 
   // Fetch account entries for selected bank
   const fetchAccountEntries = useCallback(async (bankName) => {
@@ -576,6 +288,11 @@ export default function Dashboard() {
           } else { acc.push({ vender_name: curr.vender_name, credit: curr.credit, debit: curr.debit, remaining_amount: curr.credit - curr.debit }); }
           return acc;
         }, []);
+        
+        // Calculate Total Vendor Payable and Paid
+        const totalVendorPayable = aggregatedVendors.reduce((sum, curr) => sum + curr.credit, 0);
+        const totalVendorPaid = aggregatedVendors.reduce((sum, curr) => sum + curr.debit, 0);
+        // END Vendor Calculations
 
         const agentsData = agentData.agents?.map((entry, index) => ({
           id: entry.id || index, agent_name: entry.agent_name || '', credit: Number(entry.credit) || 0, debit: Number(entry.debit) || 0,
@@ -583,26 +300,43 @@ export default function Dashboard() {
         const aggregatedAgents = agentsData.reduce((acc, curr) => {
           const existing = acc.find(a => a.agent_name === curr.agent_name);
           if (existing) {
-            existing.credit += curr.credit; existing.debit += curr.debit; existing.remaining_amount = existing.credit - existing.debit;
+            existing.credit += curr.credit; existing.debit += curr.debit; existing.remaining_amount = existing.credit - curr.debit;
           } else { acc.push({ agent_name: curr.agent_name, credit: curr.credit, debit: curr.debit, remaining_amount: curr.credit - curr.debit }); }
           return acc;
         }, []);
+
+        // NEW: Calculate Total Agent Payable and Paid
+        const totalAgentPayable = aggregatedAgents.reduce((sum, curr) => sum + curr.credit, 0);
+        const totalAgentPaid = aggregatedAgents.reduce((sum, curr) => sum + curr.debit, 0);
+        // END NEW: Agent Calculations
 
         const parsePassportDetail = (detail) => {
           try { return JSON.parse(detail); } catch { return {}; }
         };
 
+        // FIX: Updated Umrah Bookings to use camelCase properties from the API
         const umrahBookings = umrahData.umrahBookings.map(umrah => ({
-          type: 'Umrah', employee_name: umrah.user_name, receivable_amount: umrah.receivable_amount, entry: umrah.entry, paid_cash: umrah.paid_cash, paid_in_bank: umrah.paid_in_bank, remaining_amount: umrah.remaining_amount, booking_date: safeLocaleDateString(umrah.created_at), timestamp: safeTimestamp(umrah.created_at), withdraw: 0, passengerName: null,
+          type: 'Umrah', 
+          employee_name: umrah.userName, 
+          receivable_amount: umrah.receivableAmount, 
+          entry: umrah.entry, 
+          paid_cash: umrah.paidCash, 
+          paid_in_bank: umrah.paidInBank, 
+          remaining_amount: umrah.remainingAmount, 
+          booking_date: safeLocaleDateString(umrah.createdAt), 
+          timestamp: safeTimestamp(umrah.createdAt), 
+          withdraw: 0, 
+          passengerName: null,
         }));
+        // END FIX
 
         const ticketBookings = ticketsData.ticket.map(ticket => ({
-          type: 'Ticket', employee_name: ticket.employee_name, receivable_amount: ticket.receivable_amount, entry: ticket.entry, paid_cash: ticket.paid_cash, paid_in_bank: ticket.paid_in_bank, remaining_amount: ticket.remaining_amount, booking_date: safeLocaleDateString(ticket.booking_date), timestamp: safeTimestamp(ticket.booking_date), withdraw: 0, passengerName: ticket.name,
+          type: 'Ticket', employee_name: ticket.employee_name, receivable_amount: ticket.receivable_amount, entry: ticket.entry, paid_cash: ticket.paid_cash, paid_in_bank: ticket.paid_in_bank, remaining_amount: ticket.remaining_amount, booking_date: safeLocaleDateString(ticket.created_at), timestamp: safeTimestamp(ticket.created_at), withdraw: 0, passengerName: ticket.name,
         }));
 
         const visaBookings = visaData.visa_processing.map(visa => {
           const details = parsePassportDetail(visa.passport_detail);
-          return { type: 'Visa Processing', employee_name: visa.employee_name, receivable_amount: visa.receivable_amount, entry: visa.entry, paid_cash: visa.paid_cash, paid_in_bank: visa.paid_in_bank, remaining_amount: visa.remaining_amount, booking_date: safeLocaleDateString(visa.booking_date), timestamp: safeTimestamp(visa.booking_date), withdraw: 0, passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), };
+          return { type: 'Visa Processing', employee_name: visa.employee_name, receivable_amount: visa.receivable_amount, entry: visa.entry, paid_cash: visa.paid_cash, paid_in_bank: visa.paid_in_bank, remaining_amount: visa.remaining_amount, booking_date: safeLocaleDateString(visa.created_at), timestamp: safeTimestamp(visa.created_at), withdraw: 0, passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), };
         });
 
         const gamcaTokenBookings = gamcaTokenData.gamcaTokens.map(token => {
@@ -610,9 +344,21 @@ export default function Dashboard() {
           return { type: 'GAMCA Token', employee_name: token.employee_name, receivable_amount: token.receivable_amount, entry: token.entry, paid_cash: token.paid_cash, paid_in_bank: token.paid_in_bank, remaining_amount: token.remaining_amount, booking_date: safeLocaleDateString(token.created_at), timestamp: safeTimestamp(token.created_at), withdraw: 0, passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), };
         });
 
-        const servicesBookings = servicesData.services.map(services => ({
-          type: 'Services', employee_name: services.user_name, receivable_amount: services.receivable_amount, entry: services.entry, paid_cash: services.paid_cash, paid_in_bank: services.paid_in_bank, remaining_amount: services.remaining_amount, booking_date: safeLocaleDateString(services.booking_date), timestamp: safeTimestamp(services.booking_date), withdraw: 0, passengerName: null,
-        }));
+        // const servicesBookings = servicesData.services.map(services => ({
+        //   type: 'Services', employee_name: services.user_name, receivable_amount: services.receivable_amount, entry: services.entry, paid_cash: services.paid_cash, paid_in_bank: services.paid_in_bank, remaining_amount: services.remaining_amount, booking_date: safeLocaleDateString(services.booking_date), timestamp: safeTimestamp(services.created_at), withdraw: 0, passengerName: null,
+        // }));
+
+        const servicesBookings = servicesData.services.map(services => {
+  console.log('Service entry:', {
+    entry: services.entry,
+    created_at: services.created_at,
+    booking_date: services.booking_date
+  });
+  
+  return {
+     type: 'Services', employee_name: services.user_name, receivable_amount: services.receivable_amount, entry: services.entry, paid_cash: services.paid_cash, paid_in_bank: services.paid_in_bank, remaining_amount: services.remaining_amount, booking_date: safeLocaleDateString(services.booking_date), timestamp: safeTimestamp(services.createdAt), withdraw: 0, passengerName: null,
+  };
+});
 
         const navtccBookings = navtccData.navtcc.map(navtcc => {
           const details = parsePassportDetail(navtcc.passport_detail);
@@ -620,36 +366,48 @@ export default function Dashboard() {
         });
 
         const protectorBookings = protectorData.protectors.map(protector => ({
-          type: 'Protector', employee_name: protector.employee, entry: protector.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(protector.protector_date), timestamp: safeTimestamp(protector.protector_date), withdraw: parseFloat(protector.withdraw || 0), passengerName: protector.name || null,
+          type: 'Protector', employee_name: protector.employee, entry: protector.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(protector.protector_date), timestamp: safeTimestamp(protector.createdAt), withdraw: parseFloat(protector.withdraw || 0), passengerName: protector.name || null,
         }));
 
         const expensesBookings = expensesData.expenses.map(expenses => ({
-          type: 'Expenses', employee_name: expenses.user_name, entry: expenses.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(expenses.date), timestamp: safeTimestamp(expenses.date), withdraw: parseFloat(expenses.withdraw || 0), passengerName: expenses.detail || null,
+          type: 'Expenses', employee_name: expenses.user_name, entry: expenses.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(expenses.create), timestamp: safeTimestamp(expenses.createdAt), withdraw: parseFloat(expenses.withdraw || 0), passengerName: expenses.detail || null,
         }));
 
         const refundedBookings = (refundedData.refunded || []).map(refund => ({
-          type: 'Refunded', employee_name: refund.employee, entry: refund.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(refund.date), timestamp: safeTimestamp(refund.date), withdraw: parseFloat(refund.withdraw || 0), passengerName: refund.name || null,
+          type: 'Refunded', employee_name: refund.employee, entry: refund.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(refund.date), timestamp: safeTimestamp(refund.created_at), withdraw: parseFloat(refund.withdraw || 0), passengerName: refund.name || null,
         }));
 
         const venderBookings = (venderData.vendors || []).map(vender => ({
-          type: 'Vender', employee_name: vender.user_name, entry: vender.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(vender.date), timestamp: safeTimestamp(vender.date), withdraw: parseFloat(vender.withdraw || 0), passengerName: null,
+          type: 'Vender', employee_name: vender.user_name, entry: vender.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(vender.date), timestamp: safeTimestamp(vender.created_at), withdraw: parseFloat(vender.withdraw || 0), passengerName: null,
         }));
 
         const combinedBookingsRaw = [
           ...umrahBookings, ...ticketBookings, ...visaBookings, ...gamcaTokenBookings, ...servicesBookings,
-          ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings, ...venderBookings,
+          ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings,
+          //  ...venderBookings,
         ];
 
-        const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));
+       const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));
 
-        let runningCashInOffice = 0;
-        const bookingsWithCashInOffice = sortedForRunningTotal.map(booking => {
-          runningCashInOffice += parseFloat(booking.paid_cash || 0);
-          runningCashInOffice -= parseFloat(booking.withdraw || 0);
-          return { ...booking, cash_in_office_running: runningCashInOffice };
-        });
+let runningCashInOffice = 0;
+const bookingsWithCashInOffice = sortedForRunningTotal.map(booking => {
+  runningCashInOffice += parseFloat(booking.paid_cash || 0);
+  runningCashInOffice -= parseFloat(booking.withdraw || 0);
+  return { ...booking, cash_in_office_running: runningCashInOffice };
+});
 
-        const finalCombinedBookings = bookingsWithCashInOffice.sort((a, b) => safeTimestamp(b.timestamp) - safeTimestamp(a.timestamp));
+console.log('Sample booking timestamps:', bookingsWithCashInOffice.slice().map(b => ({
+  entry: b.entry,
+  type: b.type,
+  booking_date: b.booking_date,
+  timestamp: b.timestamp,
+  timestampDate: new Date(b.timestamp)
+})));
+
+// Final sort for display (by timestamp descending - newest first)
+const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
+  return b.timestamp - a.timestamp; // Use direct timestamp comparison
+});
 
         const totalProtectorWithdraw = protectorBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
         const totalExpensesWithdraw = expensesBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
@@ -667,6 +425,13 @@ export default function Dashboard() {
           totalRevenue: dashboardStats.data.totalRevenue,
           totalProtectorWithdraw, totalExpenseWithdraw: totalExpensesWithdraw, totalRefundedWithdraw, totalVendorWithdraw,
           cashInOffice, TotalWithdraw, accounts: accountsData, vendors: aggregatedVendors, agents: aggregatedAgents,
+          // Vendor Totals
+          totalVendorPayable,
+          totalVendorPaid,
+          // NEW: Agent Totals
+          totalAgentPayable,
+          totalAgentPaid,
+          // END NEW
         });
         
         console.log("Dashboard data loaded successfully");
@@ -678,6 +443,7 @@ export default function Dashboard() {
     };
 
     const handlePaymentUpdate = () => {
+      // Clear cache and refetch data on payment update event
       cache.data.clear();
       cache.timestamp.clear();
       fetchDashboardData();
@@ -688,8 +454,12 @@ export default function Dashboard() {
     
     return () => {
       window.removeEventListener('paymentUpdated', handlePaymentUpdate);
+      // Clean up the delay timer on component unmount
+      if (delayHandler) {
+        clearTimeout(delayHandler);
+      }
     };
-  }, [fetchWithCache]);
+  }, [fetchWithCache]); 
 
   // Extract counts for individual booking types
   const booking = dashboardData.bookingsByType || [];
@@ -704,19 +474,45 @@ export default function Dashboard() {
   const moduleBreakdown = [
     { name: 'Ticket', count: ticketCount, color: 'midnight', icon: Plane },
     { name: 'Umrah', count: umrahCount, color: 'emerald', icon: MapPin },
-    { name: 'Visa', count: visaCount, color: 'rose', icon: FileText },
+    { name: 'Visa Processing', count: visaCount, color: 'rose', icon: FileText },
     { name: 'GAMCA Token', count: gamcaTokenCount, color: 'teal', icon: CreditCard },
     { name: 'Services', count: serviceCount, color: 'indigo', icon: CreditCard },
     { name: 'Navtcc', count: navtccCount, color: 'ivory', icon: Shield },
   ];
 
   // Calculate total amounts
-  const totalReceivableAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.receivable_amount || 0), 0);
-  const totalPaidCash = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.paid_cash || 0), 0);
+  // const totalReceivableAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.receivable_amount || 0), 0);
   const totalPaidInBank = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.paid_in_bank || 0), 0);
   const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.remaining_amount || 0), 0);
 
+  // Vendor Totals
+  const totalVendorPayable = dashboardData.totalVendorPayable || 0;
+  const totalVendorPaid = dashboardData.totalVendorPaid || 0;
+  
+  // NEW: Agent Totals
+  const totalAgentPayable = dashboardData.totalAgentPayable || 0;
+  const totalAgentPaid = dashboardData.totalAgentPaid || 0;
+  // END NEW
+
   const showPartialData = !isLoading && dashboardData.combinedBookings.length > 0;
+
+  // --- Remaining Amount Card Update ---
+  // Calculate remaining amount breakdown by type
+  const remainingBreakdown = dashboardData.combinedBookings.reduce((acc, booking) => {
+    if (booking.receivable_amount > 0) { // Only count bookings that had a receivable amount
+      const remaining = parseFloat(booking.remaining_amount || 0);
+      acc[booking.type] = (acc[booking.type] || 0) + remaining;
+    }
+    return acc;
+  }, {});
+  
+  // Convert object to array for mapping in dropdown
+  const remainingBreakdownArray = Object.keys(remainingBreakdown)
+    .map(type => ({
+      name: type,
+      amount: remainingBreakdown[type],
+    }))
+    .filter(item => item.amount > 0); // Only show types with a remaining amount
 
   // Define table columns
   const columns = [
@@ -733,29 +529,9 @@ export default function Dashboard() {
     { header: 'CASH IN OFFICE', accessor: 'cash_in_office_display' },
   ];
 
-
-
   return (
     <div className="bg-[#f8fafc] p-6 rounded-2xl shadow-md overflow-hidden font-inter">
       {/* Modals */}
-      <EntriesModal 
-        show={showEntriesModal} 
-        onClose={() => setShowEntriesModal(false)} 
-        moduleBreakdown={moduleBreakdown} 
-        totalBookings={dashboardData.totalBookings}
-        onModuleClick={handleModuleClick}
-      />
-      
-      <AccountsModal
-        show={showBankAccountsModal}
-        onClose={() => setShowBankAccountsModal(false)}
-        accounts={dashboardData.accounts}
-        handleAccountClick={handleAccountClick}
-        errors={errors}
-        isLoading={isLoading}
-        showPartialData={showPartialData}
-      />
-
       <AccountEntriesModal
         show={showAccountsModal}
         onClose={() => setShowAccountsModal(false)}
@@ -765,225 +541,401 @@ export default function Dashboard() {
         errors={errors}
       />
 
-      <VenderAgentModal
-        show={showVenderModal}
-        onClose={() => setShowVenderModal(false)}
-        data={dashboardData.vendors}
-        type="Vender"
-        errors={errors}
-        isLoading={isLoading}
-        showPartialData={showPartialData}
-      />
+      {/* Stats Cards Section - ADJUSTED FOR 10 COLUMNS */}
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-4 mb-8">        
+        {/* Total Bookings Card - WRAPPER with DELAY FIX */}
+        <div
+          className="relative w-full"
+          onMouseEnter={() => handleMouseEnter('bookings')}
+          onMouseLeave={handleMouseLeave}
+        >
+            <div
+                className="relative bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
+                title="Total Bookings" 
+            >
+                <div className="relative z-10">
+                    <h2 className="text-black text-[0.65rem] font-bold uppercase tracking-wide font-inter mb-1 truncate">Bookings</h2>
+                    <p className="text-sm font-bold text-white">
+                    {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.totalBookings.toLocaleString()}
+                    </p>
+                </div>
+            </div>
+          {/* Hover List for Bookings */}
+          {/* Ensure z-50 for visibility above other elements */}
+          {hoveredCard === 'bookings' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {moduleBreakdown.map((module, index) => (
+                    <div
+                      key={index}
+                      className="list-item text-[0.65rem] text-[#333] cursor-pointer hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150"
+                      onClick={() => handleModuleClick(module.name)}
+                    >
+                      {module.name} ({module.count})
+                    </div>
+                  ))}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2">
+                    Total: {dashboardData.totalBookings}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-      <VenderAgentModal
-        show={showAgentModal}
-        onClose={() => setShowAgentModal(false)}
-        data={dashboardData.agents}
-        type="Agent"
-        errors={errors}
-        isLoading={isLoading}
-        showPartialData={showPartialData}
-      />
+        {/* Bank Accounts Card - UPDATED to show Paid Bank Amount */}
+        <div
+            className="relative w-full"
+            onMouseEnter={() => handleMouseEnter('accounts')}
+            onMouseLeave={handleMouseLeave}
+        >
+            <div
+                className="relative bg-gradient-to-br from-emerald-600 via-green-700 to-teal-800 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
+                title="Total Paid In Bank Amount"
+            >
+                <div className="relative z-10">
+                    <div className="flex justify-between items-center mb-1">
+                    <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Bank Amount</h2>
+                    
+                    </div>
+                    {/* CARD FIX: text-xl and break-all applied here */}
+                    <p className="text-sm font-bold text-white mt-0 break-all">
+                    {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalPaidInBank.toLocaleString()}
+                    </p>
+                </div>
+            </div>
+          {/* Hover List for Accounts - UPDATED FORMATTING */}
+          {hoveredCard === 'accounts' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {dashboardData.accounts.map((account, index) => (
+                    <div
+                      key={account.name}
+                      className="list-item text-[0.65rem] text-[#333] cursor-pointer hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-start"
+                      onClick={() => handleAccountClick(account)}
+                    >
+                      <span className="font-semibold text-[#1e3a8a]">
+                        {`${account.name} (${account.balance.toLocaleString()})`}
+                      </span>
+                    </div>
+                  ))}
+                  {errors.accounts && (
+                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+                      {errors.accounts}
+                    </div>
+                  )}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2">
+                    Total: {dashboardData.accounts.length}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-      {/* Stats Cards Section */}
-     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-  {/* Total Bookings Card - Deep Ocean Blue to Indigo */}
-  <div
-    className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 p-5 rounded-2xl shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group"
-    onClick={() => setShowEntriesModal(true)}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <h2 className="text-white/90 text-sm font-semibold uppercase tracking-wide font-inter mb-2">Total Bookings</h2>
-      <p className="text-4xl font-bold text-white mb-1">
-        {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.totalBookings.toLocaleString()}
-      </p>
+        {/* Vendor Card - WRAPPER with DELAY FIX */}
+        <div
+            className="relative w-full"
+            onMouseEnter={() => handleMouseEnter('vendors')}
+            onMouseLeave={handleMouseLeave}
+        >
+            <div
+                className="relative bg-gradient-to-br from-red-600 via-rose-700 to-red-800 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
+                title="Vendors"
+            >
+                <div className="relative z-10">
+                    <div className="flex justify-between items-center mb-1">
+                    <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Vendors</h2>
+                    
+                    </div>
+                    {/* UPDATED: Display Total Payable and Paid */}
+                    <p className="text-sm font-bold text-white mt-0 break-all">
+                    {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalVendorPayable.toLocaleString()} / ${totalVendorPaid.toLocaleString()}`}
+                    </p>
+                    {/* Secondary text to clarify */}
+                    {/* <p className="text-white/80 text-[0.6rem] font-medium uppercase mt-1">
+                        Payable / Paid
+                    </p> */}
+                    {/* END UPDATED */}
+                </div>
+            </div>
+          {/* Hover List for Vendors - UPDATED FORMATTING */}
+          {hoveredCard === 'vendors' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {dashboardData.vendors.map((vendor, index) => (
+                    <div
+                      key={vendor.vender_name}
+                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center"
+                    >
+                      <span className="font-semibold text-[#1e3a8a] truncate pr-2">
+                        {vendor.vender_name}
+                      </span>
+                      {/* Color-code the remaining amount (Negative = you owe/Red, Positive = they owe/Green) */}
+                      <span className={`font-bold ${vendor.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
+                        {vendor.remaining_amount.toLocaleString()}
+                      </span>
+                      {/* END UPDATED */}
+                    </div>
+                  ))}
+                  {errors.vendor && (
+                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+                      {errors.vendor}
+                    </div>
+                  )}
+                  {/* Total Payable/Paid in the footer */}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total Payable:</span> <span className="text-emerald-600">{totalVendorPayable.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
+                    <span>Total Paid:</span> <span className="text-red-600">{totalVendorPaid.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
+                    Total Vendors: {dashboardData.vendors.length}
+                  </div>
+                  {/* END UPDATED */}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Agent Card - WRAPPER with DELAY FIX (Updated) */}
+        <div
+            className="relative w-full"
+            onMouseEnter={() => handleMouseEnter('agents')}
+            onMouseLeave={handleMouseLeave}
+        >
+            <div
+                className="relative bg-gradient-to-br from-cyan-600 via-teal-700 to-cyan-800 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
+                title="Agents"
+            >
+                <div className="relative z-8">
+                    <div className="flex justify-between items-center mb-1">
+                    <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Agents</h2>
+                    
+                    </div>
+                    {/* UPDATED: Display Total Payable and Paid */}
+                    <p className="text-sm font-bold text-white mt-0 break-all">
+                    {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()}`}
+                    </p>
+                    {/* NEW: Secondary text to clarify */}
+                    {/* <p className="text-white/80 text-[0.6rem] font-medium uppercase mt-1">
+                        Payable / Paid
+                    </p> */}
+                    {/* END UPDATED */}
+                </div>
+            </div>
+          {/* Hover List for Agents - UPDATED FORMATTING */}
+          {hoveredCard === 'agents' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {dashboardData.agents.map((agent, index) => (
+                    <div
+                      key={agent.agent_name}
+                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center"
+                    >
+                      <span className="font-semibold text-cyan-700 truncate pr-2">
+                        {agent.agent_name}
+                      </span>
+                      {/* Color-code the remaining amount (Negative = you owe/Red, Positive = they owe/Green) */}
+                      <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
+                        {agent.remaining_amount.toLocaleString()}
+                      </span>
+                      {/* END UPDATED */}
+                    </div>
+                  ))}
+                  {errors.agent && (
+                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+                      {errors.agent}
+                    </div>
+                  )}
+                  {/* UPDATED: Total Payable/Paid in the footer */}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total Payable:</span> <span className="text-emerald-600">{totalAgentPayable.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
+                    <span>Total Paid:</span> <span className="text-red-600">{totalAgentPaid.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
+                    Total Agents: {dashboardData.agents.length}
+                  </div>
+                  {/* END UPDATED */}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+     
+        {/* Total Remaining Amount Card (Original Line 930) */}
+        {/* --- Remaining Amount Card Update --- */}
+        <div
+          className="relative w-full"
+          onMouseEnter={() => handleMouseEnter('remaining')}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div
+            className="relative bg-gradient-to-br from-gray-700 via-slate-800 to-stone-900 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group cursor-pointer"
+            title="Total Remaining Amount"
+          >
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-1">
+                <h2 className="text-white/90 text-[0.65rem] font-bold tracking-wide font-inter truncate">Remaining Amount</h2>
+              </div>
+              <p className="text-sm font-bold text-white mt-0 break-all">
+                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalRemainingAmount.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          {/* Hover List for Remaining Amount */}
+          {hoveredCard === 'remaining' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : remainingBreakdownArray.length > 0 ? (
+                <div className="space-y-1">
+                  {remainingBreakdownArray.map((item, index) => (
+                    <div
+                      key={item.name}
+                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center"
+                    >
+                      <span className="font-semibold text-slate-700 truncate pr-2">
+                        {item.name}
+                      </span>
+                      <span className="font-bold text-amber-600 flex-shrink-0">
+                        {item.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total:</span> <span className="text-amber-600">{totalRemainingAmount.toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-[0.65rem] text-slate-500 py-2">
+                  No remaining amounts.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {/* --- End Remaining Amount Card Update --- */}
+
+        {/* Total Withdraw Card (Original Line 943) */}
+
+        <div
+    className="relative w-full"
+    onMouseEnter={() => handleMouseEnter('withdraw')}
+    onMouseLeave={handleMouseLeave}
+>
+    <div className="bg-gradient-to-br from-fuchsia-600 via-pink-700 to-purple-800 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group">
+          <div className="relative z-10 w-full">
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Total Withdraw</h2>
+             
+            </div>
+            {/* CARD FIX: text-xl and break-all applied here */}
+            <p className="text-sm font-bold text-white mt-0 break-all">
+              {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.TotalWithdraw.toLocaleString()}
+            </p>
+          </div>
+        </div>
+         {hoveredCard === 'withdraw' && (
+    <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+        {isLoading && !showPartialData ? (
+            <div className="space-y-1">
+                {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                        <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                ))}
+            </div>
+        ) : (
+            <div className="space-y-1">
+                <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between">
+                    <span className="font-semibold text-fuchsia-700">Protector</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalProtectorWithdraw.toLocaleString()}</span>
+                </div>
+                <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between">
+                    <span className="font-semibold text-fuchsia-700">Expenses</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalExpenseWithdraw.toLocaleString()}</span>
+                </div>
+                <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between">
+                    <span className="font-semibold text-fuchsia-700">Refunded</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalRefundedWithdraw.toLocaleString()}</span>
+                </div>
+                
+                <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total:</span> <span className="text-fuchsia-600">{dashboardData.TotalWithdraw.toLocaleString()}</span>
+                </div>
+            </div>
+        )}
     </div>
-  </div>
-
-  {/* Bank Accounts Card - Emerald Green to Forest Teal */}
-  <div
-    className="bg-gradient-to-br from-emerald-600 via-green-700 to-teal-800 p-5 rounded-2xl shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group"
-    onClick={() => setShowBankAccountsModal(true)}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Bank Accounts</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.accounts.length}
-          </p>
-        </div>
-        <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl hover:scale-110 transition-transform duration-200 shadow-lg">
-          <Landmark size={24} className="text-white" />
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (dashboardData.accounts.length / 10) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Vendor Card - Fiery Red to Dark Burgundy */}
-  <div
-    className="bg-gradient-to-br from-red-600 via-rose-700 to-red-800 p-5 rounded-2xl shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group"
-    onClick={() => setShowVenderModal(true)}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Vendors</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.vendors.length}
-          </p>
-        </div>
-        <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl hover:scale-110 transition-transform duration-200 shadow-lg">
-          <DollarSign size={24} className="text-white" />
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (dashboardData.vendors.length / 50) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Agent Card - Sky Blue to Deep Cyan */}
-  <div
-    className="bg-gradient-to-br from-cyan-600 via-teal-700 to-cyan-800 p-5 rounded-2xl shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group"
-    onClick={() => setShowAgentModal(true)}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Agents</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.agents.length}
-          </p>
-        </div>
-        <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl hover:scale-110 transition-transform duration-200 shadow-lg">
-          <User size={24} className="text-white" />
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (dashboardData.agents.length / 50) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Total Receivable Amount Card - Royal Purple to Dark Magenta */}
-  <div className="bg-gradient-to-br from-indigo-700 via-purple-800 to-fuchsia-900 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Total Receivable</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalReceivableAmount.toLocaleString()}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (totalReceivableAmount / 1000000) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Total Paid Cash Card - Classic Gold to Sunlit Orange (Representing Immediate Value/Cash) */}
-  <div className="bg-gradient-to-br from-yellow-500 via-yellow-600 to-amber-700 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Total Paid Cash</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalPaidCash.toLocaleString()}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (totalPaidCash / 1000000) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Total Paid In Bank Card - Deep Sea Blue to Sky Blue */}
-  <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-700 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Total Paid In Bank</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalPaidInBank.toLocaleString()}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (totalPaidInBank / 1000000) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Total Remaining Amount Card - Dark Graphite to Slate Gray (Representing Debt/Remaining) */}
-  <div className="bg-gradient-to-br from-gray-700 via-slate-800 to-stone-900 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Total Remaining Amount</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalRemainingAmount.toLocaleString()}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (totalRemainingAmount / 1000000) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Total Withdraw Card - Vivid Magenta to Dark Violet */}
-  <div className="bg-gradient-to-br from-fuchsia-600 via-pink-700 to-purple-800 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Withdraw</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.TotalWithdraw.toLocaleString()}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (dashboardData.TotalWithdraw / 1000000) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
-
-  {/* Cash in Office Card - Clean, Bright Lime Green to Dark Teal (Representing Available Cash) */}
-  <div className="bg-gradient-to-br from-lime-500 via-green-600 to-teal-700 p-5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-    <div className="relative z-10">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h2 className="text-white/90 text-sm font-semibold tracking-wide font-inter">Cash in Office</h2>
-          <p className="text-3xl font-bold text-white mt-1">
-            {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.cashInOffice.toLocaleString()}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-        <div className="bg-white h-2 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${Math.min(100, (dashboardData.cashInOffice / 1000000) * 100)}%` }}></div>
-      </div>
-    </div>
-  </div>
+)}
 </div>
 
-      {/* Table Section */}
-  {isLoading && !showPartialData ? (
+
+        {/* Cash in Office Card (Original Line 956) */}
+        <div className="bg-gradient-to-br from-lime-500 via-green-600 to-teal-700 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group">
+          <div className="relative z-10 w-full">
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Cash in Office</h2>
+              
+            </div>
+            {/* CARD FIX: text-xl and break-all applied here */}
+            <p className="text-sm font-bold text-white mt-0 break-all">
+              {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.cashInOffice.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </div>
+
+     
+     {/* Table Section */}
+
+{isLoading && !showPartialData ? (
   <div className="flex justify-center py-12">
     <TableSpinner />
   </div>
@@ -999,18 +951,21 @@ export default function Dashboard() {
         </span>
       )}
     </div>
-    <div className="overflow-auto max-h-[75vh] rounded-xl border border-indigo-100">
-      <table className="min-w-full divide-y divide-indigo-100">
+    <div className="overflow-y-auto max-h-[75vh] rounded-xl border border-indigo-100">
+      <table className="w-full table-fixed divide-y divide-indigo-100">
         <thead className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 sticky top-0">
           <tr>
-            {columns.map((col, index) => (
-              <th
-                key={index}
-                className="px-4 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider font-inter"
-              >
-                {col.header}
-              </th>
-            ))}
+            <th className="w-[7%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">DATE</th>
+            <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">EMPLOYEE</th>
+            <th className="w-[6%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">ENTRY</th>
+            <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">TYPE</th>
+            <th className="w-[10%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">NAME</th>
+            <th className="w-[10%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">RECEIVABLE</th>
+            <th className="w-[8%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">PAID CASH</th>
+            <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">PAID BANK</th>
+            <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">REMAINING</th>
+            <th className="w-[8%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">WITHDRAW</th>
+            <th className="w-[10%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">CASH OFFICE</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-indigo-50">
@@ -1018,45 +973,41 @@ export default function Dashboard() {
             dashboardData.combinedBookings.map((booking, index) => (
               <tr 
                 key={index} 
-                className={`${
-                  index % 2 === 0 
-                    ? 'bg-white' 
-                    : 'bg-gradient-to-r from-indigo-50/30 via-purple-50/20 to-pink-50/30'
-                } hover:bg-gradient-to-r hover:from-indigo-100/40 hover:via-purple-100/30 hover:to-pink-100/40 transition-all duration-200`}
+                className={`${index % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-indigo-50/30 via-purple-50/20 to-pink-50/30'} hover:bg-gradient-to-r hover:from-indigo-100/40 hover:via-purple-100/30 hover:to-pink-100/40 transition-all duration-200`}
               >
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-inter font-medium">
+                <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-inter font-medium truncate">
                   {booking.booking_date}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-inter">
+                <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-inter truncate" title={booking.employee_name}>
                   {booking.employee_name}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-inter">
+                <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-inter truncate" title={booking.entry}>
                   {booking.entry ? booking.entry : <span className="text-slate-400">--</span>}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold font-inter">
-                  <span className="px-2 py-1 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700">
+                <td className="px-1 py-2 text-[0.65rem] font-semibold font-inter truncate">
+                  <span className="px-1 py-0.5 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 inline-block">
                     {booking.type}
                   </span>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-inter">
+                <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-inter truncate" title={booking.passengerName}>
                   {booking.passengerName ? booking.passengerName : <span className="text-slate-400">--</span>}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-emerald-600 font-inter font-semibold">
+                <td className="px-1 py-2 text-[0.65rem] text-emerald-600 font-inter font-semibold truncate">
                   {booking.receivable_amount}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-inter">
+                <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-inter truncate">
                   {booking.paid_cash}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-inter">
+                <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-inter truncate">
                   {booking.paid_in_bank}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-amber-600 font-inter font-semibold">
+                <td className="px-1 py-2 text-[0.65rem] text-amber-600 font-inter font-semibold truncate">
                   {booking.remaining_amount}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-700 font-inter">
+                <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-inter truncate">
                   {booking.withdraw}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-indigo-600 font-inter font-semibold">
+                <td className="px-1 py-2 text-[0.65rem] text-indigo-600 font-inter font-semibold truncate">
                   {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : <span className="text-slate-400">--</span>}
                 </td>
               </tr>

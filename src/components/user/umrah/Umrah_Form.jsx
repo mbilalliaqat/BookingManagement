@@ -139,18 +139,19 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         remainingAmount: Yup.number()
     });
 
-        const fetchNames = async () => {
-            try {
-                const vendorRes = await axios.get(`${BASE_URL}/vender-names/existing`);
-
-                if (vendorRes.data.status === 'success') {
-                    setVendorNames(vendorRes.data.vendorNames || []);
-                }
-            } catch (error) {
-                console.error('Error fetching names:', error);
+       useEffect(() => {
+    const fetchNames = async () => {
+        try {
+            const vendorRes = await axios.get(`${BASE_URL}/vender-names/existing`);
+            if (vendorRes.data.status === 'success') {
+                setVendorNames(vendorRes.data.vendorNames || []);
             }
-        };
-        fetchNames();
+        } catch (error) {
+            console.error('Error fetching names:', error);
+        }
+    };
+    fetchNames();
+}, []);
 
     useEffect(()=>{
         const getCounts = async ()=>{
@@ -351,7 +352,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     const vendorData = {
                         user_name: values.vendorName,
                         amount: vendorPayment_diff,
-                        date: new Date(),
+                        date: new Date().toISOString().split('T')[0],
                     };
                     try {
                         await fetch(`${BASE_URL}/vender`, {

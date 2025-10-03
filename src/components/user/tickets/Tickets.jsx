@@ -36,7 +36,7 @@ const fetchTickets = async () => {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = response.data;
-        console.log("Fetched data:", data);
+        console.log("Fetched ticket data:", data);
 
         // Sort by ID to maintain consistent order
         const sortedTickets = data.ticket.sort((a, b) => a.id - b.id);

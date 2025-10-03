@@ -150,6 +150,7 @@ const Services = () => {
         }
         setShowForm(false);
         setEditEntry(null);
+        fetchData();
     };
 
     const handleUpdate = (entry) => {
