@@ -18,6 +18,8 @@ import RefundCustomer from '../user/refundCustomer/RefundCustomer'
 import Navtcc from '../user/navtcc/Navtcc'
 import RemainingPay from '../user/paymentHistory/RemainingPay'
 import PaymentRecord from '../admin/PaymentRecord'
+import RemainingAmounts from '../user/paymentHistory/RemainingAmounts';
+
 
 const AdminRoutes = () => {
   return (
@@ -41,6 +43,7 @@ const AdminRoutes = () => {
           <Route path="/agent" element={<Agent />} />
             <Route path="/remainingPay" element={<RemainingPay />} />
             <Route path='/payment' element={<PaymentRecord/>}/>
+            <Route path="/remaining-amounts" element={<RemainingAmounts />} />
 
 
           </Routes>

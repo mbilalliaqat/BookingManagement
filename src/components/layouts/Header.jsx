@@ -243,7 +243,7 @@ const Header = () => {
             onClick={() => setShowSearch(!showSearch)}
             className="p-2.5 rounded-xl bg-[#24243e] text-white hover:bg-[#1f1f33] transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
           >
-            <i className="fas fa-search"></i> 
+            <i className="fas fa-search"></i>  
           </button>
           
           {showSearch && (

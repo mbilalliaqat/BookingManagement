@@ -6,6 +6,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import Table from '../../ui/Table';
 import axios from 'axios';
 import Modal from '../../ui/Modal';
+import { useLocation } from 'react-router-dom';
 
 // Cache to store fetched entries by bank name
 const entriesCache = new Map();
@@ -37,6 +38,15 @@ const OfficeAccounts = () => {
         return '';
     }
 }, []);
+
+const location = useLocation();
+
+// Set initial selected bank from navigation state
+useEffect(() => {
+  if (location.state?.selectedBank) {
+    setSelectedBank(location.state.selectedBank);
+  }
+}, [location.state]);
 
    const formatDateForInput = useCallback((dateString) => {
     if (!dateString) return '';

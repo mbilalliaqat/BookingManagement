@@ -28,83 +28,7 @@ const cache = {
 };
 
 // --- Account Entries Modal ---
-const AccountEntriesModal = ({ show, onClose, accountEntries, selectedAccount, isLoadingEntries, errors }) => {
-  if (!show) return null;
 
-  const accountColumns = [
-    { header: 'DATE', accessor: 'date' },
-    { header: 'ENTRY', accessor: 'entry' },
-    { header: 'EMPLOYEE', accessor: 'employee_name' },
-    { header: 'VENDOR', accessor: 'vendor_name' },
-    { header: 'DETAIL', accessor: 'detail' },
-    { header: 'CREDIT', accessor: 'credit' },
-    { header: 'DEBIT', accessor: 'debit' },
-    { header: 'BALANCE', accessor: 'balance' },
-  ];
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 transition-opacity duration-300">
-      <div className="bg-[#f8fafc] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-in-out scale-95 hover:scale-100">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-[#1e3a8a] font-inter">{selectedAccount?.name} Entries</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-[#e11d48] transition-colors duration-200 transform hover:scale-110">
-            <X size={24} />
-          </button>
-        </div>
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {isLoadingEntries ? (
-            <div className="flex justify-center py-12">
-              <TableSpinner />
-            </div>
-          ) : errors.accounts ? (
-            <div className="text-[#e11d48] text-center py-4 font-inter">{errors.accounts}</div>
-          ) : accountEntries.length > 0 ? (
-            <div className="overflow-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-[#f8fafc] sticky top-0">
-                  <tr>
-                    {accountColumns.map((col, index) => (
-                      <th
-                        key={index}
-                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-inter"
-                      >
-                        {col.header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-[#f8fafc] divide-y divide-gray-200">
-                  {accountEntries.map((entry, index) => (
-                    <tr key={index} className={`${index % 2 === 0 ? 'bg-[#f8fafc]' : 'bg-gray-50'} hover:bg-[#10b981]/10 transition-colors duration-200`}>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.date}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.entry || '--'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.employee_name || '--'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.vendor_name || '--'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.detail || '--'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.credit || 0}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.debit || 0}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#1e3a8a] font-inter">{entry.balance || 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-4 text-gray-500 font-inter">No entries found for this account.</div>
-          )}
-        </div>
-        <div className="p-6 border-t bg-[#f8fafc]">
-          <button
-            onClick={onClose}
-            className="w-full bg-[#10b981] text-white py-2 px-4 rounded-lg hover:bg-[#059669] transition-all duration-200 font-medium font-inter transform hover:scale-105"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // --- Main Dashboard Component ---
 export default function Dashboard() {
@@ -131,12 +55,9 @@ export default function Dashboard() {
   });
   
   const [isLoading, setIsLoading] = useState(true);
-  const [showAccountsModal, setShowAccountsModal] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState(null);
-  const [accountEntries, setAccountEntries] = useState([]);
-  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
-  const [hoveredCard, setHoveredCard] = useState(null); // State to track which card is hovered
-  const [delayHandler, setDelayHandler] = useState(null); // State to manage the close delay
+  // const [selectedAccount, setSelectedAccount] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null); 
+  const [delayHandler, setDelayHandler] = useState(null);
   const navigate = useNavigate();
  
   const [errors, setErrors] = useState({
@@ -144,26 +65,33 @@ export default function Dashboard() {
     navtcc: null, protector: null, expenses: null, refunded: null, vendor: null, agent: null, accounts: null,
   });
 
-  // New unified mouse enter handler
   const handleMouseEnter = (cardName) => {
-    // Clear any existing timeout to prevent closing
     if (delayHandler) {
       clearTimeout(delayHandler);
     }
     setHoveredCard(cardName);
   };
 
-  // New unified mouse leave handler with a delay
   const handleMouseLeave = () => {
-    // Set a timeout before closing the dropdown
     const handler = setTimeout(() => {
       setHoveredCard(null);
-    }, 200); // 200ms delay to allow mouse movement
+    }, 200); 
 
     setDelayHandler(handler);
   };
 
-  // Cached data fetching function
+  const handleProtectorClick = useCallback(() => {
+  navigate('/admin/protector');
+}, [navigate]);
+
+const handleExpensesClick = useCallback(() => {
+  navigate('/admin/expense');
+}, [navigate]);
+
+const handleRefundedClick = useCallback(() => {
+  navigate('/admin/refunded');
+}, [navigate]);
+
   const fetchWithCache = useCallback(async (endpoint) => {
     const now = Date.now();
     const cacheKey = endpoint;
@@ -215,31 +143,30 @@ const safeLocaleDateString = (dateValue) => {
     }
   };
 
-  // Fetch account entries for selected bank
-  const fetchAccountEntries = useCallback(async (bankName) => {
-    setIsLoadingEntries(true);
-    setErrors(prev => ({ ...prev, accounts: null }));
-    try {
-      const response = await api.get(`/accounts/${bankName}`);
-      const formattedData = response.data.map(entry => ({
-        ...entry,
-        date: safeLocaleDateString(entry.date),
-      }));
-      setAccountEntries(formattedData);
-    } catch (error) {
-      console.error('Error fetching account entries:', error);
-      setErrors(prev => ({ ...prev, accounts: 'Failed to load account entries' }));
-    } finally {
-      setIsLoadingEntries(false);
-    }
-  }, []);
+  
 
   // Handle account card click
   const handleAccountClick = useCallback((account) => {
-    setSelectedAccount(account);
-    fetchAccountEntries(account.name);
-    setShowAccountsModal(true);
-  }, [fetchAccountEntries]);
+  navigate('/admin/officeAccount', { 
+    state: { selectedBank: account.name } });
+}, [navigate]);
+
+  const handleVendorClick = useCallback((vendorName)=>{
+    navigate('/admin/vender/',
+      {state:{selectedVendor:vendorName}});
+  },[navigate]);
+
+  const handleAgentClick = useCallback((agentName) => {
+  navigate('/admin/agent', { 
+    state: { selectedAgent: agentName } 
+  });
+}, [navigate]);
+
+const handleRemainingAmountClick = useCallback((typeName) => {
+  navigate('/admin/remaining-amounts', { 
+    state: { selectedType: typeName } 
+  });
+}, [navigate]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -482,8 +409,8 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
 
   // Calculate total amounts
   // const totalReceivableAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.receivable_amount || 0), 0);
-  const totalPaidInBank = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.paid_in_bank || 0), 0);
-  const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.remaining_amount || 0), 0);
+// Calculate total of all account balances instead
+const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);  const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.remaining_amount || 0), 0);
 
   // Vendor Totals
   const totalVendorPayable = dashboardData.totalVendorPayable || 0;
@@ -531,15 +458,7 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
 
   return (
     <div className="bg-[#f8fafc] p-6 rounded-2xl shadow-md overflow-hidden font-inter">
-      {/* Modals */}
-      <AccountEntriesModal
-        show={showAccountsModal}
-        onClose={() => setShowAccountsModal(false)}
-        accountEntries={accountEntries}
-        selectedAccount={selectedAccount}
-        isLoadingEntries={isLoadingEntries}
-        errors={errors}
-      />
+     
 
       {/* Stats Cards Section - ADJUSTED FOR 10 COLUMNS */}
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-4 mb-8">        
@@ -609,7 +528,7 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
                     </div>
                     {/* CARD FIX: text-xl and break-all applied here */}
                     <p className="text-sm font-bold text-white mt-0 break-all">
-                    {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalPaidInBank.toLocaleString()}
+                    {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalAccountsBalance.toLocaleString()}
                     </p>
                 </div>
             </div>
@@ -643,7 +562,7 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
                     </div>
                   )}
                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2">
-                    Total: {dashboardData.accounts.length}
+                    Total: {totalAccountsBalance.toLocaleString()}
                   </div>
                 </div>
               )}
@@ -692,11 +611,12 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
                 <div className="space-y-1">
                   {dashboardData.vendors.map((vendor, index) => (
                     <div
-                      key={vendor.vender_name}
-                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center"
+                     key={vendor.vender_name}
+                       className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer"
+                         onClick={() => handleVendorClick(vendor.vender_name)}
                     >
-                      <span className="font-semibold text-[#1e3a8a] truncate pr-2">
-                        {vendor.vender_name}
+                      <span className="font-semibold text-[#1e3a8a] truncate pr-2 hover:underline">
+                            {vendor.vender_name}
                       </span>
                       {/* Color-code the remaining amount (Negative = you owe/Red, Positive = they owe/Green) */}
                       <span className={`font-bold ${vendor.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
@@ -768,12 +688,13 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
                 <div className="space-y-1">
                   {dashboardData.agents.map((agent, index) => (
                     <div
-                      key={agent.agent_name}
-                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center"
+                     key={agent.agent_name}
+                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer"
+                         onClick={() => handleAgentClick(agent.agent_name)}
                     >
-                      <span className="font-semibold text-cyan-700 truncate pr-2">
-                        {agent.agent_name}
-                      </span>
+                       <span className="font-semibold text-cyan-700 truncate pr-2 hover:underline">
+                           {agent.agent_name}
+                        </span> 
                       {/* Color-code the remaining amount (Negative = you owe/Red, Positive = they owe/Green) */}
                       <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
                         {agent.remaining_amount.toLocaleString()}
@@ -803,7 +724,6 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
           )}
         </div>
      
-        {/* Total Remaining Amount Card (Original Line 930) */}
         {/* --- Remaining Amount Card Update --- */}
         <div
           className="relative w-full"
@@ -824,42 +744,47 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
             </div>
           </div>
           {/* Hover List for Remaining Amount */}
-          {hoveredCard === 'remaining' && (
-            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
-              {isLoading && !showPartialData ? (
-                <div className="space-y-1">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
-                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : remainingBreakdownArray.length > 0 ? (
-                <div className="space-y-1">
-                  {remainingBreakdownArray.map((item, index) => (
-                    <div
-                      key={item.name}
-                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center"
-                    >
-                      <span className="font-semibold text-slate-700 truncate pr-2">
-                        {item.name}
-                      </span>
-                      <span className="font-bold text-amber-600 flex-shrink-0">
-                        {item.amount.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
-                    <span>Total:</span> <span className="text-amber-600">{totalRemainingAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-[0.65rem] text-slate-500 py-2">
-                  No remaining amounts.
-                </div>
-              )}
-            </div>
-          )}
+         {hoveredCard === 'remaining' && (
+  <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+    {isLoading && !showPartialData ? (
+      <div className="space-y-1">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+            <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    ) : remainingBreakdownArray.length > 0 ? (
+      <div className="space-y-1">
+        {remainingBreakdownArray.map((item, index) => (
+          <div
+            key={item.name}
+            className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer"
+            onClick={() => handleRemainingAmountClick(item.name)}
+          >
+            <span className="font-semibold text-slate-700 truncate pr-2 hover:underline">
+              {item.name}
+            </span>
+            <span className="font-bold text-amber-600 flex-shrink-0">
+              {item.amount.toLocaleString()}
+            </span>
+          </div>
+        ))}
+        <div 
+          className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between cursor-pointer hover:bg-[#e0e0e0]"
+          onClick={() => handleRemainingAmountClick('all')}
+        >
+          <span className="hover:underline">Total:</span> 
+          <span className="text-amber-600">{totalRemainingAmount.toLocaleString()}</span>
+        </div>
+      </div>
+    ) : (
+      <div className="text-center text-[0.65rem] text-slate-500 py-2">
+        No remaining amounts.
+      </div>
+    )}
+  </div>
+)}
         </div>
         {/* --- End Remaining Amount Card Update --- */}
 
@@ -894,16 +819,25 @@ const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
             </div>
         ) : (
             <div className="space-y-1">
-                <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between">
-                    <span className="font-semibold text-fuchsia-700">Protector</span>
+                <div 
+                    className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer"
+                    onClick={handleProtectorClick}
+                >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Protector</span>
                     <span className="font-bold text-fuchsia-600">{dashboardData.totalProtectorWithdraw.toLocaleString()}</span>
                 </div>
-                <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between">
-                    <span className="font-semibold text-fuchsia-700">Expenses</span>
+                <div 
+                    className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer"
+                    onClick={handleExpensesClick}
+                >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Expenses</span>
                     <span className="font-bold text-fuchsia-600">{dashboardData.totalExpenseWithdraw.toLocaleString()}</span>
                 </div>
-                <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between">
-                    <span className="font-semibold text-fuchsia-700">Refunded</span>
+                <div 
+                    className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer"
+                    onClick={handleRefundedClick}
+                >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Refunded</span>
                     <span className="font-bold text-fuchsia-600">{dashboardData.totalRefundedWithdraw.toLocaleString()}</span>
                 </div>
                 

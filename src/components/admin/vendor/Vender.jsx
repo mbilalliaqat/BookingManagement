@@ -6,6 +6,7 @@ import Table from '../../ui/Table';
 import Modal from '../../ui/Modal';
 import axios from 'axios';
 import VenderForm from './Vendor_Form';
+import { useLocation } from 'react-router-dom';
 
 const Vender = () => {
   const { user } = useAppContext();
@@ -23,6 +24,15 @@ const Vender = () => {
   const [loadingActionId, setLoadingActionId] = useState(null);
 
   const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+
+  const location = useLocation();
+
+// Set initial selected vendor from navigation state
+useEffect(() => {
+  if (location.state?.selectedVendor) {
+    setSelectedVendor(location.state.selectedVendor);
+  }
+}, [location.state]);
 
  const formatDate = (dateString) => {
   if (!dateString) return '';

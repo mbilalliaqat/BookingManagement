@@ -6,6 +6,7 @@ import Table from '../../ui/Table';
 import Modal from '../../ui/Modal';
 import axios from 'axios';
 import AgentForm from './Agent_Form';
+import { useLocation } from 'react-router-dom';
 
 const Agent = () => {
     const { user } = useAppContext();
@@ -30,6 +31,15 @@ const Agent = () => {
     if (isNaN(date.getTime())) return '';
     return date.toLocaleDateString('en-GB'); 
 };
+
+const location = useLocation();
+
+// Set initial selected agent from navigation state
+useEffect(() => {
+  if (location.state?.selectedAgent) {
+    setSelectedAgent(location.state.selectedAgent);
+  }
+}, [location.state]);
 
     const fetchData = async () => {
         try {
