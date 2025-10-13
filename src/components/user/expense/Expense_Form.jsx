@@ -12,7 +12,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [data, setData] = useState({
         user_name: user?.username || '',
         entry: '0/0',
-        date: '',
+        date: new Date().toISOString().split('T')[0],
         detail: '',
         total_amount: '',
         selection: '',
@@ -255,7 +255,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.detail && <span className="text-red-500">{prevError.detail}</span>}
                         </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
+                        {/* <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Total Amount</label>
                             <input
                                 type="number"
@@ -265,7 +265,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
                             {prevError.total_amount && <span className="text-red-500">{prevError.total_amount}</span>}
-                        </div>
+                        </div> */}
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Select Type</label>
                             <select

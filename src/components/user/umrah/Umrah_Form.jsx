@@ -74,7 +74,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         userName: user?.username || '',
         customerAdd: '',
         reference: '',
-        booking_date: '',
+        booking_date: new Date().toISOString().split('T')[0],
         entry:'0/0',
         packageDetail: '',
         depart_date: '',

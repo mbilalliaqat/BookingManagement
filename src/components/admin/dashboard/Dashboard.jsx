@@ -130,7 +130,7 @@ const safeLocaleDateString = (dateValue) => {
       navigate('/admin/umrah'); 
     }
     if (moduleName === 'Visa Processing') { // Corrected name for navigation
-      navigate('/admin/visa-processing'); 
+      navigate('/admin/visa'); 
     }
     if (moduleName === 'GAMCA Token') {
       navigate('/admin/gamcaToken'); 
@@ -255,21 +255,200 @@ const handleRemainingAmountClick = useCallback((typeName) => {
           withdraw: 0, 
           passengerName: null,
         }));
-        // END FIX
+       
+        // After umrahBookings mapping, fetch payment history for all umrah bookings
+const allUmrahPayments = [];
 
-        const ticketBookings = ticketsData.ticket.map(ticket => ({
-          type: 'Ticket', employee_name: ticket.employee_name, receivable_amount: ticket.receivable_amount, entry: ticket.entry, paid_cash: ticket.paid_cash, paid_in_bank: ticket.paid_in_bank, remaining_amount: ticket.remaining_amount, booking_date: safeLocaleDateString(ticket.created_at), timestamp: safeTimestamp(ticket.created_at), withdraw: 0, passengerName: ticket.name,
-        }));
+for (const umrah of umrahData.umrahBookings) {
+  try {
+    const paymentHistory = await fetchWithCache(`/umrah_payments/${umrah.id}`);
+    if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+      const paymentsWithUmrahInfo = paymentHistory.payments.map(payment => ({
+        ...payment,
+        umrah_id: umrah.id,
+        umrah_entry: umrah.entry,
+        customer_name: umrah.customerAdd,
+        employee_name: payment.recorded_by || umrah.userName,
+      }));
+      allUmrahPayments.push(...paymentsWithUmrahInfo);
+    }
+  } catch (err) {
+    console.error(`Failed to load payments for umrah ${umrah.id}`);
+  }
+}
+
+const umrahPaymentEntries = allUmrahPayments.map(payment => ({
+  type: 'Umrah Payment',
+  employee_name: payment.employee_name,
+  receivable_amount: 0,
+  entry: payment.umrah_entry,
+  paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+  paid_in_bank: parseFloat(payment.paid_bank || 0),
+  remaining_amount: payment.remaining_amount,
+  booking_date: safeLocaleDateString(payment.payment_date),
+  timestamp: safeTimestamp(payment.created_at),
+  withdraw: 0,
+  passengerName: payment.customer_name,
+}));
+
+console.log('Umrah payment entries:', umrahPaymentEntries); // Debug log
+
+       
+       // Ticket booking details is here
+        const ticketBookings = ticketsData.ticket.map(ticket => {
+  let firstPassengerName = null;
+  try {
+    let parsedDetails = [];
+    if (typeof ticket.passport_detail === 'string') {
+      parsedDetails = JSON.parse(ticket.passport_detail);
+    } else if (Array.isArray(ticket.passport_detail)) {
+      parsedDetails = ticket.passport_detail;
+    }
+    
+    if (parsedDetails.length > 0) {
+      const firstPassenger = parsedDetails[0];
+      firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+    }
+  } catch (e) {
+    console.error("Error parsing passenger details:", e);
+  }
+
+  return {
+    type: 'Ticket', 
+    employee_name: ticket.employee_name, 
+    receivable_amount: ticket.receivable_amount, 
+    entry: ticket.entry, 
+    paid_cash: ticket.paid_cash, 
+    paid_in_bank: ticket.paid_in_bank, 
+    remaining_amount: ticket.remaining_amount, 
+    booking_date: safeLocaleDateString(ticket.created_at), 
+    timestamp: safeTimestamp(ticket.created_at), 
+    withdraw: 0, 
+    passengerName: firstPassengerName || ticket.customer_add || null, // CHANGED
+  };
+});
+
+    // After ticketBookings mapping, fetch payment history for all tickets
+const allTicketPayments = [];
+
+for (const ticket of ticketsData.ticket) {
+  try {
+    const paymentHistory = await fetchWithCache(`/ticket_payments/${ticket.id}`);
+    if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+      const paymentsWithTicketInfo = paymentHistory.payments.map(payment => ({
+        ...payment,
+        ticket_id: ticket.id,
+        ticket_entry: ticket.entry,
+        customer_name: ticket.customer_add,
+        employee_name: payment.recorded_by || ticket.employee_name,
+      }));
+      allTicketPayments.push(...paymentsWithTicketInfo);
+    }
+  } catch (err) {
+    console.error(`Failed to load payments for ticket ${ticket.id}`);
+  }
+}
+
+const ticketPaymentEntries = allTicketPayments.map(payment => ({
+  type: 'Ticket Payment',
+  employee_name: payment.employee_name,
+  receivable_amount: 0,
+  entry: payment.ticket_entry,
+  paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+  paid_in_bank: parseFloat(payment.paid_bank || 0),
+  remaining_amount: payment.remaining_amount,
+  booking_date: safeLocaleDateString(payment.payment_date),
+  timestamp: safeTimestamp(payment.created_at),
+  withdraw: 0,
+  passengerName: payment.customer_name,
+}));
+
+console.log('Ticket payment entries:', ticketPaymentEntries); // Debug log
 
         const visaBookings = visaData.visa_processing.map(visa => {
           const details = parsePassportDetail(visa.passport_detail);
-          return { type: 'Visa Processing', employee_name: visa.employee_name, receivable_amount: visa.receivable_amount, entry: visa.entry, paid_cash: visa.paid_cash, paid_in_bank: visa.paid_in_bank, remaining_amount: visa.remaining_amount, booking_date: safeLocaleDateString(visa.created_at), timestamp: safeTimestamp(visa.created_at), withdraw: 0, passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), };
+          return { type: 'Visa Processing', employee_name: visa.employee_name, receivable_amount: visa.receivable_amount, entry: visa.entry, paid_cash: visa.paid_cash, paid_in_bank: visa.paid_in_bank, remaining_amount: visa.remaining_amount, booking_date: safeLocaleDateString(visa.created_at), timestamp: safeTimestamp(visa.created_at), withdraw: 0,
+             passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), };
         });
+
+        // After visaBookings mapping, fetch payment history for all visa bookings
+const allVisaPayments = [];
+
+for (const visa of visaData.visa_processing) {
+  try {
+    const paymentHistory = await fetchWithCache(`/visa-processing/${visa.id}/payments`);
+    if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+      const paymentsWithVisaInfo = paymentHistory.payments.map(payment => ({
+        ...payment,
+        visa_id: visa.id,
+        visa_entry: visa.entry,
+        customer_name: visa.customer_add,
+        employee_name: payment.recorded_by || visa.employee_name,
+      }));
+      allVisaPayments.push(...paymentsWithVisaInfo);
+    }
+  } catch (err) {
+    console.error(`Failed to load payments for visa ${visa.id}`);
+  }
+}
+
+const visaPaymentEntries = allVisaPayments.map(payment => ({
+  type: 'Visa Payment',
+  employee_name: payment.employee_name,
+  receivable_amount: 0,
+  entry: payment.visa_entry,
+  paid_cash: parseFloat(payment.payed_cash || 0),
+  paid_in_bank: parseFloat(payment.paid_bank || 0),
+  remaining_amount: 0,
+  booking_date: safeLocaleDateString(payment.payment_date),
+  timestamp: safeTimestamp(payment.created_at),
+  withdraw: 0,
+  passengerName: payment.customer_name,
+}));
+
+console.log('Visa payment entries:', visaPaymentEntries); // Debug log
 
         const gamcaTokenBookings = gamcaTokenData.gamcaTokens.map(token => {
           const details = parsePassportDetail(token.passport_detail);
           return { type: 'GAMCA Token', employee_name: token.employee_name, receivable_amount: token.receivable_amount, entry: token.entry, paid_cash: token.paid_cash, paid_in_bank: token.paid_in_bank, remaining_amount: token.remaining_amount, booking_date: safeLocaleDateString(token.created_at), timestamp: safeTimestamp(token.created_at), withdraw: 0, passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), };
         });
+
+        // After gamcaTokenBookings mapping, fetch payment history for all GAMCA Token bookings
+const allGamcaTokenPayments = [];
+
+for (const token of gamcaTokenData.gamcaTokens) {
+  try {
+    const paymentHistory = await fetchWithCache(`/gamca-token/${token.id}/payments`);
+    if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+      const paymentsWithGamcaInfo = paymentHistory.payments.map(payment => ({
+        ...payment,
+        gamca_token_id: token.id,
+        gamca_entry: token.entry,
+        customer_name: token.customer_add,
+        employee_name: payment.recorded_by || token.employee_name,
+      }));
+      allGamcaTokenPayments.push(...paymentsWithGamcaInfo);
+    }
+  } catch (err) {
+    console.error(`Failed to load payments for GAMCA Token ${token.id}`);
+  }
+}
+
+const gamcaTokenPaymentEntries = allGamcaTokenPayments.map(payment => ({
+  type: 'GAMCA Token Payment',
+  employee_name: payment.employee_name,
+  receivable_amount: 0,
+  entry: payment.gamca_entry,
+  paid_cash: parseFloat(payment.payed_cash || 0),
+  paid_in_bank: parseFloat(payment.paid_bank || 0),
+  remaining_amount: 0,
+  booking_date: safeLocaleDateString(payment.payment_date),
+  timestamp: safeTimestamp(payment.created_at),
+  withdraw: 0,
+  passengerName: payment.customer_name,
+}));
+
+console.log('GAMCA Token payment entries:', gamcaTokenPaymentEntries); // Debug log
 
         // const servicesBookings = servicesData.services.map(services => ({
         //   type: 'Services', employee_name: services.user_name, receivable_amount: services.receivable_amount, entry: services.entry, paid_cash: services.paid_cash, paid_in_bank: services.paid_in_bank, remaining_amount: services.remaining_amount, booking_date: safeLocaleDateString(services.booking_date), timestamp: safeTimestamp(services.created_at), withdraw: 0, passengerName: null,
@@ -297,7 +476,7 @@ const handleRemainingAmountClick = useCallback((typeName) => {
         }));
 
         const expensesBookings = expensesData.expenses.map(expenses => ({
-          type: 'Expenses', employee_name: expenses.user_name, entry: expenses.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(expenses.create), timestamp: safeTimestamp(expenses.createdAt), withdraw: parseFloat(expenses.withdraw || 0), passengerName: expenses.detail || null,
+          type: 'Expenses', employee_name: expenses.user_name, entry: expenses.entry, receivable_amount: 0, paid_cash: 0, paid_in_bank: 0, remaining_amount: 0, booking_date: safeLocaleDateString(expenses.date), timestamp: safeTimestamp(expenses.createdAt), withdraw: parseFloat(expenses.withdraw || 0), passengerName: expenses.detail || null,
         }));
 
         const refundedBookings = (refundedData.refunded || []).map(refund => ({
@@ -309,8 +488,9 @@ const handleRemainingAmountClick = useCallback((typeName) => {
         }));
 
         const combinedBookingsRaw = [
-          ...umrahBookings, ...ticketBookings, ...visaBookings, ...gamcaTokenBookings, ...servicesBookings,
+          ...umrahBookings, ...ticketBookings,...ticketPaymentEntries, ...visaBookings, ...gamcaTokenBookings, ...servicesBookings,...umrahPaymentEntries,...visaPaymentEntries,
           ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings,
+          ...gamcaTokenPaymentEntries,
           //  ...venderBookings,
         ];
 
@@ -795,7 +975,7 @@ const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (
     onMouseEnter={() => handleMouseEnter('withdraw')}
     onMouseLeave={handleMouseLeave}
 >
-    <div className="bg-gradient-to-br from-fuchsia-600 via-pink-700 to-purple-800 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group">
+    <div className="bg-gradient-to-br from-fuchsia-600 via-pink-700 to-purple-800 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group cursor-pointer">
           <div className="relative z-10 w-full">
             <div className="flex justify-between items-center mb-1">
               <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Total Withdraw</h2>
@@ -852,8 +1032,8 @@ const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (
 
 
         {/* Cash in Office Card (Original Line 956) */}
-        <div className="bg-gradient-to-br from-lime-500 via-green-600 to-teal-700 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group">
-          <div className="relative z-10 w-full">
+        <div className="bg-gradient-to-br from-lime-500 via-green-600 to-teal-700 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group cursor-pointer">
+          <div className="relative z-10 w-full ">
             <div className="flex justify-between items-center mb-1">
               <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Cash in Office</h2>
               

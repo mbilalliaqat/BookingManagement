@@ -14,7 +14,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [data, setData] = useState({
         employee: user?.username || '',
         entry: '0/0',
-        date: '',
+        date: new Date().toISOString().split('T')[0],
         name: '',
         passport: '',
         reference: '',

@@ -269,7 +269,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         agent_name: '',
         customer_add: '',
         reference: '',
-        booking_date: '',
+        booking_date: new Date().toISOString().split('T')[0],
         entry: '0/0',
         depart_date: '',
         return_date: '',
@@ -296,7 +296,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
         booking_date: Yup.date().required('Booking Date is required').typeError('Invalid date'),
-        customer_add: Yup.string().required('Customer Address is required'),
+        customer_add: Yup.string().notRequired('Customer Address is required'),
         depart_date: Yup.date().required('Travel Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
         airline: Yup.string().required('Airline is required'),

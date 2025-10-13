@@ -64,6 +64,14 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         const cashAmount = parseFloat(newPayment.payed_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
+         console.log('Cash Amount:', cashAmount);
+    console.log('Bank Amount:', bankAmount);
+    console.log('Payment Data:', {
+        payed_cash: cashAmount,
+        paid_bank: bankAmount,
+    });
+
+
         if (cashAmount === 0 && bankAmount === 0) {
             alert('Please Enter either cash paid or Paid Bank');
             return;
@@ -72,13 +80,19 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         setIsSubmitting(true);
 
         try {
+
+            const currentRemaining = parseFloat(gamcaTokenDetails?.remaining_amount) || 0;
+        const totalPayment = cashAmount + bankAmount;
+        const newRemaining = currentRemaining - totalPayment;
+
             const response = await axios.post(`${BASE_URL}/gamca-token/${gamcaTokenId}/payments`, {
                 gamca_token_id: gamcaTokenId,
                 payment_date: newPayment.payment_date,
                 payed_cash: cashAmount,
                 paid_bank: bankAmount,
                 bank_title: newPayment.bank_title || null,
-                recorded_by: newPayment.recorded_by
+                recorded_by: newPayment.recorded_by,
+                remaining_amount: newRemaining
             });
 
             if (response.status === 201) {
@@ -176,13 +190,13 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                         ) : (
                             payments.map((payment, index) => (
                                 <tr key={payment.id || index}>
-                                    <td className="border border-gray-300 px-4 py-2">
+                                    <td className="border border-gray-300 px-4 py-2 text-white">
                                         {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.recorded_by || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.payed_cash || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.paid_bank || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.bank_title || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.recorded_by || ''}</td>
                                 </tr>
                             ))
                         )}

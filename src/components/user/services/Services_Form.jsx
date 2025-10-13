@@ -59,7 +59,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             user_name: user?.username || '',
              entry: `${entryNumber}/${totalEntries}`,
             customer_add: '',
-            booking_date: '',
+            booking_date: new Date().toISOString().split('T')[0],
             specific_detail: '',
             visa_type: '',
             receivable_amount: '',

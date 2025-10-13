@@ -50,7 +50,7 @@ const RefundCustomer_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         employee: user?.username || '',
         name: '',
         entry: '0/0',
-        date: '',
+        date: new Date().toISOString().split('T')[0],
         passport: '',
         reference: '',
         detail_sector: '',

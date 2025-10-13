@@ -180,7 +180,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             {/* Payments Table */}
             <div className="mb-4">
                 <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-semibold">Payment Records</h3>
+                    <h3 className="text-lg font-semibold text-white">Payment Records</h3>
                     <div className="text-sm text-gray-600">
                         Total Cash Paid: <span className="font-bold text-green-600">{totalPaid.toFixed(2)}</span>
                     </div>
@@ -207,14 +207,14 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                         ) : (
                             payments.map((payment, index) => (
                                 <tr key={payment.id || index}>
-                                    <td className="border border-gray-300 px-4 py-2">
+                                    <td className="border border-gray-300 px-4 py-2 text-white">
                                         {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.recorded_by || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.remaining_amount || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.payed_cash || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.paid_bank || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.bank_title || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.recorded_by || ''}</td>
                                 </tr>
                             ))
                         )}
