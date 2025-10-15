@@ -193,10 +193,19 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     return (
         <div className="flex items-center justify-center bg-white p-4">
             <div className="w-full max-w-3xl p-8 rounded-md">
-                <div className="text-2xl font-semibold mb-6 relative inline-block">
-                    EXPENSE FORM
-                    <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
-                </div>
+                <div className="flex items-center justify-between mb-6">
+    <div className="text-2xl font-semibold relative inline-block">
+        EXPENSE FORM
+        <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
+    </div>
+    <button
+        type="button"
+        onClick={onCancel}
+        className="text-gray-700 hover:text-gray-900 transition-colors"
+    >
+        <i className="fas fa-arrow-left text-xl"></i>
+    </button>
+</div>
                 <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
                     <div className="flex flex-wrap justify-between gap-4">
                         <div className="w-full sm:w-[calc(50%-10px)]">

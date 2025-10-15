@@ -147,6 +147,17 @@ const GamcaToken = () => {
         { header: 'NATIONALITY', accessor: 'passengerNationality' },
         { header: 'DOCUMENT TYPE', accessor: 'documentType' },
         { header: 'DOCUMENT NO', accessor: 'documentNo' },
+         {
+        header: 'VENDOR & PAYABLE',
+        accessor: 'vendor_payable',
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.vendor_name || ''}</div>
+                <div >{row?.payable_to_vendor || ''}</div>
+            </div>
+        )
+    },
+    { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
         { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },

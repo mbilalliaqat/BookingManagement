@@ -327,25 +327,40 @@ const renderField = (field) => (
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
             {/* Header */}
-            <div className="bg-gradient-to-r from-red-600 to-orange-600 py-6 px-8 rounded-t-xl">
-                <motion.h2 
-                    className="text-2xl font-bold text-black flex items-center"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <i className="fas fa-undo-alt mr-3"></i>
-                    {editEntry ? 'Update Customer Refund' : 'New Customer Refund'}
-                </motion.h2>
-                <motion.p 
-                    className="text-black mt-1"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                >
-                    Please fill in the refund details
-                </motion.p>
+
+            
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
+                <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                        <motion.h2 
+                            className="text-2xl font-bold text-black flex items-center"
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <i className="fas fa-kaaba mr-3"></i>
+                           {editEntry ? 'Update Customer Refund' : 'New Customer Refund'}
+                        </motion.h2>
+                        <motion.p 
+                            className="text-indigo-600 mt-1"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                        >
+                            Please fill in the details
+                        </motion.p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="text-black hover:text-gray-600 transition-colors ml-4"
+                    >
+                        <i className="fas fa-arrow-left text-xl"></i>
+                    </button>
+                </div>
             </div>
+
+           
 
             {/* Progress tabs */}
             <div className="px-8 pt-6">

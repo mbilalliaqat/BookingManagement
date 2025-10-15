@@ -1,5 +1,5 @@
+// Modified Visa.jsx
 import React, { useEffect, useState } from 'react';
-
 import Table from '../../ui/Table';
 import VisaProcessing_Form from './VisaProcessing_Form';
 import { useAppContext } from '../../contexts/AppContext';
@@ -24,8 +24,7 @@ const Visa = () => {
     const [selectedVisaForPay, setSelectedVisaForPay] = useState(null);
     const { user } = useAppContext();
 
-   const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-    
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     
     const fetchData = async () => {
         setIsLoading(true);
@@ -34,11 +33,8 @@ const Visa = () => {
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            console.log("Response Data", response)
             const data = response.data;
-            console.log("API Data", data)
             const formattedData = data.visa_processing?.map((visa) => {
-                // Parse passport details similar to Tickets component
                 let passportDetails = {};
                 try {
                     if (typeof visa.passport_detail === 'string') {
@@ -50,12 +46,9 @@ const Visa = () => {
                     console.error("Error parsing passport details:", e);
                 }
 
-                // Calculate total payments from payment history if available - similar to Tickets
                 let totalCashPaid = parseFloat(visa.paid_cash || 0);
                 let totalBankPaid = parseFloat(visa.paid_in_bank || 0);
                 
-                // If there are additional payments, we need to get the original amounts
-                // The initial amounts should be the base amounts from when the visa was first created
                 const initialCash = visa.initial_paid_cash !== undefined 
                     ? parseFloat(visa.initial_paid_cash) 
                     : parseFloat(visa.paid_cash || 0);
@@ -65,14 +58,10 @@ const Visa = () => {
 
                 return {
                     ...visa,
-                    // Store original payment amounts
                     initial_paid_cash: initialCash,
                     initial_paid_in_bank: initialBank,
-                    
-                    // Current total payments (original + additional)
                     paid_cash: totalCashPaid,
                     paid_in_bank: totalBankPaid,
-                  
                     created_at: new Date(visa.created_at).toLocaleDateString('en-GB'),  
                     embassy_send_date: visa.embassy_send_date
                         ? new Date(visa.embassy_send_date).toLocaleDateString('en-GB')
@@ -83,13 +72,12 @@ const Visa = () => {
                     protector_date: visa.protector_date
                         ? new Date(visa.protector_date).toLocaleDateString('en-GB')
                         : 'N/A',
-                         expiry_medical_date: visa.expiry_medical_date
+                    expiry_medical_date: visa.expiry_medical_date
                         ? new Date(visa.expiry_medical_date).toLocaleDateString('en-GB')
                         : 'N/A',
                     passport_deliver_date: visa.passport_deliver_date
                         ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB')
                         : 'N/A',
-                    // Add formatted passport details for display
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
@@ -99,8 +87,10 @@ const Visa = () => {
                     documentNo: passportDetails.documentNo || '',
                     documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                     documentIssueCountry: passportDetails.issueCountry || '',
-                    // Keep the original passport detail for editing
-                    passport_detail: visa.passport_detail
+                    passport_detail: visa.passport_detail,
+                    status: visa.status || 'Processing',
+                    agent_name: visa.agent_name || '',
+                    vendor_name: visa.vendor_name || ''
                 };
             });
             setEntries(formattedData.reverse());
@@ -131,10 +121,8 @@ const Visa = () => {
             if (visa.id === paymentData.visaId) {
                 return {
                     ...visa,
-                    // Store initial amounts if not already stored
                     initial_paid_cash: visa.initial_paid_cash || visa.paid_cash,
                     initial_paid_in_bank: visa.initial_paid_in_bank || visa.paid_in_bank,
-                    
                     paid_cash: parseFloat(visa.paid_cash || 0) + paymentData.cash_amount,
                     paid_in_bank: parseFloat(visa.paid_in_bank || 0) + paymentData.bank_amount,
                     remaining_amount: parseFloat(visa.remaining_amount || 0) - (paymentData.cash_amount + paymentData.bank_amount)
@@ -146,55 +134,92 @@ const Visa = () => {
         fetchData();
     };
 
-   
-
-     const baseColumns = [
-       { header: 'BOOKING DATE', accessor: 'created_at' },
-        { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
-        { header: 'ENTRY', accessor: 'entry' },
-        { header: 'FILE NO.', accessor: 'file_number' },
-        { header: 'REFERENCE', accessor: 'reference' },
-        { header: 'SPONSOR NAME', accessor: 'sponsor_name' },
-        { header: 'VISA NO.', accessor: 'visa_number' },
-        { header: 'ID NO.', accessor: 'id_number' },
-        { header: 'EMBASSY', accessor: 'embassy' },
-        { header: 'E-NUMBER', accessor: 'e_number' },
-        { header: 'CUSTOMER ADD', accessor: 'customer_add' },
-        { header: 'PTN/PERMISSION', accessor: 'ptn_permission' },
-         { header: 'EMBASSY SEND DATE', accessor: 'embassy_send_date' },
-        { header: 'EMBASSY RETURN DATE', accessor: 'embassy_return_date' },
-        { header: 'PROTECTOR DATE', accessor: 'protector_date' },
-        { header: 'EXPIRY MEDICAL DATE', accessor: 'expiry_medical_date' },
-        { header: 'PASSPORT DELIVER DATE', accessor: 'passport_deliver_date' },
+    const baseColumns = [
+        { header: 'BOOKING DATE', accessor: 'created_at' },
         {
-            header: 'PASSENGERS',
-            accessor: 'passengerCount',
-            render: (row,index) => {
-                // Ensure default values are used if properties are undefined
-                const adults = index.adults === undefined ? 0 : index.adults;
-                const children = index.children === undefined ? 0 : index.children;
-                const infants = index.infants === undefined ? 0 : index.infants;
-                return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
-            }
-        },
-        { header: 'TITLE', accessor: 'passengerTitle' },
-        { header: 'FIRST NAME', accessor: 'passengerFirstName' },
-        { header: 'LAST NAME', accessor: 'passengerLastName' },
+    header: 'FILE NO. EMBASSY',
+    accessor: 'file_embassy',
+    render: (cellValue, row) => (
+        <div>
+            <div> {row.file_number || 'N/A'}</div>
+            <div>{row.embassy || 'N/A'}</div>
+        </div>
+    )
+},
+{ header: 'REFERENCE', accessor: 'reference' },
+{
+    header: 'VISA NO. ID NO.',
+    accessor: 'visa_id',
+    render: (cellValue, row) => (
+        <div>
+            <div>{row.visa_number || 'N/A'}</div>
+            <div>{row.id_number || 'N/A'}</div>
+        </div>
+    )
+},
+{
+    header: 'FULL NAME  FATHER NAME',
+    accessor: 'passenger_name',
+    render: (cellValue, row) => (
+        <div>
+            <div> {row.passengerFirstName || 'N/A'}</div>
+            <div> {row.passengerLastName || 'N/A'}</div>
+        </div>
+    )
+},
+{
+    header: 'E-NUMBER  MEDICAL EXPIRY',
+    accessor: 'e_number_medical',
+    render: (cellValue, row) => (
+        <div>
+            <div> {row.e_number || 'N/A'}</div>
+            <div> {row.expiry_medical_date || 'N/A'}</div>
+        </div>
+    )
+},
+        { header: 'PTN/PERMISSION', accessor: 'ptn_permission' },
+
+        // { header: 'ENTRY', accessor: 'entry' },
+        { header: 'STATUS', accessor: 'status' }, // Added status column
+        
+        
+        { header: 'AGENT NAME', accessor: 'agent_name' },
+        { header: 'VENDOR NAME', accessor: 'vendor_name' },
+        // { header: 'SPONSOR NAME', accessor: 'sponsor_name' },
+       
+        
+        
+        // { header: 'CUSTOMER ADD', accessor: 'customer_add' },
+        // { header: 'EMBASSY SEND DATE', accessor: 'embassy_send_date' },
+        // { header: 'EMBASSY RETURN DATE', accessor: 'embassy_return_date' },
+        // { header: 'PROTECTOR DATE', accessor: 'protector_date' },
+        
+        // { header: 'PASSPORT DELIVER DATE', accessor: 'passport_deliver_date' },
+        // {
+        //     header: 'PASSENGERS',
+        //     accessor: 'passengerCount',
+        //     render: (row, index) => {
+        //         const adults = index.adults === undefined ? 0 : index.adults;
+        //         const children = index.children === undefined ? 0 : index.children;
+        //         const infants = index.infants === undefined ? 0 : index.infants;
+        //         return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
+        //     }
+        // },
+        // { header: 'TITLE', accessor: 'passengerTitle' },
+        
     ];
-       const passportColumns = [
+    const passportColumns = [
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-        { header: 'NATIONALITY', accessor: 'passengerNationality' },
-        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
-        { header: 'DOCUMENT NO', accessor: 'documentNo' },
+    
+        { header: 'PASSPORT NO', accessor: 'documentNo' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
-        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
+        
     ];
 
-    // Financial columns - Updated to match Tickets component format
     const financialColumns = [
-       { header: 'RECEIVE ABLE AMOUNT', accessor: 'receivable_amount' },
+        { header: 'RECEIVE ABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'ADDITIONAL CHARGES', accessor: 'additional_charges' },
-        { header: 'PAY FOR PROTECTOR', accessor: 'pay_for_protector' },
+        // { header: 'PAY FOR PROTECTOR', accessor: 'pay_for_protector' },
         {
             header: 'PAID CASH',
             accessor: 'paid_cash_details',
@@ -215,7 +240,7 @@ const Visa = () => {
                 </div>
             )
         },
-        { header: 'PROFIT', accessor: 'profit' },
+        // { header: 'PROFIT', accessor: 'profit' },
         {
             header: 'REMAINING AMOUNT',
             accessor: 'remaining_amount',
@@ -234,7 +259,7 @@ const Visa = () => {
         },
     ];
        
-        const actionColumns = user.role === 'admin' ? [{
+    const actionColumns = user.role === 'admin' ? [{
         header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
             <>
                 <button
@@ -297,10 +322,10 @@ const Visa = () => {
         console.log('Attempting to delete visa processing with id:', id);
         const parsedId = typeof id === 'object' && id !== null ? id.id : id;
         if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
-             console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-             setError('Invalid visa processing ID. Cannot delete.');
-             setIsDeleting(false);
-             return;
+            console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
+            setError('Invalid visa processing ID. Cannot delete.');
+            setIsDeleting(false);
+            return;
         }
         try {
             const response = await axios.delete(`${BASE_URL}/visa-processing/${parsedId}`);
@@ -324,9 +349,9 @@ const Visa = () => {
             {showForm ? (
                 <VisaProcessing_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry}/>
             ) : (
-                <div className="flex flex-col h-full ">
+                <div className="flex flex-col h-full">
                     <div className="flex justify-between items-center mb-4 relative">
-                     <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4">
                             <div className="relative">
                                 <input
                                     type="text"
@@ -337,8 +362,6 @@ const Visa = () => {
                                 />
                                 <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
-                            
-                            {/* Toggle button for passport fields */}
                             <button
                                 className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
                                     showPassportFields 
@@ -353,7 +376,7 @@ const Visa = () => {
                         </div>
 
                         <button
-                            className="font-semibold text-sm bg-white  rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+                            className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
                             onClick={() => setShowForm(true)}
                         >
                             <i className="fas fa-plus mr-1"></i> Add New
@@ -412,47 +435,42 @@ const Visa = () => {
                     </button>
                 </div>
             </Modal>
-            {/* Remaining Pay Modal Component - Same as Tickets */}
-    {showRemainingPayModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">Payment Details</h2>
-                    <button
-                        onClick={closeRemainingPayModal}
-                        className="text-gray-500 hover:text-gray-700"
-                    >
-                        <i className="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                {/* Display Visa Info */}
-                <div className="bg-gray-100 p-4 rounded mb-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <strong>Visa ID:</strong> {selectedVisaForPay?.id}
+            {showRemainingPayModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-semibold">Payment Details</h2>
+                            <button
+                                onClick={closeRemainingPayModal}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <i className="fas fa-times text-xl"></i>
+                            </button>
                         </div>
-                        <div>
-                            <strong>Customer:</strong> {selectedVisaForPay?.customer_add}
+                        <div className="bg-gray-100 p-4 rounded mb-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <strong>Visa ID:</strong> {selectedVisaForPay?.id}
+                                </div>
+                                <div>
+                                    <strong>Customer:</strong> {selectedVisaForPay?.customer_add}
+                                </div>
+                                <div>
+                                    <strong>Reference:</strong> {selectedVisaForPay?.reference}
+                                </div>
+                                <div>
+                                    <strong>Remaining Amount:</strong> {selectedVisaForPay?.remaining_amount || '0'}
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <strong>Reference:</strong> {selectedVisaForPay?.reference}
-                        </div>
-                        <div>
-                            <strong>Remaining Amount:</strong> {selectedVisaForPay?.remaining_amount || '0'}
-                        </div>
+                        <VisaRemainingPay
+                            visaId={selectedVisaForPay?.id}
+                            onClose={closeRemainingPayModal}
+                            onPaymentSuccess={handlePaymentSuccess}
+                        />
                     </div>
                 </div>
-
-                {/* RemainingPay Component */}
-                <VisaRemainingPay
-                    visaId={selectedVisaForPay?.id}
-                    onClose={closeRemainingPayModal}
-                    onPaymentSuccess={handlePaymentSuccess}
-                />
-            </div>
-        </div>
-    )}
+            )}
         </div>
     );
 };

@@ -29,35 +29,48 @@ const Navtcc = () => {
             }
             const data = response.data;
             console.log("Fetched data:", data);
+
             const formattedData = data.navtcc?.map((navtcc) => {
-                let passportDetails = {};
-                try {
-                    if (typeof navtcc.passport_detail === 'string') {
-                        passportDetails = JSON.parse(navtcc.passport_detail);
-                    } else if (typeof navtcc.passport_detail === 'object' && navtcc.passport_detail !== null) {
-                        passportDetails = navtcc.passport_detail;
-                    }
-                } catch (e) {
-                    console.error("Error parsing passport details:", e);
-                }
-                return {
-                    ...navtcc,
-                    
-                    created_at: new Date(navtcc.created_at).toLocaleDateString('en-GB'),
-                    // Add formatted passport details for display
-                    passengerTitle: passportDetails.title || '',
-                    passengerFirstName: passportDetails.firstName || '',
-                    passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
-                    passengerNationality: passportDetails.nationality || '',
-                    documentType: passportDetails.documentType || '',
-                    documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
-                    documentIssueCountry: passportDetails.issueCountry || '',
-                    // Keep the original passport detail for editing
-                    passport_detail: navtcc.passport_detail
-                };
-            });
+    let passportDetails = {};
+    let vendorsList = [];
+    
+    try {
+        if (typeof navtcc.passport_detail === 'string') {
+            passportDetails = JSON.parse(navtcc.passport_detail);
+        } else if (typeof navtcc.passport_detail === 'object' && navtcc.passport_detail !== null) {
+            passportDetails = navtcc.passport_detail;
+        }
+    } catch (e) {
+        console.error("Error parsing passport details:", e);
+    }
+    
+    // Parse vendors
+    try {
+        if (typeof navtcc.vendors === 'string') {
+            vendorsList = JSON.parse(navtcc.vendors);
+        } else if (Array.isArray(navtcc.vendors)) {
+            vendorsList = navtcc.vendors;
+        }
+    } catch (e) {
+        console.error("Error parsing vendors:", e);
+    }
+    
+    return {
+        ...navtcc,
+        created_at: new Date(navtcc.created_at).toLocaleDateString('en-GB'),
+        passengerTitle: passportDetails.title || '',
+        passengerFirstName: passportDetails.firstName || '',
+        passengerLastName: passportDetails.lastName || '',
+        passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
+        passengerNationality: passportDetails.nationality || '',
+        documentType: passportDetails.documentType || '',
+        documentNo: passportDetails.documentNo || '',
+        documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
+        documentIssueCountry: passportDetails.issueCountry || '',
+        passport_detail: navtcc.passport_detail,
+        vendors: vendorsList  // Add parsed vendors
+    };
+});
             setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -92,6 +105,25 @@ const Navtcc = () => {
         { header: 'PAID FROM BANK', accessor: 'paid_from_bank' },
         { header: 'PAYED TO BANK', accessor: 'payed_to_bank' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
+        {
+    header: 'VENDORS & PAYABLE',
+    accessor: 'vendors',
+    render: (cellValue, row) => (
+        <div className="space-y-1">
+            {row?.vendors && row.vendors.length > 0 ? (
+                row.vendors.map((vendor, idx) => (
+                    <div key={idx} className="text-xs">
+                        <div className="font-medium">{vendor.vendor_name}</div>
+                        <div className="text-gray-600">{vendor.amount}</div>
+                    </div>
+                ))
+            ) : (
+                <span className="text-gray-400">-</span>
+            )}
+        </div>
+    )
+},
+{ header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
         ...(user.role === 'admin' ? [{

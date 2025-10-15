@@ -3,31 +3,44 @@ import { Formik, Form, Field, ErrorMessage, useFormikContext } from 'formik';
 import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
-import { useAppContext } from '../../contexts/AppContext'; // Ensure this path is correct
+import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
+import VenderNameModal from '../../ui/VenderNameModal';
 import axios from 'axios';
 
-
-// --- Constants (consider moving to a separate file if used across components) ---
+// --- Constants ---
 const VISA_TYPES = ['NAVTTC', 'VISIT VISA', 'WORK VISA', 'E-PROTECTOR', 'OTHERS'];
 
-// --- Auto-calculation component for Services form ---
+const BANK_OPTIONS = [
+    { value: "UBL M.A.R", label: "UBL M.A.R" },
+    { value: "UBL F.Z", label: "UBL F.Z" },
+    { value: "HBL M.A.R", label: "HBL M.A.R" },
+    { value: "HBL F.Z", label: "HBL F.Z" },
+    { value: "JAZ C", label: "JAZ C" },
+    { value: "MCB FIT", label: "MCB FIT" },
+];
+
+// --- Auto-calculation component ---
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
     
     useEffect(() => {
-        // Get values as numbers (defaulting to 0 if empty or NaN)
         const receivable = parseFloat(values.receivable_amount) || 0;
         const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
+        const payableToVendor = parseFloat(values.payable_to_vendor) || 0;
         
-        // Calculate remaining amount
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining);
+
+        // Calculate profit if vendor payable is provided
+        const profit = payableToVendor > 0 ? receivable - payableToVendor : '';
+        setFieldValue('profit', profit ? profit.toFixed(2) : '');
     }, [
         values.receivable_amount,
         values.paid_cash,
         values.paid_in_bank,
+        values.payable_to_vendor,
         setFieldValue
     ]);
     
@@ -39,25 +52,17 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
     const [activeSection, setActiveSection] = useState(1);
-     const [entryNumber, setEntryNumber] = useState(0);
+    const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
-    
+    const [agentNames, setAgentNames] = useState([]);
+    const [vendorNames, setVendorNames] = useState([]);
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
 
-    const bankOptions = [
-        { value: "UBL M.A.R", label: "UBL M.A.R" },
-        { value: "UBL F.Z", label: "UBL F.Z" },
-        { value: "HBL M.A.R", label: "HBL M.A.R" },
-        { value: "HBL F.Z", label: "HBL F.Z" },
-        { value: "JAZ C", label: "JAZ C" },
-        { value: "MCB FIT", label: "MCB FIT" },
-    ];
-
-
-    // Memoize initial values to avoid re-creation on every render
+    // Memoize initial values
     const initialValues = useMemo(() => {
         const base = {
             user_name: user?.username || '',
-             entry: `${entryNumber}/${totalEntries}`,
+            entry: `${entryNumber}/${totalEntries}`,
             customer_add: '',
             booking_date: new Date().toISOString().split('T')[0],
             specific_detail: '',
@@ -66,7 +71,9 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             paid_cash: '',
             paid_from_bank: '',
             paid_in_bank: '',
-          
+            payable_to_vendor: '',
+            vendor_name: '',
+            agent_name: '',
             profit: '',
             remaining_amount: '0'
         };
@@ -81,7 +88,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             return {
                 ...base,
                 user_name: editEntry.user_name || user?.username || '',
-                 entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
                 customer_add: editEntry.customer_add || '',
                 booking_date: formatDate(editEntry.booking_date),
                 specific_detail: editEntry.specific_detail || '',
@@ -90,7 +97,9 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_cash: editEntry.paid_cash || '',
                 paid_from_bank: editEntry.paid_from_bank || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
-              
+                payable_to_vendor: editEntry.payable_to_vendor || '',
+                vendor_name: editEntry.vendor_name || '',
+                agent_name: editEntry.agent_name || '',
                 profit: editEntry.profit || '',
                 remaining_amount: editEntry.remaining_amount || '0'
             };
@@ -107,10 +116,41 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         receivable_amount: Yup.number().typeError('Receivable Amount must be a number').required('Receivable Amount is required').min(0, 'Amount cannot be negative'),
         paid_cash: Yup.number().typeError('Paid Cash must be a number').required('Paid Cash is required').min(0, 'Amount cannot be negative'),
         paid_from_bank: Yup.string().notRequired(),
-        paid_in_bank:Yup.number().typeError('Paid_in_bank must be a number').notRequired(),
-        profit: Yup.number().typeError('Profit must be a number').required('Profit is required'),
+        paid_in_bank: Yup.number().typeError('Paid_in_bank must be a number').notRequired(),
+        payable_to_vendor: Yup.number().typeError('Payable To Vendor must be a number').notRequired().min(0, 'Amount cannot be negative'),
+        vendor_name: Yup.string().notRequired(),
+        agent_name: Yup.string().notRequired(),
+        profit: Yup.number().typeError('Profit must be a number').notRequired(),
         remaining_amount: Yup.number().typeError('Remaining Amount must be a number').min(0, 'Remaining amount cannot be negative')
     });
+
+    // Fetch agent and vendor names
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [agentRes, vendorRes] = await Promise.all([
+                    axios.get(`${BASE_URL}/agent-names/existing`),
+                    axios.get(`${BASE_URL}/vender-names/existing`)
+                ]);
+                
+                if (agentRes.data.status === 'success') {
+                    setAgentNames(agentRes.data.agentNames || []);
+                }
+                if (vendorRes.data.status === 'success') {
+                    setVendorNames(vendorRes.data.vendorNames || []);
+                }
+            } catch (error) {
+                console.error('Error fetching names:', error);
+            }
+        };
+        fetchData();
+    }, [BASE_URL]);
+
+    const handleVendorAdded = async (newVendorName) => {
+        if (newVendorName && !vendorNames.includes(newVendorName)) {
+            setVendorNames(prev => [...prev, newVendorName].sort());
+        }
+    };
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         const requestData = {
@@ -123,8 +163,11 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             receivable_amount: parseFloat(values.receivable_amount),
             paid_cash: parseFloat(values.paid_cash),
             paid_from_bank: values.paid_from_bank,
-            paid_in_bank: parseFloat(values.paid_in_bank),
-            profit: parseFloat(values.profit),
+            paid_in_bank: parseFloat(values.paid_in_bank) || 0,
+            payable_to_vendor: parseFloat(values.payable_to_vendor) || 0,
+            vendor_name: values.vendor_name || null,
+            agent_name: values.agent_name || null,
+            profit: parseFloat(values.profit) || 0,
             remaining_amount: parseFloat(values.remaining_amount)
         };
 
@@ -147,6 +190,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const submittedEntry = await response.json();
 
+            // Submit to accounts if bank payment exists
             if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
                 const bankData = {
                     bank_name: values.paid_from_bank,
@@ -162,15 +206,53 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     await axios.post(`${BASE_URL}/accounts`, bankData);
                 } catch (error) {
                     console.error('Error storing bank transaction:', error);
-                    setErrors({ general: 'An error occurred while recording the bank transaction.' });
-                    return; // Prevent form reset and success message
                 }
             }
 
+            // Submit to vendor if vendor details exist
+            if (values.vendor_name && parseFloat(values.payable_to_vendor) > 0) {
+                const vendorData = {
+                    vender_name: values.vendor_name,
+                    detail: `Service - ${values.specific_detail} - ${values.customer_add}`,
+                    credit: parseFloat(values.payable_to_vendor),
+                    date: values.booking_date,
+                    entry: values.entry,
+                    bank_title: values.paid_from_bank || null,
+                    debit: null
+                };
+
+                try {
+                    await axios.post(`${BASE_URL}/vender`, vendorData);
+                } catch (error) {
+                    console.error('Error storing vendor transaction:', error);
+                }
+            }
+
+            // Submit to agent if agent details exist
+            if (values.agent_name) {
+                const agentData = {
+                    agent_name: values.agent_name,
+                    employee: values.user_name,
+                    detail: `Service - ${values.specific_detail} - ${values.customer_add}`,
+                    receivable_amount: parseFloat(values.receivable_amount) || 0,
+                    paid_cash: parseFloat(values.paid_cash) || 0,
+                    paid_bank: parseFloat(values.paid_in_bank) || 0,
+                    credit: parseFloat(values.remaining_amount) || 0,
+                    date: values.booking_date,
+                    entry: values.entry,
+                    bank_title: values.paid_from_bank || null,
+                    debit: null
+                };
+
+                try {
+                    await axios.post(`${BASE_URL}/agent`, agentData);
+                } catch (error) {
+                    console.error('Error storing agent transaction:', error);
+                }
+            }
 
             resetForm();
-            // Pass the updated entry back to the parent component
-            onSubmitSuccess(submittedEntry); 
+            onSubmitSuccess(submittedEntry);
         } catch (error) {
             console.error('Submission Error:', error);
             setErrors({ general: error.message || 'Failed to submit form. Please try again later.' });
@@ -179,7 +261,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-     useEffect(() => {
+    useEffect(() => {
         const getCounts = async () => {
             const counts = await fetchEntryCounts();
             if (counts) {
@@ -239,14 +321,18 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             placeholder: 'Select visa type', 
             icon: 'passport' 
         },
+       
     ];
 
     const section3Fields = [
         { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'paid_from_bank', label: 'Paid From Bank', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
+        { name: 'paid_from_bank', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university' },
-        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Enter profit amount', icon: 'chart-line' },
+         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
+        { name: 'payable_to_vendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
+        { name: 'vendor_name', label: 'Vendor Name', type: 'vendor_select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
+        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];
 
@@ -273,6 +359,29 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             <option key={option} value={option}>{option}</option>
                         ))}
                     </Field>
+                ) : field.type === 'vendor_select' ? (
+                    <div className="flex items-center gap-2">
+                        <Field
+                            as="select"
+                            id={field.name}
+                            name={field.name}
+                            className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        >
+                            <option value="">{field.placeholder}</option>
+                            {field.options?.map((option) => (
+                                <option key={option} value={option}>
+                                    {option}
+                                </option>
+                            ))}
+                        </Field>
+                        <button
+                            type="button"
+                            onClick={() => setIsVendorModalOpen(true)}
+                            className="bg-purple-600 text-white px-3 py-2 rounded-md hover:bg-purple-700"
+                        >
+                            <i className="fas fa-plus"></i>
+                        </button>
+                    </div>
                 ) : (
                     <Field
                         id={field.name}
@@ -304,24 +413,35 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-6 px-8 rounded-t-xl">
-                <motion.h2 
-                    className="text-2xl font-bold text-black flex items-center"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <i className="fas fa-cogs mr-3"></i>
-                    {editEntry ? 'Update Service' : 'New Service'}
-                </motion.h2>
-                <motion.p 
-                    className="text-blue-600 mt-1"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                >
-                    Please fill in the service details
-                </motion.p>
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
+                <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                        <motion.h2 
+                            className="text-2xl font-bold text-black flex items-center"
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <i className="fas fa-kaaba mr-3"></i>
+                            {editEntry ? 'Update Service' : 'New Service'}
+                        </motion.h2>
+                        <motion.p 
+                            className="text-indigo-600 mt-1"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                        >
+                            Please fill in the details
+                        </motion.p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="text-black hover:text-gray-600 transition-colors ml-4"
+                    >
+                        <i className="fas fa-arrow-left text-xl"></i>
+                    </button>
+                </div>
             </div>
 
             {/* Progress tabs */}
@@ -460,6 +580,12 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     )}
                 </Formik>
             </div>
+
+            <VenderNameModal
+                isOpen={isVendorModalOpen}
+                onClose={() => setIsVendorModalOpen(false)}
+                onVenderAdded={handleVendorAdded}
+            />
         </div>
     );
 };

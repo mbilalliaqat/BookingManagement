@@ -70,6 +70,17 @@ const Services = () => {
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'SPECIAL DETAIL', accessor: 'specific_detail' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
+        {
+        header: 'VENDOR & PAYABLE',
+        accessor: 'vendor_payable',
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.vendor_name || ''}</div>
+                <div >{row?.payable_to_vendor || ''}</div>
+            </div>
+        )
+    },
+    { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
         { header: 'PROFIT', accessor: 'profit' },

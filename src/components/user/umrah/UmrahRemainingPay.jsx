@@ -214,7 +214,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                     <td className="border border-gray-300 px-4 py-2 text-white">{payment.payed_cash || '0'}</td>
                                     <td className="border border-gray-300 px-4 py-2 text-white">{payment.paid_bank || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2 text-white">{payment.bank_title || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.recorded_by || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.recorded_by || ''}</td> 
                                 </tr>
                             ))
                         )}

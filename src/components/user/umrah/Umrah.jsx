@@ -14,7 +14,7 @@ const Umrah = () => {
     const [entries, setEntries] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [editEntry, setEditEntry] = useState(null); 
+    const [editEntry, setEditEntry] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -24,49 +24,62 @@ const Umrah = () => {
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-    
 
     const fetchUmrah = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${BASE_URL}/umrah`);
-            if (!response.ok) {
+            const response = await axios.get(`${BASE_URL}/umrah`);
+            if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const data = await response.json();
-            const formattedData = data.umrahBookings.map((booking) => {
-                 let passportDetails = {};
+            const data = response.data;
+            console.log("Fetched umrah data:", data);
+
+            // Sort by ID to maintain consistent order
+            const sortedBookings = data.umrahBookings.sort((a, b) => a.id - b.id);
+
+            const formattedData = sortedBookings.map((booking) => {
+                let parsedPassengerDetails = [];
                 try {
                     if (typeof booking.passportDetail === 'string') {
-                        passportDetails = JSON.parse(booking.passportDetail);
+                        const parsed = JSON.parse(booking.passportDetail);
+                        if (Array.isArray(parsed)) {
+                            parsedPassengerDetails = parsed;
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                            parsedPassengerDetails = [parsed];
+                        }
+                    } else if (Array.isArray(booking.passportDetail)) {
+                        parsedPassengerDetails = booking.passportDetail;
                     } else if (typeof booking.passportDetail === 'object' && booking.passportDetail !== null) {
-                        passportDetails = booking.passportDetail;
+                        parsedPassengerDetails = [booking.passportDetail];
                     }
                 } catch (e) {
                     console.error("Error parsing passport details:", e);
+                    parsedPassengerDetails = [];
                 }
+
+                // Calculate total payments
+                const initialCash = booking.initial_paid_cash !== undefined
+                    ? parseFloat(booking.initial_paid_cash)
+                    : parseFloat(booking.paidCash || 0);
+                const initialBank = booking.initial_paid_in_bank !== undefined
+                    ? parseFloat(booking.initial_paid_in_bank)
+                    : parseFloat(booking.paidInBank || 0);
+
                 return {
-                     ...booking,
-                    
+                    ...booking,
+                    initial_paid_cash: initialCash,
+                    initial_paid_in_bank: initialBank,
+                    paidCash: parseFloat(booking.paidCash || 0),
+                    paidInBank: parseFloat(booking.paidInBank || 0),
                     booking_date: new Date(booking.booking_date).toLocaleDateString('en-GB'),
                     depart_date: new Date(booking.depart_date).toLocaleDateString('en-GB'),
                     return_date: new Date(booking.return_date).toLocaleDateString('en-GB'),
                     createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB'),
-                    // Add formatted passport details for display
-                    passengerTitle: passportDetails.title || '',
-                    passengerFirstName: passportDetails.firstName || '',
-                    passengerLastName: passportDetails.lastName || '',
-                    passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
-                    passengerNationality: passportDetails.nationality || '',
-                    documentType: passportDetails.documentType || '',
-                    documentNo: passportDetails.documentNo || '',
-                    documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
-                    documentIssueCountry: passportDetails.issueCountry || '',
-                    // Keep the original passport detail for editing
+                    allPassengerDetails: parsedPassengerDetails,
                     passportDetail: booking.passportDetail
-                }
-            }
-        );
+                };
+            });
             setEntries(formattedData.reverse());
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -95,6 +108,8 @@ const Umrah = () => {
             if (umrah.id === paymentData.umrahId) {
                 return {
                     ...umrah,
+                    initial_paid_cash: umrah.initial_paid_cash || umrah.paidCash,
+                    initial_paid_in_bank: umrah.initial_paid_in_bank || umrah.paidInBank,
                     paidCash: parseFloat(umrah.paidCash || 0) + paymentData.cashAmount,
                     paidInBank: parseFloat(umrah.paidInBank || 0) + paymentData.bankAmount,
                     remainingAmount: parseFloat(umrah.remainingAmount || 0) - (paymentData.cashAmount + paymentData.bankAmount)
@@ -106,79 +121,170 @@ const Umrah = () => {
         fetchUmrah();
     };
 
-     const baseColumns = [
+    const baseColumns = [
         { header: 'BOOKING DATE', accessor: 'booking_date' },
-        { 
-        header: 'EMPLOYEE & ENTRY', 
-        accessor: 'employee_entry', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.userName || ''}</div>
-                <div>{row?.entry || ''}</div>
-            </div>
-        )
-    },
+        {
+            header: 'EMPLOYEE & ENTRY',
+            accessor: 'employee_entry',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.userName || ''}</div>
+                    <div>{row?.entry || ''}</div>
+                </div>
+            )
+        },
         { header: 'CUSTOMER ADD', accessor: 'customerAdd' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'PACKAGE DETAIL', accessor: 'packageDetail' },
-        { 
-        header: 'DEPART & RETURN DATE', 
-        accessor: 'depart_return_date', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.depart_date || ''}</div>
-                <div>{row?.return_date || ''}</div>
-            </div>
-        )
-    },
+        {
+            header: 'DEPART & RETURN DATE',
+            accessor: 'depart_return_date',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.depart_date || ''}</div>
+                    <div>{row?.return_date || ''}</div>
+                </div>
+            )
+        },
         { header: 'SECTOR', accessor: 'sector' },
         { header: 'AIRLINE', accessor: 'airline' },
         {
             header: 'PASSENGERS',
             accessor: 'passengerCount',
-            render: (row,index) => {
-                // Ensure default values are used if properties are undefined
-                const adults = index.adults === undefined ? 0 : index.adults;
-                const children = index.children === undefined ? 0 : index.children;
-                const infants = index.infants === undefined ? 0 : index.infants;
+            render: (cellValue, row) => {
+                const adults = row.adults === undefined ? 0 : row.adults;
+                const children = row.children === undefined ? 0 : row.children;
+                const infants = row.infants === undefined ? 0 : row.infants;
                 return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
             }
         },
-        { 
-        header: 'PASSENGER DETAILS', 
-        accessor: 'passenger_details', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
-            </div>
-        )
-    },
-    ];
-       const passportColumns = [
-        { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-        { header: 'NATIONALITY', accessor: 'passengerNationality' },
-        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
-        { header: 'DOCUMENT NO', accessor: 'documentNo' },
-        { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
-        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
+        {
+            header: 'PASSENGER DETAILS',
+            accessor: 'passenger_details',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.length > 0 ? (
+                        row.allPassengerDetails.map((passenger, idx) => (
+                            <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                                <p className="font-semibold text-gray-800">
+                                    {passenger.title || ''} {passenger.firstName || ''} {passenger.lastName || ''}
+                                </p>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-gray-500">No passenger details</p>
+                    )}
+                </div>
+            )
+        },
     ];
 
-    // Financial columns
+    const passportColumns = [
+        {
+            header: 'DATE OF BIRTH',
+            accessor: 'passengerDob',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.dob ? new Date(p.dob).toLocaleDateString('en-GB') : ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'NATIONALITY',
+            accessor: 'passengerNationality',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.nationality || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'DOCUMENT TYPE',
+            accessor: 'documentType',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.documentType || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'DOCUMENT NO',
+            accessor: 'documentNo',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.documentNo || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'EXPIRY DATE',
+            accessor: 'documentExpiry',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.documentExpiry ? new Date(p.documentExpiry).toLocaleDateString('en-GB') : ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+        {
+            header: 'ISSUE COUNTRY',
+            accessor: 'documentIssueCountry',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                            {p.issueCountry || ''}
+                        </div>
+                    ))}
+                </div>
+            )
+        },
+    ];
+
     const financialColumns = [
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivableAmount' },
-        { header: 'PAID CASH', accessor: 'paidCash' },
-        { 
-        header: 'BANK & PAID IN BANK', 
-        accessor: 'bank_paid', 
-        render: (cellValue, row) => (
-            <div>
-                <div style={{ color: '#666' }}>{row?.bank_title || ''}</div>
-                <div>{row?.paidInBank || ''}</div>
-            </div>
-        )
-    },
-        { 
-            header: 'REMAINING AMOUNT', 
+        {
+            header: 'PAID CASH',
+            accessor: 'paidCash',
+            render: (cellValue, row) => (
+                <div>
+                    <div>Initial: {row.initial_paid_cash || row.paidCash || '0'}</div>
+                    <div>Total: {row.paidCash || '0'}</div>
+                </div>
+            )
+        },
+        {
+            header: 'BANK & PAID IN BANK',
+            accessor: 'bank_paid',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.bank_title || ''}</div>
+                    <div>Initial: {row.initial_paid_in_bank || row.paidInBank || '0'}</div>
+                    <div>Total: {row.paidInBank || '0'}</div>
+                </div>
+            )
+        },
+        {
+            header: 'REMAINING AMOUNT',
             accessor: 'remainingAmount',
             render: (cellValue, row) => (
                 <div className="flex flex-col items-center">
@@ -193,31 +299,34 @@ const Umrah = () => {
                 </div>
             )
         },
-        { 
-        header: 'VENDOR & PAYABLE', 
-        accessor: 'vendor_payable', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.vendorName || ''}</div>
-                <div>{row?.payableToVendor || ''}</div>
-            </div>
-        )
-    },
+        { header: 'AGENT NAME', accessor: 'agent_name' },
+        {
+            header: 'VENDOR & PAYABLE',
+            accessor: 'vendor_payable',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.vendorName || ''}</div>
+                    <div>{row?.payableToVendor || ''}</div>
+                </div>
+            )
+        },
         { header: 'PROFIT', accessor: 'profit' },
     ];
-       
-        const actionColumns = user.role === 'admin' ? [{
-        header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
+
+    const actionColumns = user.role === 'admin' ? [{
+        header: 'ACTIONS',
+        accessor: 'actions',
+        render: (row, index) => (
             <>
                 <button
                     className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
-                    onClick={() => handleUpdate(index)}
+                    onClick={() => handleUpdate(row)}
                 >
                     <i className="fas fa-edit"></i>
                 </button>
                 <button
                     className="text-red-500 hover:text-red-700 text-[13px]"
-                    onClick={() => openDeleteModal(index)}
+                    onClick={() => openDeleteModal(row.id)}
                 >
                     <i className="fas fa-trash"></i>
                 </button>
@@ -231,28 +340,73 @@ const Umrah = () => {
         ...financialColumns,
         ...actionColumns
     ];
-    
 
-    const filteredData = entries.filter((index) =>
-        Object.values(index).some((value) =>
+    const filteredData = entries.filter((entry) =>
+        Object.values(entry).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
         )
     );
 
     const handleCancel = () => {
         setShowForm(false);
-        setEditEntry(null); // Clear edit state
+        setEditEntry(null);
     };
 
-    const handleFormSubmit = () => {
-        fetchUmrah();
+    const handleFormSubmit = (updatedBooking = null) => {
+        if (updatedBooking && editEntry) {
+            const entryIndex = entries.findIndex(entry => entry.id === updatedBooking.id);
+            if (entryIndex !== -1) {
+                let parsedPassengerDetails = [];
+                try {
+                    if (typeof updatedBooking.passportDetail === 'string') {
+                        const parsed = JSON.parse(updatedBooking.passportDetail);
+                        if (Array.isArray(parsed)) {
+                            parsedPassengerDetails = parsed;
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                            parsedPassengerDetails = [parsed];
+                        }
+                    } else if (Array.isArray(updatedBooking.passportDetail)) {
+                        parsedPassengerDetails = updatedBooking.passportDetail;
+                    } else if (typeof updatedBooking.passportDetail === 'object' && updatedBooking.passportDetail !== null) {
+                        parsedPassengerDetails = [updatedBooking.passportDetail];
+                    }
+                } catch (e) {
+                    console.error("Error parsing passport details:", e);
+                    parsedPassengerDetails = [];
+                }
+
+                const formattedBooking = {
+                    ...updatedBooking,
+                    initial_paid_cash: updatedBooking.initial_paid_cash !== undefined
+                        ? parseFloat(updatedBooking.initial_paid_cash)
+                        : parseFloat(updatedBooking.paidCash || 0),
+                    initial_paid_in_bank: updatedBooking.initial_paid_in_bank !== undefined
+                        ? parseFloat(updatedBooking.initial_paid_in_bank)
+                        : parseFloat(updatedBooking.paidInBank || 0),
+                    paidCash: parseFloat(updatedBooking.paidCash || 0),
+                    paidInBank: parseFloat(updatedBooking.paidInBank || 0),
+                    booking_date: new Date(updatedBooking.booking_date).toLocaleDateString('en-GB'),
+                    depart_date: new Date(updatedBooking.depart_date).toLocaleDateString('en-GB'),
+                    return_date: new Date(updatedBooking.return_date).toLocaleDateString('en-GB'),
+                    createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB'),
+                    allPassengerDetails: parsedPassengerDetails,
+                    passportDetail: updatedBooking.passportDetail
+                };
+
+                const updatedEntries = [...entries];
+                updatedEntries[entryIndex] = formattedBooking;
+                setEntries(updatedEntries);
+            }
+        } else {
+            fetchUmrah();
+        }
         setShowForm(false);
-        setEditEntry(null); // Clear edit state
+        setEditEntry(null);
     };
 
     const handleUpdate = (entry) => {
-        setEditEntry(entry); // Set the entry to edit
-        setShowForm(true); // Show the form
+        setEditEntry(entry);
+        setShowForm(true);
     };
 
     const openDeleteModal = (id) => {
@@ -267,12 +421,11 @@ const Umrah = () => {
 
     const handleDelete = async (id) => {
         setIsDeleting(true);
-        console.log('Attempting to delete expense with id:', id); // Debug log
-        // Handle case where id is an object (temporary safeguard)
+        console.log('Attempting to delete umrah booking with id:', id);
         const parsedId = typeof id === 'object' && id !== null ? id.id : id;
         if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
             console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-            setError('Invalid expense ID. Cannot delete.');
+            setError('Invalid umrah booking ID. Cannot delete.');
             setIsDeleting(false);
             return;
         }
@@ -280,20 +433,18 @@ const Umrah = () => {
             const response = await axios.delete(`${BASE_URL}/umrah/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
-                console.log('Expense deleted successfully');
+                console.log('Umrah booking deleted successfully');
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error deleting expense:', error);
-            setError('Failed to delete expense. Please try again later.');
+            console.error('Error deleting umrah booking:', error);
+            setError('Failed to delete umrah booking. Please try again later.');
         } finally {
             setIsDeleting(false);
             closeDeleteModal();
         }
     };
-
-
 
     return (
         <div className="h-full flex flex-col">
@@ -301,12 +452,12 @@ const Umrah = () => {
                 <Umrah_Form
                     onCancel={handleCancel}
                     onSubmitSuccess={handleFormSubmit}
-                    editEntry={editEntry} // Pass the entry to edit
+                    editEntry={editEntry}
                 />
             ) : (
                 <div className="flex flex-col h-full">
                     <div className="flex justify-between items-center mb-4 relative">
-              <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4">
                             <div className="relative">
                                 <input
                                     type="text"
@@ -317,12 +468,10 @@ const Umrah = () => {
                                 />
                                 <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
-                            
-                            {/* Toggle button for passport fields */}
                             <button
                                 className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
-                                    showPassportFields 
-                                        ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                    showPassportFields
+                                        ? 'bg-purple-600 text-white hover:bg-purple-700'
                                         : 'bg-white text-gray-700 hover:bg-gray-100'
                                 }`}
                                 onClick={() => setShowPassportFields(!showPassportFields)}
@@ -363,7 +512,7 @@ const Umrah = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this umrah booking? 
+                    Are you sure you want to delete this umrah booking?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button
@@ -390,7 +539,6 @@ const Umrah = () => {
                     title={`Add Payment for ${selectedUmrahForPay?.customerAdd}`}
                     width="4xl"
                 >
-                    {/* Display Umrah Info */}
                     <div className="bg-gray-800 p-4 rounded mb-4 text-white">
                         <div className="grid grid-cols-2 gap-4">
                             <div>

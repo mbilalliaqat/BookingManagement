@@ -1,3 +1,4 @@
+// Modified VisaProcessing_Form.jsx
 import React, { useEffect, useState } from 'react';
 import { Formik, Form, Field, ErrorMessage, useFormikContext } from 'formik';
 import * as Yup from 'yup';
@@ -6,6 +7,7 @@ import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
 import axios from 'axios';
+import VenderNameModal from '../../ui/VenderNameModal';
 
 const BANK_OPTIONS = [
     { value: "UBL M.A.R", label: "UBL M.A.R" },
@@ -16,23 +18,27 @@ const BANK_OPTIONS = [
     { value: "MCB FIT", label: "MCB FIT" },
 ];
 
+// Status options for the new status field
+const STATUS_OPTIONS = [
+    { value: "Processing", label: "Processing" },
+    { value: "Complete", label: "Complete" },
+    { value: "Deliver", label: "Deliver" },
+];
+
 // Auto-calculation component for visa processing form
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
     
     useEffect(() => {
-        // Get values as numbers (defaulting to 0 if empty or NaN)
         const receivable = parseFloat(values.receivable_amount) || 0;
         const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
         const additionalCharges = parseFloat(values.additional_charges) || 0;
         const payForProtector = parseFloat(values.pay_for_protector) || 0;
         
-        // Calculate remaining amount
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining);
         
-        // Calculate profit (receivable - additional charges - pay for protector)
         const profit = receivable - additionalCharges - payForProtector;
         setFieldValue('profit', profit);
     }, [
@@ -53,6 +59,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [activeSection, setActiveSection] = useState(1);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
+    const [agentNames, setAgentNames] = useState([]);
+    const [vendorNames, setVendorNames] = useState([]);
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
 
     const [formInitialValues, setFormInitialValues] = useState({
         employee_name: user?.username || '',
@@ -69,9 +78,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         embassy_send_date: '',
         embassy_return_date: '',
         protector_date: '',
-        expiry_medical_date:'',
+        expiry_medical_date: '',
         passport_deliver_date: '',
-        // Structured passport fields
         passengerTitle: '',
         passengerFirstName: '',
         passengerLastName: '',
@@ -88,16 +96,39 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         bank_title: '',
         paid_in_bank: '',
         profit: '',
-        remaining_amount: ''
+        remaining_amount: '',
+        status: 'Processing', // Default status for new entries
+        agent_name: '',
+        vendor_name: ''
     });
 
     const validationSchema = Yup.object({
         employee_name: Yup.string().required('Employee Name is required'),
+        status: Yup.string().required('Status is required').oneOf(
+            STATUS_OPTIONS.map(opt => opt.value),
+            'Invalid status'
+        ),
+        agent_name: Yup.string().required('Agent Name is required'),
+        vendor_name: Yup.string().required('Vendor Name is required'),
     });
 
-    // Modified useEffect to only fetch new entry counts when creating a new entry
     useEffect(() => {
-        // Only fetch new entry counts when creating a new entry (not editing)
+        const fetchNames = async () => {
+            try {
+                const [agentsRes, vendorsRes] = await Promise.all([
+                    axios.get(`${BASE_URL}/agent-names/existing`),
+                    axios.get(`${BASE_URL}/vender-names/existing`),
+                ]);
+                setAgentNames(agentsRes.data.map(a => a.name));
+                setVendorNames(vendorsRes.data.map(v => v.name));
+            } catch (error) {
+                console.error('Error fetching names:', error);
+            }
+        };
+        fetchNames();
+    }, []);
+
+    useEffect(() => {
         if (!editEntry) {
             const getCounts = async () => {
                 const counts = await fetchEntryCounts();
@@ -119,28 +150,23 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     }, [editEntry]);
 
-    // Modified useEffect to handle entry field updates properly
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
             employee_name: user?.username || '',
-            // Only set new entry for new records, preserve existing entry for edits
             entry: editEntry ? (editEntry.entry || '0/0') : `${entryNumber}/${totalEntries}`
         }));
     }, [user, editEntry, entryNumber, totalEntries]);
 
-    // useEffect for handling edit entry data
     useEffect(() => {
         if (editEntry) {
-            // Parse passport details if it's stored as a JSON string or structured object
             let parsedPassportDetails = {};
             try {
                 if (typeof editEntry.passport_detail === 'string') {
-                    // Try to parse as JSON first
                     try {
                         parsedPassportDetails = JSON.parse(editEntry.passport_detail);
-                    } catch {
-                        // If not JSON, it's probably a simple string, so leave passport fields empty
+                    } catch(e) {
+                        console.error("Error parsing passport details:", e);
                     }
                 } else if (typeof editEntry.passport_detail === 'object' && editEntry.passport_detail !== null) {
                     parsedPassportDetails = editEntry.passport_detail;
@@ -149,8 +175,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 console.error("Error parsing passport details:", e);
             }
 
-            // Format dates properly for the form fields
-           const formatDate = (dateStr) => {
+            const formatDate = (dateStr) => {
                 if (!dateStr) return '';
                 const date = new Date(dateStr);
                 return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
@@ -159,7 +184,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
                 file_number: editEntry.file_number || '',
-                entry: editEntry.entry || '0/0', // Keep the original entry
+                entry: editEntry.entry || '0/0',
                 reference: editEntry.reference || '',
                 sponsor_name: editEntry.sponsor_name || '',
                 visa_number: editEntry.visa_number || '',
@@ -171,10 +196,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 embassy_send_date: formatDate(editEntry.embassy_send_date),
                 embassy_return_date: formatDate(editEntry.embassy_return_date),
                 protector_date: formatDate(editEntry.protector_date),
-                expiry_medical_date:formatDate(editEntry.expiry_medical_date),
+                expiry_medical_date: formatDate(editEntry.expiry_medical_date),
                 passport_deliver_date: formatDate(editEntry.passport_deliver_date),
-                
-                // Map passport details from parsed object
                 passengerTitle: parsedPassportDetails.title || '',
                 passengerFirstName: parsedPassportDetails.firstName || '',
                 passengerLastName: parsedPassportDetails.lastName || '',
@@ -184,7 +207,6 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 documentNo: parsedPassportDetails.documentNo || '',
                 documentExpiry: formatDate(parsedPassportDetails.documentExpiry),
                 documentIssueCountry: parsedPassportDetails.issueCountry || '',
-                
                 receivable_amount: editEntry.receivable_amount || '',
                 additional_charges: editEntry.additional_charges || '',
                 pay_for_protector: editEntry.pay_for_protector || '',
@@ -192,7 +214,10 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 bank_title: editEntry.bank_title || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
                 profit: editEntry.profit || '',
-                remaining_amount: editEntry.remaining_amount || ''
+                remaining_amount: editEntry.remaining_amount || '',
+                status: editEntry.status || 'Processing',
+                agent_name: editEntry.agent_name || '',
+                vendor_name: editEntry.vendor_name || ''
             };
             
             setFormInitialValues(newValues);
@@ -200,8 +225,11 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     }, [editEntry, user]);
 
+    const handleVendorAdded = (newVendor) => {
+        setVendorNames(prev => [...prev, newVendor.name]);
+    };
+
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-        // Create a structured passport details object
         const passportDetail = JSON.stringify({
             title: values.passengerTitle,
             firstName: values.passengerFirstName,
@@ -227,18 +255,21 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             e_number: values.e_number,
             customer_add: values.customer_add,
             ptn_permission: values.ptn_permission,
-            embassy_send_date: new Date(values.embassy_send_date),
-            embassy_return_date: new Date(values.embassy_return_date),
-            protector_date: new Date(values.protector_date),
-            expiry_medical_date:new Date(values.expiry_medical_date),
-            passport_deliver_date: new Date(values.passport_deliver_date),
-            receivable_amount: parseInt(values.receivable_amount),
-            additional_charges: parseInt(values.additional_charges),
-            pay_for_protector: parseInt(values.pay_for_protector),
-            paid_cash: parseInt(values.paid_cash),
-            paid_in_bank: values.paid_in_bank,
-            profit: parseInt(values.profit),
-            remaining_amount: parseInt(values.remaining_amount)
+            embassy_send_date: values.embassy_send_date ? new Date(values.embassy_send_date) : null,
+            embassy_return_date: values.embassy_return_date ? new Date(values.embassy_return_date) : null,
+            protector_date: values.protector_date ? new Date(values.protector_date) : null,
+            expiry_medical_date: values.expiry_medical_date ? new Date(values.expiry_medical_date) : null,
+            passport_deliver_date: values.passport_deliver_date ? new Date(values.passport_deliver_date) : null,
+            receivable_amount: parseFloat(values.receivable_amount) || 0,
+            additional_charges: parseFloat(values.additional_charges) || 0,
+            pay_for_protector: parseFloat(values.pay_for_protector) || 0,
+            paid_cash: parseFloat(values.paid_cash) || 0,
+            paid_in_bank: parseFloat(values.paid_in_bank) || 0,
+            profit: parseFloat(values.profit) || 0,
+            remaining_amount: parseFloat(values.remaining_amount) || 0,
+            status: values.status,
+            agent_name: values.agent_name,
+            vendor_name: values.vendor_name
         };
 
         try {
@@ -265,7 +296,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 const bankData = {
                     bank_name: values.bank_title,
                     employee_name: values.employee_name,
-                    detail: `Visa Sale - ${values.passenger_name} - ${values.reference_name}`,
+                    detail: `Visa Sale - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
                     credit: parseFloat(values.paid_in_bank),
                     debit: 0,
                     date: new Date().toISOString().split('T')[0],
@@ -292,7 +323,6 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-    // Animation variants
     const formVariants = {
         hidden: { opacity: 0 },
         visible: { 
@@ -314,12 +344,14 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-    // Form fields grouped by section
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
-        { name: 'entry', label: 'Entry', type: 'text', placeholder: '',icon: 'hashtag', readOnly: true }, 
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
+        { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map(opt => opt.value), placeholder: 'Select status', icon: 'tasks' },
         { name: 'file_number', label: 'File No.', type: 'text', placeholder: 'Enter file number', icon: 'file-alt' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
+        { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
+        { name: 'vendor_name', label: 'Vendor Name', type: 'vendor_select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
         { name: 'sponsor_name', label: 'Sponsor Name', type: 'text', placeholder: 'Enter sponsor name', icon: 'user-tie' },
         { name: 'visa_number', label: 'Visa No.', type: 'text', placeholder: 'Enter visa number', icon: 'id-badge' },
         { name: 'id_number', label: 'ID No.', type: 'text', placeholder: 'Enter ID number', icon: 'id-card' },
@@ -329,7 +361,6 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'ptn_permission', label: 'PTN/Permission', type: 'text', placeholder: 'Enter PTN/Permission', icon: 'certificate' },
     ];
 
-    // New section for passport details
     const section2Fields = [
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
@@ -384,6 +415,27 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             <option key={option} value={option}>{option}</option>
                         ))}
                     </Field>
+                ) : field.type === 'vendor_select' ? (
+                    <div className="flex items-center gap-2">
+                        <Field
+                            as="select"
+                            id={field.name}
+                            name={field.name}
+                            className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        >
+                            <option value="">{field.placeholder}</option>
+                            {field.options && field.options.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </Field>
+                        <button
+                            type="button"
+                            onClick={() => setIsVendorModalOpen(true)}
+                            className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700"
+                        >
+                            <i className="fas fa-plus"></i>
+                        </button>
+                    </div>
                 ) : (
                     <Field
                         id={field.name}
@@ -397,45 +449,54 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         readOnly={field.readOnly}
                     />
                 )}
-              <ErrorMessage 
-    name={field.name} 
-    component="p" 
-    className="mt-1 text-sm text-red-500 flex items-center !text-red-500"
->
-    {(msg) => (
-        <span className="flex items-center text-red-500">
-            <i className="fas fa-exclamation-circle mr-1 text-red-500"></i> {msg}
-        </span>
-    )}
-</ErrorMessage>
+                <ErrorMessage 
+                    name={field.name} 
+                    component="p" 
+                    className="mt-1 text-sm text-red-500 flex items-center !text-red-500"
+                >
+                    {(msg) => (
+                        <span className="flex items-center text-red-500">
+                            <i className="fas fa-exclamation-circle mr-1 text-red-500"></i> {msg}
+                        </span>
+                    )}
+                </ErrorMessage>
             </div>
         </motion.div>
     );
 
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-6 px-8 rounded-t-xl">
-                <motion.h2 
-                    className="text-2xl font-bold text-black flex items-center"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <i className="fas fa-passport mr-3"></i>
-                    {editEntry ? 'Update Visa Processing' : 'New Visa Processing'}
-                </motion.h2>
-                <motion.p 
-                    className="text-blue-600 mt-1"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                >
-                    Please fill in the visa processing details
-                </motion.p>
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
+                <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                        <motion.h2 
+                            className="text-2xl font-bold text-black flex items-center"
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <i className="fas fa-kaaba mr-3"></i>
+                            {editEntry ? 'Update Visa Processing' : 'New Visa Processing'}
+                        </motion.h2>
+                        <motion.p 
+                            className="text-indigo-600 mt-1"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                        >
+                            Please fill in the details
+                        </motion.p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="text-black hover:text-gray-600 transition-colors ml-4"
+                    >
+                        <i className="fas fa-arrow-left text-xl"></i>
+                    </button>
+                </div>
             </div>
 
-            {/* Progress tabs */}
             <div className="px-8 pt-6">
                 <div className="flex justify-between mb-8">
                     {[1, 2, 3, 4].map((step) => (
@@ -475,7 +536,6 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
             </div>
 
-            {/* Form content */}
             <div className="px-8 pb-8">
                 <Formik
                     initialValues={formInitialValues}
@@ -511,7 +571,6 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </motion.div>
                             )}
 
-                            {/* Navigation buttons */}
                             <motion.div 
                                 className="flex justify-between mt-8 pt-4 border-t border-gray-100"
                                 initial={{ opacity: 0 }}
@@ -536,7 +595,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     <motion.button
                                         type="button"
                                         onClick={onCancel}
-                                        className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                                        className="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
                                         whileHover={{ scale: 1.03 }}
                                         whileTap={{ scale: 0.97 }}
                                         disabled={isSubmitting}
@@ -572,6 +631,11 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     )}
                 </Formik>
             </div>
+            <VenderNameModal
+                isOpen={isVendorModalOpen}
+                onClose={() => setIsVendorModalOpen(false)}
+                onVenderAdded={handleVendorAdded}
+            />
         </div>
     );
 };
