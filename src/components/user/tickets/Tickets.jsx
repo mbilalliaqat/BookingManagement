@@ -186,12 +186,12 @@ const handlePaymentSuccess = (paymentData) => {
     const baseColumns=[
          { header: 'BOOKING DATE', accessor: 'booking_date' },
          {
-            header: 'EMPLOYEE & ENTRY',
+            header: 'EMPLOYEE',
             accessor: 'employee_entry',
             render: (cellValue, row) => (
                 <div>
                     <div>{row?.employee_name || ''}</div>
-                    <div style={{ }}>{row?.entry || ''}</div>
+                    {/* <div style={{ }}>{row?.entry || ''}</div> */}
                 </div>
             )
         },

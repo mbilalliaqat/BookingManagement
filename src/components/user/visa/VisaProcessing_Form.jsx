@@ -80,7 +80,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         protector_date: '',
         expiry_medical_date: '',
         passport_deliver_date: '',
-        passengerTitle: '',
+        passengerTitle: 'Mr',
         passengerFirstName: '',
         passengerLastName: '',
         passengerDob: '',
@@ -108,8 +108,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             STATUS_OPTIONS.map(opt => opt.value),
             'Invalid status'
         ),
-        agent_name: Yup.string().required('Agent Name is required'),
-        vendor_name: Yup.string().required('Vendor Name is required'),
+        
     });
 
     useEffect(() => {
@@ -198,7 +197,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 protector_date: formatDate(editEntry.protector_date),
                 expiry_medical_date: formatDate(editEntry.expiry_medical_date),
                 passport_deliver_date: formatDate(editEntry.passport_deliver_date),
-                passengerTitle: parsedPassportDetails.title || '',
+                passengerTitle: parsedPassportDetails.title || 'Mr',
                 passengerFirstName: parsedPassportDetails.firstName || '',
                 passengerLastName: parsedPassportDetails.lastName || '',
                 passengerDob: formatDate(parsedPassportDetails.dob),
@@ -363,14 +362,14 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const section2Fields = [
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
-        { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
-        { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
+        { name: 'passengerFirstName', label: 'Full Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
+        { name: 'passengerLastName', label: 'Father Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
         { name: 'passengerDob', label: 'Date of Birth', type: 'date', placeholder: 'Select date of birth', icon: 'calendar' },
-        { name: 'passengerNationality', label: 'Nationality', type: 'text', placeholder: 'Enter nationality', icon: 'flag' },
+        // { name: 'passengerNationality', label: 'Nationality', type: 'text', placeholder: 'Enter nationality', icon: 'flag' },
         { name: 'documentType', label: 'Document Type', type: 'select', options: ['Passport'], placeholder: 'Select document type', icon: 'id-card' },
         { name: 'documentNo', label: 'Document No', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
         { name: 'documentExpiry', label: 'Expiry Date', type: 'date', placeholder: 'Select expiry date', icon: 'calendar-times' },
-        { name: 'documentIssueCountry', label: 'Issue Country', type: 'text', placeholder: 'Enter issue country', icon: 'globe' },
+        // { name: 'documentIssueCountry', label: 'Issue Country', type: 'text', placeholder: 'Enter issue country', icon: 'globe' },
     ];
 
     const section3Fields = [

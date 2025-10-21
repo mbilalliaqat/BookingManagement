@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
-import { fetchEntryCounts } from '../../ui/api'; // Ensure this import is correct
+import { fetchEntryCounts } from '../../ui/api';
 
 const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -41,6 +41,16 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     });
 
     const [isLoading, setIsLoading] = useState(false);
+
+    // Calculate withdraw when additional_charges changes
+    useEffect(() => {
+        const additionalCharges = parseInt(data.additional_charges) || 0;
+        const calculatedWithdraw = 13200 + additionalCharges;
+        setData(prev => ({
+            ...prev,
+            withdraw: calculatedWithdraw.toString()
+        }));
+    }, [data.additional_charges]);
 
     // Fetch entry counts on component mount
     useEffect(() => {
@@ -115,8 +125,9 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, [editEntry, user?.username, entryNumber, totalEntries]);
 
     const handleChange = (e) => {
-        setData({ ...data, [e.target.name]: e.target.value });
-        setPrevError({ ...prevError, [e.target.name]: '' });
+        const { name, value } = e.target;
+        setData(prev => ({ ...prev, [name]: value }));
+        setPrevError(prev => ({ ...prev, [name]: '' }));
     };
 
     const handleSubmit = async (e) => {
@@ -209,7 +220,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 entry: data.entry
             };
 
-            // Debug: Log the request data to verify file_no is included
             console.log('Request Data:', requestData);
 
             try {
@@ -269,18 +279,18 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         <div className="overflow-y-auto flex items-center justify-center bg-white p-4">
             <div className="h-[70vh] w-full max-w-3xl p-8 rounded-md">
                 <div className="flex items-center justify-between mb-6">
-    <div className="text-2xl font-semibold relative inline-block">
-        PROTECTOR FORM
-        <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
-    </div>
-    <button
-        type="button"
-        onClick={onCancel}
-        className="text-gray-700 hover:text-gray-900 transition-colors"
-    >
-        <i className="fas fa-arrow-left text-xl"></i>
-    </button>
-</div>
+                    <div className="text-2xl font-semibold relative inline-block">
+                        PROTECTOR FORM
+                        <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="text-gray-700 hover:text-gray-900 transition-colors"
+                    >
+                        <i className="fas fa-arrow-left text-xl"></i>
+                    </button>
+                </div>
                 <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
                     <div className="flex flex-wrap justify-between gap-4">
                         <div className="w-full sm:w-[calc(50%-10px)]">
@@ -355,8 +365,8 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 type="text"
                                 name="withdraw"
                                 value={data.withdraw}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                readOnly
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 bg-gray-100 cursor-not-allowed"
                             />
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">

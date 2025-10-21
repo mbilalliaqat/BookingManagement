@@ -653,7 +653,7 @@ const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (
                 title="Total Bookings" 
             >
                 <div className="relative z-10">
-                    <h2 className="text-black text-[0.65rem] font-bold uppercase tracking-wide font-inter mb-1 truncate">Bookings</h2>
+                    <h2 className="text-black text-[0.65rem] font-bold uppercase tracking-wide font-inter mb-1 truncate">kings</h2>
                     <p className="text-sm font-bold text-white">
                     {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.totalBookings.toLocaleString()}
                     </p>

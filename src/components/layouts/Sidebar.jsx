@@ -34,7 +34,7 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/admin/services', icon: 'fa-cogs', label: 'Services' },
     { path: '/admin/protector', icon: 'fa-shield-alt', label: 'Protector' },
     { path: '/admin/expense', icon: 'fa-money-bill-wave', label: 'Cash Expense' },
-    { path: '/admin/refunded', icon: 'fa-undo', label: 'Refunded MCB' },
+    { path: '/admin/refunded', icon: 'fa-undo', label: 'MCB Paid/Refund' },
     { path: '/admin/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/admin/officeAccount', icon: 'fa-building', label: 'Office Accounts' },
     { path: '/admin/vender', icon: 'fa-store', label: 'Vender' },

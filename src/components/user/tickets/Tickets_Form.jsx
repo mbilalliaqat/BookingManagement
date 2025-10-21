@@ -84,46 +84,83 @@ const AutoCalculate = () => {
     return null;
 };
 
-const PassengerDetailsFields = ({ index, fieldPrefix }) => (
-    <motion.div
-        key={index}
-        variants={{
-            hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
-        }}
-        className="border p-4 rounded-md mb-4 bg-gray-50"
-    >
-        <h4 className="text-lg font-semibold mb-3 text-purple-700">Passenger {index + 1} Details</h4>
-        {([
-            { label: 'Title', name: 'title', as: 'select', options: PASSENGER_TITLE_OPTIONS, placeholder: 'Select title' },
-            { label: 'First Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
-            { label: 'Last Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
-            { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
-            { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
-                        { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
-            { label: 'Date of Birth', name: 'dob', type: 'date', placeholder: 'Select date of birth' },
-            { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'Enter nationality' },
-            { label: 'Expiry Date', name: 'documentExpiry', type: 'date', placeholder: 'Select expiry date' },
-            { label: 'Issue Country', name: 'issueCountry', type: 'text', placeholder: 'Enter issue country' },
+const PassengerDetailsFields = ({ index, fieldPrefix }) => {
+    const [showOptionalFields, setShowOptionalFields] = useState(false);
+
+    const requiredFields = [
+        { label: 'Title', name: 'title', as: 'select', options: PASSENGER_TITLE_OPTIONS, placeholder: 'Select title' },
+        { label: 'First Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
+        { label: 'Last Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
+        { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
+        { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
+        { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
+    ];
+
+    const optionalFields = [
+        { label: 'Date of Birth', name: 'dob', type: 'date', placeholder: 'Select date of birth' },
+        { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'Enter nationality' },
+        { label: 'Expiry Date', name: 'documentExpiry', type: 'date', placeholder: 'Select expiry date' },
+        { label: 'Issue Country', name: 'issueCountry', type: 'text', placeholder: 'Enter issue country' },
+    ];
+
+    return (
+        <motion.div
+            key={index}
+            variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
+            }}
+            className="border p-4 rounded-md mb-4 bg-gray-50"
+        >
+            <h4 className="text-lg font-semibold mb-3 text-purple-700">Passenger {index + 1} Details</h4>
             
-        ]).map(field => (
-            <div className="mb-4" key={field.name}>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${fieldPrefix}.${field.name}`}>
-                    {field.label}
-                </label>
-                {field.as === 'select' ? (
-                    <Field
-                        as="select"
-                        id={`${fieldPrefix}.${field.name}`}
-                        name={`${fieldPrefix}.${field.name}`}
-                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    >
-                        <option value="">{field.placeholder}</option>
-                        {field.options.map(option => (
-                            <option key={option} value={option}>{option}</option>
-                        ))}
-                    </Field>
-                ) : (
+            {/* Required Fields */}
+            {requiredFields.map(field => (
+                <div className="mb-4" key={field.name}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${fieldPrefix}.${field.name}`}>
+                        {field.label}
+                    </label>
+                    {field.as === 'select' ? (
+                        <Field
+                            as="select"
+                            id={`${fieldPrefix}.${field.name}`}
+                            name={`${fieldPrefix}.${field.name}`}
+                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        >
+                            <option value="">{field.placeholder}</option>
+                            {field.options.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </Field>
+                    ) : (
+                        <Field
+                            id={`${fieldPrefix}.${field.name}`}
+                            type={field.type}
+                            name={`${fieldPrefix}.${field.name}`}
+                            placeholder={field.placeholder}
+                            className="w-full border border-gray-300 rounded-md px-3 py-1"
+                        />
+                    )}
+                    <ErrorText name={`${fieldPrefix}.${field.name}`} />
+                </div>
+            ))}
+
+            {/* Toggle Button */}
+            <button
+                type="button"
+                onClick={() => setShowOptionalFields(!showOptionalFields)}
+                className="mb-3 text-purple-600 hover:text-purple-800 flex items-center text-sm font-medium"
+            >
+                <i className={`fas fa-chevron-${showOptionalFields ? 'up' : 'down'} mr-2`}></i>
+                {showOptionalFields ? 'Hide' : 'Show'} Additional Details
+            </button>
+
+            {/* Optional Fields */}
+            {showOptionalFields && optionalFields.map(field => (
+                <div className="mb-4" key={field.name}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${fieldPrefix}.${field.name}`}>
+                        {field.label}
+                    </label>
                     <Field
                         id={`${fieldPrefix}.${field.name}`}
                         type={field.type}
@@ -131,12 +168,12 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => (
                         placeholder={field.placeholder}
                         className="w-full border border-gray-300 rounded-md px-3 py-1"
                     />
-                )}
-                <ErrorText name={`${fieldPrefix}.${field.name}`} />
-            </div>
-        ))}
-    </motion.div>
-);
+                    <ErrorText name={`${fieldPrefix}.${field.name}`} />
+                </div>
+            ))}
+        </motion.div>
+    );
+};
 
 const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider }) => {
     const handleCountChange = useCallback((type, delta) => {
@@ -231,17 +268,17 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
             { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Enter booking date', icon: 'calendar-alt' },
             { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
-           {
-      name: 'customer_add',
-      label: 'Add Customer',
-      type: 'select',
-      options: customerNames.map((c) => ({
-        value: c.name,
-        label: `${c.name} (${c.mobile_number})`,
-      })),
-      placeholder: 'Select Customer Name',
-      icon: 'address-card',
-    },
+    //        {
+    //   name: 'customer_add',
+    //   label: 'Add Customer',
+    //   type: 'select',
+    //   options: customerNames.map((c) => ({
+    //     value: c.name,
+    //     label: `${c.name} (${c.mobile_number})`,
+    //   })),
+    //   placeholder: 'Select Customer Name',
+    //   icon: 'address-card',
+    // },
             { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
             { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
             { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter return date', icon: 'calendar-alt' },
@@ -644,7 +681,7 @@ useEffect(() => {
           className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
           onClick={() => setShowPassengerSlider(!showPassengerSlider)}
         >
-          <span>{`${values.adults} Adults, ${values.children} Children, ${values.infants} Infants`}</span>
+          <span>{`${values.adults} Adt, ${values.children} Chd, ${values.infants} Inf`}</span>
           <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
         </div>
       ) : field.type === 'vendor_select' ? (
@@ -691,15 +728,36 @@ useEffect(() => {
 
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-6 px-8 rounded-t-xl">
-                <motion.h2 className="text-2xl font-bold text-black flex items-center" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                    <i className="fas fa-ticket-alt mr-3"></i>
-                    {editEntry ? 'Update Ticket' : 'New Ticket Booking'}
-                </motion.h2>
-                <motion.p className="text-blue-600 mt-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.5 }}>
-                    Please fill in the ticket details
-                </motion.p>
-            </div>
+           <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-6 px-8 rounded-t-xl">
+    <div className="flex items-center justify-between">
+        <div>
+            <motion.h2 
+                className="text-2xl font-bold text-black flex items-center" 
+                initial={{ opacity: 0, y: -20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.5 }}
+            >
+                <i className="fas fa-ticket-alt mr-3"></i>
+                {editEntry ? 'Update Ticket' : 'New Ticket Booking'}
+            </motion.h2>
+            <motion.p 
+                className="text-blue-500 mt-1" 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                transition={{ delay: 0.2, duration: 0.5 }}
+            >
+                Please fill in the ticket details
+            </motion.p>
+        </div>
+        <button
+            type="button"
+            onClick={onCancel}
+            className="text-black hover:text-blue-100 transition-colors"
+        >
+            <i className="fas fa-arrow-left text-xl"></i>
+        </button>
+    </div>
+</div>
             <div className="px-8 pt-6">
                 <div className="flex justify-between mb-8">
                     {[1, 2, 3].map((step) => (

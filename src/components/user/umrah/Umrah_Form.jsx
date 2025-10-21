@@ -84,8 +84,8 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => (
         <h4 className="text-lg font-semibold mb-3 text-purple-700">Passenger {index + 1} Details</h4>
         {([
             { label: 'Title', name: 'title', as: 'select', options: PASSENGER_TITLE_OPTIONS, placeholder: 'Select title' },
-            { label: 'First Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
-            { label: 'Last Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
+            { label: 'Full Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
+            { label: 'Father Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
             { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
             { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
             { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
@@ -433,53 +433,65 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         fetchNames();
 
         const getCounts = async () => {
-            if (!editEntry) {
-                const umrahCounts = await fetchEntryCounts('umrah');
-                setEntryNumber((umrahCounts?.global_count || 0) + 1);
-                setTotalEntries((umrahCounts?.global_count || 0) + 1);
+            const counts = await fetchEntryCounts();
+            if (counts) {
+                const umrahCounts = counts.find(c => c.form_type === 'umrah');
+                if (umrahCounts) {
+                    setEntryNumber(umrahCounts.current_count + 1);
+                    setTotalEntries(umrahCounts.global_count + 1);
+                } else {
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
             } else {
-                setEntryNumber(parseInt(editEntry.entry.split('/')[0]));
-                setTotalEntries(parseInt(editEntry.entry.split('/')[1]));
-                setOriginalPayments({
-                    paidCash: parseFloat(editEntry.paidCash) || 0,
-                    paidInBank: parseFloat(editEntry.paidInBank) || 0
-                });
-                setFormInitialValues({
-                    userName: editEntry.userName || '',
-                    agentName: editEntry.agent_name || '',
-                    customerAdd: editEntry.customerAdd || '',
-                    reference: editEntry.reference || '',
-                    booking_date: formatDateForInput(editEntry.booking_date),
-                    entry: editEntry.entry || '0/0',
-                    packageDetail: editEntry.packageDetail || '',
-                    depart_date: formatDateForInput(editEntry.depart_date),
-                    return_date: formatDateForInput(editEntry.return_date),
-                    sector: editEntry.sector || '',
-                    airline: editEntry.airline || '',
-                    adults: editEntry.adults || 1,
-                    children: editEntry.children || 0,
-                    infants: editEntry.infants || 0,
-                    passengers: JSON.parse(editEntry.passportDetail) || [{ ...DEFAULT_PASSENGER_DETAIL }],
-                    receivableAmount: editEntry.receivableAmount || '',
-                    paidCash: editEntry.paidCash || '',
-                    bank_title: editEntry.bank_title || '',
-                    paidInBank: editEntry.paidInBank || '',
-                    payableToVendor: editEntry.payableToVendor || '',
-                    vendorName: typeof editEntry.vendorName === 'string' ? editEntry.vendorName.split(',') : editEntry.vendorName || [],
-                    profit: editEntry.profit || '',
-                    remainingAmount: editEntry.remainingAmount || '0'
-                });
+                setEntryNumber(1);
+                setTotalEntries(1);
             }
         };
-        getCounts();
+        if (!editEntry) {
+            getCounts();
+        } else {
+            setEntryNumber(parseInt(editEntry.entry.split('/')[0]));
+            setTotalEntries(parseInt(editEntry.entry.split('/')[1]));
+            setOriginalPayments({
+                paidCash: parseFloat(editEntry.paidCash) || 0,
+                paidInBank: parseFloat(editEntry.paidInBank) || 0
+            });
+            setFormInitialValues({
+                userName: editEntry.userName || '',
+                agentName: editEntry.agent_name || '',
+                customerAdd: editEntry.customerAdd || '',
+                reference: editEntry.reference || '',
+                booking_date: formatDateForInput(editEntry.booking_date),
+                entry: editEntry.entry || '0/0',
+                packageDetail: editEntry.packageDetail || '',
+                depart_date: formatDateForInput(editEntry.depart_date),
+                return_date: formatDateForInput(editEntry.return_date),
+                sector: editEntry.sector || '',
+                airline: editEntry.airline || '',
+                adults: editEntry.adults || 1,
+                children: editEntry.children || 0,
+                infants: editEntry.infants || 0,
+                passengers: JSON.parse(editEntry.passportDetail) || [{ ...DEFAULT_PASSENGER_DETAIL }],
+                receivableAmount: editEntry.receivableAmount || '',
+                paidCash: editEntry.paidCash || '',
+                bank_title: editEntry.bank_title || '',
+                paidInBank: editEntry.paidInBank || '',
+                payableToVendor: editEntry.payableToVendor || '',
+                vendorName: typeof editEntry.vendorName === 'string' ? editEntry.vendorName.split(',') : editEntry.vendorName || [],
+                profit: editEntry.profit || '',
+                remainingAmount: editEntry.remainingAmount || '0'
+            });
+        }
     }, [editEntry, user]);
 
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: `Umrah ${entryNumber}/${totalEntries}`
+            userName: user?.username || '',
+            entry: `${entryNumber}/${totalEntries}`
         }));
-    }, [entryNumber, totalEntries]);
+    }, [entryNumber, totalEntries, user]);
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         setSubmitting(true);
@@ -490,9 +502,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         })));
 
         try {
-            const entryValueToSubmit = editEntry ? editEntry.entry : `Umrah ${entryNumber}/${totalEntries}`;
-            const parsedEntryNumber = parseInt(entryValueToSubmit.replace('Umrah ', '').split('/')[0]);
-
+            const entryValueToSubmit = editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`;
             const vendorNamesArray = Array.isArray(values.vendorName) ? values.vendorName : [];
             const vendorNamesString = vendorNamesArray.join(',');
 
@@ -535,8 +545,6 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const umrahData = await umrahResponse.json();
 
             if (!editEntry) {
-                await incrementEntryCounts('umrah', parsedEntryNumber);
-
                 const commonDetail = [
                     values.packageDetail || '',
                     values.sector || '',
@@ -829,7 +837,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
                     onClick={() => setShowPassengerSlider(!showPassengerSlider)}
                 >
-                    <span>{`${values.adults} Adults, ${values.children} Children, ${values.infants} Infants`}</span>
+                    <span>{`${values.adults} Adt, ${values.children} Chd, ${values.infants} Inf`}</span>
                     <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
                 </div>
             ) : (

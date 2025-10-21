@@ -180,7 +180,25 @@ const Visa = () => {
         { header: 'PTN/PERMISSION', accessor: 'ptn_permission' },
 
         // { header: 'ENTRY', accessor: 'entry' },
-        { header: 'STATUS', accessor: 'status' }, // Added status column
+       {
+        header: 'STATUS',
+        accessor: 'status',
+        render: (cellValue, row) => (
+            <span
+                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    row.status === 'Processing'
+                        ? 'bg-red-100 text-red-500'
+                        : row.status === 'Complete'
+                        ? 'bg-green-100 text-green-500'
+                        : row.status === 'Deliver'
+                        ? 'bg-blue-100 text-blue-500'
+                        : 'bg-gray-100 text-gray-500'
+                }`}
+            >
+                {row.status || 'N/A'}
+            </span>
+        )
+    }, 
         
         
         { header: 'AGENT NAME', accessor: 'agent_name' },

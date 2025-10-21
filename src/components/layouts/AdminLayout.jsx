@@ -9,7 +9,7 @@ function AdminLayout({ children }) {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-hidden p-6">
-          <div className="h-full max-w-6xl mx-auto">
+          <div className=" max-w mx-auto">
             {children}
           </div>
         </main>
