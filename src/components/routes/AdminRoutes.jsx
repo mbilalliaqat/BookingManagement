@@ -17,8 +17,9 @@ import Agent from '../user/agent/Agent'
 import RefundCustomer from '../user/refundCustomer/RefundCustomer'
 import Navtcc from '../user/navtcc/Navtcc'
 import RemainingPay from '../user/paymentHistory/RemainingPay'
-import PaymentRecord from '../admin/PaymentRecord'
-import RemainingAmounts from '../user/paymentHistory/RemainingAmounts';
+import RemainingAmounts from '../user/paymentHistory/RemainingAmounts'
+import Profit from '../user/paymentHistory/Profit'
+
 
 
 const AdminRoutes = () => {
@@ -42,8 +43,8 @@ const AdminRoutes = () => {
           <Route path="/employee" element={<Employee />} />
           <Route path="/agent" element={<Agent />} />
             <Route path="/remainingPay" element={<RemainingPay />} />
-            <Route path='/payment' element={<PaymentRecord/>}/>
             <Route path="/remaining-amounts" element={<RemainingAmounts />} />
+            <Route path="/profit" element={<Profit />} />
 
 
           </Routes>

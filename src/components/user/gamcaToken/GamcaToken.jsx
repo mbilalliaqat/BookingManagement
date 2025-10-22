@@ -144,7 +144,7 @@ const GamcaToken = () => {
         )
     },
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-        { header: 'NATIONALITY', accessor: 'passengerNationality' },
+        // { header: 'NATIONALITY', accessor: 'passengerNationality' },
         { header: 'DOCUMENT TYPE', accessor: 'documentType' },
         { header: 'DOCUMENT NO', accessor: 'documentNo' },
          {
@@ -159,7 +159,7 @@ const GamcaToken = () => {
     },
     { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
-        { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
+        // { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
           { 

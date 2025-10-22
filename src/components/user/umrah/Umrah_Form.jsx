@@ -6,6 +6,7 @@ import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
 import axios from 'axios';
+import VenderNameModal from '../../ui/VenderNameModal';
 
 const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
@@ -54,63 +55,101 @@ const AutoCalculate = () => {
         const receivable = parseFloat(values.receivableAmount) || 0;
         const cashPaid = parseFloat(values.paidCash) || 0;
         const bankPaid = parseFloat(values.paidInBank) || 0;
-        const payableToVendor = parseFloat(values.payableToVendor) || 0;
+        
+        const totalPayableToVendors = values.vendors?.reduce((sum, vendor) => {
+            return sum + (parseFloat(vendor.payable_amount) || 0);
+        }, 0) || 0;
 
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remainingAmount', remaining.toFixed(2));
 
-        const profit = payableToVendor > 0 ? receivable - payableToVendor : '';
+        const profit = totalPayableToVendors > 0 ? receivable - totalPayableToVendors : '';
         setFieldValue('profit', profit ? profit.toFixed(2) : '');
     }, [
         values.receivableAmount,
         values.paidCash,
         values.paidInBank,
-        values.payableToVendor,
+        values.vendors,
         setFieldValue
     ]);
 
     return null;
 };
 
-const PassengerDetailsFields = ({ index, fieldPrefix }) => (
-    <motion.div
-        key={index}
-        variants={{
-            hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
-        }}
-        className="border p-4 rounded-md mb-4 bg-gray-50"
-    >
-        <h4 className="text-lg font-semibold mb-3 text-purple-700">Passenger {index + 1} Details</h4>
-        {([
-            { label: 'Title', name: 'title', as: 'select', options: PASSENGER_TITLE_OPTIONS, placeholder: 'Select title' },
-            { label: 'Full Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
-            { label: 'Father Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
-            { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
-            { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
-            { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
-            { label: 'Date of Birth', name: 'dob', type: 'date', placeholder: 'Select date of birth' },
-            { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'Enter nationality' },
-            { label: 'Expiry Date', name: 'documentExpiry', type: 'date', placeholder: 'Select expiry date' },
-            { label: 'Issue Country', name: 'issueCountry', type: 'text', placeholder: 'Enter issue country' },
-        ]).map(field => (
-            <div className="mb-4" key={field.name}>
-                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${fieldPrefix}.${field.name}`}>
-                    {field.label}
-                </label>
-                {field.as === 'select' ? (
-                    <Field
-                        as="select"
-                        id={`${fieldPrefix}.${field.name}`}
-                        name={`${fieldPrefix}.${field.name}`}
-                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    >
-                        <option value="">{field.placeholder}</option>
-                        {field.options.map(option => (
-                            <option key={option} value={option}>{option}</option>
-                        ))}
-                    </Field>
-                ) : (
+const PassengerDetailsFields = ({ index, fieldPrefix }) => {
+    const [showOptionalFields, setShowOptionalFields] = useState(false);
+
+    const requiredFields = [
+        { label: 'Title', name: 'title', as: 'select', options: PASSENGER_TITLE_OPTIONS, placeholder: 'Select title' },
+        { label: 'Full Name', name: 'firstName', type: 'text', placeholder: 'Enter first name' },
+        { label: 'Father Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
+        { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
+        { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
+        { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
+    ];
+
+    const optionalFields = [
+        { label: 'Date of Birth', name: 'dob', type: 'date', placeholder: 'Select date of birth' },
+        { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'Enter nationality' },
+        { label: 'Expiry Date', name: 'documentExpiry', type: 'date', placeholder: 'Select expiry date' },
+        { label: 'Issue Country', name: 'issueCountry', type: 'text', placeholder: 'Enter issue country' },
+    ];
+
+    return (
+        <motion.div
+            key={index}
+            variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
+            }}
+            className="border p-4 rounded-md mb-4 bg-gray-50"
+        >
+            <h4 className="text-lg font-semibold mb-3 text-purple-700">Passenger {index + 1} Details</h4>
+            
+            {requiredFields.map(field => (
+                <div className="mb-4" key={field.name}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${fieldPrefix}.${field.name}`}>
+                        {field.label}
+                    </label>
+                    {field.as === 'select' ? (
+                        <Field
+                            as="select"
+                            id={`${fieldPrefix}.${field.name}`}
+                            name={`${fieldPrefix}.${field.name}`}
+                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        >
+                            <option value="">{field.placeholder}</option>
+                            {field.options.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </Field>
+                    ) : (
+                        <Field
+                            id={`${fieldPrefix}.${field.name}`}
+                            type={field.type}
+                            name={`${fieldPrefix}.${field.name}`}
+                            placeholder={field.placeholder}
+                            className="w-full border border-gray-300 rounded-md px-3 py-1"
+                        />
+                    )}
+                    <ErrorText name={`${fieldPrefix}.${field.name}`} />
+                </div>
+            ))}
+
+            <button
+                type="button"
+                onClick={() => setShowOptionalFields(!showOptionalFields)}
+                className="mb-3 text-purple-600 hover:text-purple-800 flex items-center text-sm font-medium"
+            >
+                <i className={`fas fa-chevron-${showOptionalFields ? 'up' : 'down'} mr-2`}></i>
+                {showOptionalFields ? 'Hide' : 'Show'} Additional Details
+            </button>
+
+            {showOptionalFields && optionalFields.map(field => (
+                <div className="mb-4" key={field.name}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`${fieldPrefix}.${field.name}`}>
+                        {field.label}
+                    </label>
                     <Field
                         id={`${fieldPrefix}.${field.name}`}
                         type={field.type}
@@ -118,12 +157,12 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => (
                         placeholder={field.placeholder}
                         className="w-full border border-gray-300 rounded-md px-3 py-1"
                     />
-                )}
-                <ErrorText name={`${fieldPrefix}.${field.name}`} />
-            </div>
-        ))}
-    </motion.div>
-);
+                    <ErrorText name={`${fieldPrefix}.${field.name}`} />
+                </div>
+            ))}
+        </motion.div>
+    );
+};
 
 const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider }) => {
     const handleCountChange = useCallback((type, delta) => {
@@ -201,122 +240,104 @@ const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider })
     );
 };
 
-const MultiSelectVendor = ({ field, form, options, label, placeholder }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedVendors, setSelectedVendors] = useState(field.value || []);
-
-    const filteredOptions = options.filter(option =>
-        option.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const handleSelectVendor = (vendor) => {
-        const newSelected = selectedVendors.includes(vendor)
-            ? selectedVendors.filter(v => v !== vendor)
-            : [...selectedVendors, vendor];
-        setSelectedVendors(newSelected);
-        form.setFieldValue(field.name, newSelected);
+const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry }) => {
+    const addVendor = () => {
+        const newVendors = [...(values.vendors || []), { vendor_name: '', payable_amount: '' }];
+        setFieldValue('vendors', newVendors);
     };
 
-    const removeVendor = (vendor) => {
-        const newSelected = selectedVendors.filter(v => v !== vendor);
-        setSelectedVendors(newSelected);
-        form.setFieldValue(field.name, newSelected);
+    const removeVendor = (index) => {
+        const newVendors = values.vendors.filter((_, i) => i !== index);
+        setFieldValue('vendors', newVendors);
     };
 
     return (
-        <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-                {label}
-            </label>
-            
-            {/* Selected Vendors Display */}
-            <div className="border border-gray-300 rounded-md p-2 mb-2 min-h-[40px]">
-                {selectedVendors.length === 0 ? (
-                    <span className="text-gray-500">{placeholder}</span>
-                ) : (
-                    <div className="flex flex-wrap gap-2">
-                        {selectedVendors.map((vendor) => (
-                            <span
-                                key={vendor}
-                                className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center"
-                            >
-                                {vendor}
-                                <button
-                                    type="button"
-                                    onClick={() => removeVendor(vendor)}
-                                    className="ml-1 text-blue-600 hover:text-blue-800"
-                                >
-                                    <i className="fas fa-times text-xs"></i>
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Dropdown Toggle */}
-            <div
-                className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center relative"
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <span className="text-gray-700">
-                    {selectedVendors.length > 0 
-                        ? `${selectedVendors.length} vendor(s) selected` 
-                        : 'Click to select vendors'
-                    }
-                </span>
-                <i className={`fas ${isOpen ? 'fa-chevron-up' : 'fa-chevron-down'} text-gray-400`}></i>
-            </div>
-
-            {/* Dropdown Options */}
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
+        <div className="col-span-2 border border-purple-200 rounded-lg p-4 bg-purple-50">
+            <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-semibold text-purple-700 flex items-center">
+                    <i className="fas fa-store mr-2"></i>
+                    Vendor Details
+                </h4>
+                <button
+                    type="button"
+                    onClick={addVendor}
+                    className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 flex items-center text-sm"
                 >
-                    {/* Search Input */}
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search vendors..."
-                        className="w-full px-3 py-2 border-b border-gray-200 focus:outline-none"
-                    />
-                    
-                    {/* Options */}
-                    <div className="py-2">
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-2 text-gray-500">No vendors found</div>
-                        ) : (
-                            filteredOptions.map((option) => (
-                                <div
-                                    key={option}
-                                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${
-                                        selectedVendors.includes(option) ? 'bg-blue-50 text-blue-600' : ''
-                                    }`}
-                                    onClick={() => handleSelectVendor(option)}
-                                >
-                                    <span>{option}</span>
-                                    {selectedVendors.includes(option) ? (
-                                        <i className="fas fa-check text-blue-600"></i>
-                                    ) : (
-                                        <i className="fas fa-square text-gray-400"></i>
+                    <i className="fas fa-plus mr-2"></i> Add Vendor
+                </button>
+            </div>
+
+            {values.vendors && values.vendors.length > 0 ? (
+                <div className="space-y-4">
+                    {values.vendors.map((vendor, index) => (
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-md border border-gray-200"
+                        >
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Vendor Name
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <Field
+                                        as="select"
+                                        name={`vendors[${index}].vendor_name`}
+                                        className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={editEntry}
+                                    >
+                                        <option value="">Select vendor name</option>
+                                        {vendorNames.map((name) => (
+                                            <option key={name} value={name}>
+                                                {name}
+                                            </option>
+                                        ))}
+                                    </Field>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsVendorModalOpen(true)}
+                                        className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700"
+                                    >
+                                        <i className="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <ErrorText name={`vendors[${index}].vendor_name`} />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Payable Amount
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <Field
+                                        type="number"
+                                        name={`vendors[${index}].payable_amount`}
+                                        placeholder="Enter payable amount"
+                                        className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={editEntry}
+                                    />
+                                    {values.vendors.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeVendor(index)}
+                                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
+                                        >
+                                            <i className="fas fa-trash"></i>
+                                        </button>
                                     )}
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </motion.div>
+                                <ErrorText name={`vendors[${index}].payable_amount`} />
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-4 text-gray-500">
+                    <i className="fas fa-info-circle mr-2"></i>
+                    Click "Add Vendor" to add vendor details
+                </div>
             )}
-            
-            {/* Error Message */}
-            <ErrorMessage
-                name={field.name}
-                component="p"
-                className="mt-1 text-sm text-red-500"
-            />
         </div>
     );
 };
@@ -329,6 +350,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [totalEntries, setTotalEntries] = useState(0);
     const [vendorNames, setVendorNames] = useState([]);
     const [agentNames, setAgentNames] = useState([]);
+    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
     const [originalPayments, setOriginalPayments] = useState({ paidCash: 0, paidInBank: 0 });
 
     const bankOptions = [
@@ -360,8 +382,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paidCash: '',
         bank_title: '',
         paidInBank: '',
-        payableToVendor: '',
-        vendorName: [],
+        vendors: [{ vendor_name: '', payable_amount: '' }],
         profit: '',
         remainingAmount: '0'
     });
@@ -384,12 +405,12 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 title: Yup.string().required('Title is required'),
                 firstName: Yup.string().required('First Name is required'),
                 lastName: Yup.string().required('Last Name is required'),
-                dob: Yup.date().required('Date of Birth is required').typeError('Invalid date'),
-                nationality: Yup.string().required('Nationality is required'),
                 documentType: Yup.string().required('Document Type is required'),
                 documentNo: Yup.string().required('Document Number is required'),
-                documentExpiry: Yup.date().required('Expiry Date is required').typeError('Invalid date'),
-                issueCountry: Yup.string().required('Issue Country is required'),
+                dob: Yup.date().nullable().notRequired().typeError('Invalid date'),
+                nationality: Yup.string().notRequired(),
+                documentExpiry: Yup.date().nullable().notRequired().typeError('Invalid date'),
+                issueCountry: Yup.string().notRequired(),
             })
         ).test(
             'has-passenger-details',
@@ -403,12 +424,16 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 return true;
             }
         ),
+        vendors: Yup.array().of(
+            Yup.object().shape({
+                vendor_name: Yup.string().required('Vendor name is required'),
+                payable_amount: Yup.number().required('Payable amount is required').min(0, 'Amount must be positive'),
+            })
+        ).min(1, 'At least one vendor is required'),
         receivableAmount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
         paidCash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
         bank_title: Yup.string().required('Bank Title is required'),
         paidInBank: Yup.number().required('Paid In Bank is required').typeError('Paid In Bank must be a number'),
-        payableToVendor: Yup.number().required('Payable To Vendor is required').typeError('Payable To Vendor must be a number'),
-        vendorName: Yup.array().min(1, 'At least one vendor must be selected').required('Vendor Name is required'),
         profit: Yup.number(),
         remainingAmount: Yup.number()
     });
@@ -477,8 +502,9 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paidCash: editEntry.paidCash || '',
                 bank_title: editEntry.bank_title || '',
                 paidInBank: editEntry.paidInBank || '',
-                payableToVendor: editEntry.payableToVendor || '',
-                vendorName: typeof editEntry.vendorName === 'string' ? editEntry.vendorName.split(',') : editEntry.vendorName || [],
+                vendors: editEntry.vendorName && editEntry.payableToVendor ? 
+                    [{ vendor_name: editEntry.vendorName, payable_amount: editEntry.payableToVendor }] : 
+                    [{ vendor_name: '', payable_amount: '' }],
                 profit: editEntry.profit || '',
                 remainingAmount: editEntry.remainingAmount || '0'
             });
@@ -493,6 +519,12 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }));
     }, [entryNumber, totalEntries, user]);
 
+    const handleVendorAdded = async (newVendorName) => {
+        if (newVendorName && !vendorNames.includes(newVendorName)) {
+            setVendorNames(prev => [...prev, newVendorName].sort());
+        }
+    };
+
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         setSubmitting(true);
         const passportDetail = JSON.stringify(values.passengers.map(p => ({
@@ -503,8 +535,9 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
         try {
             const entryValueToSubmit = editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`;
-            const vendorNamesArray = Array.isArray(values.vendorName) ? values.vendorName : [];
-            const vendorNamesString = vendorNamesArray.join(',');
+            const totalPayableToVendor = values.vendors.reduce((sum, vendor) => {
+                return sum + (parseFloat(vendor.payable_amount) || 0);
+            }, 0);
 
             const requestData = {
                 userName: values.userName,
@@ -525,8 +558,9 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paidCash: parseFloat(values.paidCash) || 0,
                 bank_title: values.bank_title || null,
                 paidInBank: parseFloat(values.paidInBank) || 0,
-                payableToVendor: parseFloat(values.payableToVendor) || 0,
-                vendorName: vendorNamesString || null,
+                payableToVendor: totalPayableToVendor,
+                vendorName: values.vendors.map(v => v.vendor_name).join(', '),
+                vendors_detail: JSON.stringify(values.vendors),
                 profit: parseFloat(values.profit) || 0,
                 remainingAmount: parseFloat(values.remainingAmount) || 0,
                 booking_date: values.booking_date || null,
@@ -554,15 +588,12 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`.trim()
                 ].join(',');
 
-                if (vendorNamesArray.length > 0) {
-                    const totalPayable = parseFloat(values.payableToVendor) || 0;
-                    const amountPerVendor = totalPayable / vendorNamesArray.length;
-
-                    for (const vendorName of vendorNamesArray) {
+                for (const vendor of values.vendors) {
+                    if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
-                            vender_name: vendorName,
+                            vender_name: vendor.vendor_name,
                             detail: commonDetail,
-                            credit: amountPerVendor,
+                            credit: parseFloat(vendor.payable_amount) || 0,
                             date: new Date().toISOString().split('T')[0],
                             entry: entryValueToSubmit,
                             bank_title: values.bank_title,
@@ -663,56 +694,6 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         console.error("Error submitting to office account:", error);
                     }
                 }
-
-                if (editEntry) {
-                    // Logic to handle vendor payment updates in edit mode
-                    const payableToVendor_New = parseFloat(values.payableToVendor) || 0;
-                    const original_payableToVendor = parseFloat(editEntry.payableToVendor) || 0;
-                    const vendorPayment_diff = payableToVendor_New - original_payableToVendor;
-
-                    if (vendorPayment_diff !== 0) {
-                        const amountPerVendor = vendorPayment_diff / vendorNamesArray.length;
-                        for (const vendorName of vendorNamesArray) {
-                            const vendorData = {
-                                user_name: vendorName,
-                                amount: amountPerVendor,
-                                date: new Date().toISOString().split('T')[0],
-                            };
-                            try {
-                                await fetch(`${BASE_URL}/vender`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(vendorData),
-                                });
-                            } catch (error) {
-                                console.error(`Error updating vendor account for ${vendorName}:`, error);
-                            }
-                        }
-                    }
-                } else {
-                    // Original logic for new entries
-                    if (vendorNamesArray.length > 0 && parseFloat(values.payableToVendor) > 0) {
-                        const totalPayable = parseFloat(values.payableToVendor);
-                        const amountPerVendor = totalPayable / vendorNamesArray.length;
-                        for (const vendorName of vendorNamesArray) {
-                            const vendorData = {
-                                user_name: vendorName,
-                                amount: amountPerVendor,
-                                date: new Date(),
-                            };
-                            try {
-                                await fetch(`${BASE_URL}/vender`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(vendorData),
-                                });
-                            } catch (error) {
-                                console.error(`Error submitting to vendor ${vendorName}:`, error);
-                            }
-                        }
-                    }
-                }
-
             }
 
             resetForm();
@@ -776,94 +757,76 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'paidCash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
         { name: 'bank_title', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paidInBank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
-        { name: 'payableToVendor', label: 'Payable To Vendor', type: 'number', placeholder: 'Enter payable to vendor', icon: 'user-tie' },
-        { name: 'vendorName', label: 'Vendor Names', type: 'multi_select', options: vendorNames, placeholder: 'Select one or more vendors', icon: 'store' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
         { name: 'remainingAmount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
     ];
 
-   const renderField = (field, values, setFieldValue) => (
-    <motion.div 
-        key={field.name}
-        className="mb-4"
-        variants={itemVariants}
-    >
-        {/* Render label only for non-multi_select fields */}
-        {field.type !== 'multi_select' && (
+    const renderField = (field, values, setFieldValue) => (
+        <motion.div 
+            key={field.name}
+            className="mb-4"
+            variants={itemVariants}
+        >
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={field.name}>
                 {field.label}
             </label>
-        )}
-        <div className="relative">
-            {field.type === 'multi_select' ? (
-                <Field name={field.name}>
-                    {({ field: formikField, form }) => (
-                        <MultiSelectVendor
-                            field={formikField}
-                            form={form}
-                            options={field.options}
-                            label={field.label}
-                            placeholder={field.placeholder}
+            <div className="relative">
+                {field.type === 'select' ? (
+                    <Field
+                        as="select"
+                        id={field.name}
+                        name={field.name}
+                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        disabled={field.readOnly}
+                    >
+                        <option value="">Select {field.label}</option>
+                        {field.options && field.options.map(option => (
+                            <option key={option} value={option}>{option}</option>
+                        ))}
+                    </Field>
+                ) : field.type === 'checkbox' ? (
+                    <div className="flex items-center">
+                        <Field
+                            id={field.name}
+                            type="checkbox"
+                            name={field.name}
+                            className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                         />
-                    )}
-                </Field>
-            ) : field.type === 'select' ? (
-                <Field
-                    as="select"
-                    id={field.name}
-                    name={field.name}
-                    className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    disabled={field.readOnly}
-                >
-                    <option value="">Select {field.label}</option>
-                    {field.options && field.options.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                    ))}
-                </Field>
-            ) : field.type === 'checkbox' ? (
-                <div className="flex items-center">
+                        <label htmlFor={field.name} className="ml-2 block text-sm text-gray-700">
+                            {field.label}
+                        </label>
+                    </div>
+                ) : field.type === 'custom_passenger' ? (
+                    <div
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
+                        onClick={() => setShowPassengerSlider(!showPassengerSlider)}
+                    >
+                        <span>{`${values.adults} Adt, ${values.children} Chd, ${values.infants} Inf`}</span>
+                        <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
+                    </div>
+                ) : (
                     <Field
                         id={field.name}
-                        type="checkbox"
+                        type={field.type}
                         name={field.name}
-                        className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        placeholder={field.placeholder}
+                        className={`w-full border border-gray-300 rounded-md px-3 py-1 ${field.readOnly ? 'bg-gray-100' : ''}`}
+                        disabled={field.readOnly}
+                        readOnly={field.readOnly}
                     />
-                    <label htmlFor={field.name} className="ml-2 block text-sm text-gray-700">
-                        {field.label}
-                    </label>
-                </div>
-            ) : field.type === 'custom_passenger' ? (
-                <div
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white flex justify-between items-center"
-                    onClick={() => setShowPassengerSlider(!showPassengerSlider)}
-                >
-                    <span>{`${values.adults} Adt, ${values.children} Chd, ${values.infants} Inf`}</span>
-                    <i className="fas fa-chevron-down text-gray-400 text-sm"></i>
-                </div>
-            ) : (
-                <Field
-                    id={field.name}
-                    type={field.type}
-                    name={field.name}
-                    placeholder={field.placeholder}
-                    className={`w-full border border-gray-300 rounded-md px-3 py-1 ${field.readOnly ? 'bg-gray-100' : ''}`}
-                    disabled={field.readOnly}
-                    readOnly={field.readOnly}
-                />
-            )}
+                )}
 
-            {field.name === 'passengerCount' && showPassengerSlider && (
-                <PassengerCountSlider values={values} setFieldValue={setFieldValue} setShowPassengerSlider={setShowPassengerSlider} />
-            )}
+                {field.name === 'passengerCount' && showPassengerSlider && (
+                    <PassengerCountSlider values={values} setFieldValue={setFieldValue} setShowPassengerSlider={setShowPassengerSlider} />
+                )}
 
-            <ErrorText name={field.name} />
-        </div>
-    </motion.div>
-);
+                <ErrorText name={field.name} />
+            </div>
+        </motion.div>
+    );
 
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
-            {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -895,7 +858,6 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
             </div>
 
-            {/* Progress tabs */}
             <div className="px-8 pt-6">
                 <div className="flex justify-between mb-8">
                     {[1, 2, 3].map((step) => (
@@ -933,7 +895,6 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
             </div>
 
-            {/* Form content */}
             <div className="px-8 pb-8">
                 <Formik
                     initialValues={formInitialValues}
@@ -964,7 +925,18 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                         ))}
                                     </>
                                 )}
-                                {activeSection === 3 && section3Fields.map(field => renderField(field, values, setFieldValue))}
+                                {activeSection === 3 && (
+                                    <>
+                                        {section3Fields.map(field => renderField(field, values, setFieldValue))}
+                                        <VendorSelectionFields 
+                                            values={values} 
+                                            setFieldValue={setFieldValue} 
+                                            vendorNames={vendorNames}
+                                            setIsVendorModalOpen={setIsVendorModalOpen}
+                                            editEntry={editEntry}
+                                        />
+                                    </>
+                                )}
                             </motion.div>
 
                             {errors.general && (
@@ -978,7 +950,6 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </motion.div>
                             )}
 
-                            {/* Navigation buttons */}
                             <motion.div 
                                 className="flex justify-between mt-8 pt-4 border-t border-gray-200"
                                 initial={{ opacity: 0 }}
@@ -1039,6 +1010,11 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     )}
                 </Formik>
             </div>
+            <VenderNameModal
+                isOpen={isVendorModalOpen}
+                onClose={() => setIsVendorModalOpen(false)}
+                onVenderAdded={handleVendorAdded}
+            />
         </div>
     );
 };

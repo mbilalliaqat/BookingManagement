@@ -99,10 +99,10 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             newErrors.detail = 'Enter Detail';
             isValid = false;
         }
-        if (!data.total_amount) {
-            newErrors.total_amount = 'Enter Total Amount';
-            isValid = false;
-        }
+        // if (!data.total_amount) {
+        //     newErrors.total_amount = 'Enter Total Amount';
+        //     isValid = false;
+        // }
         if (!data.selection) {
             newErrors.selection = 'Select Type';
             isValid = false;

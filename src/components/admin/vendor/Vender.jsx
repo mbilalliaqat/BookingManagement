@@ -34,11 +34,16 @@ useEffect(() => {
   }
 }, [location.state]);
 
- const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-GB'); 
+const formatDate = (dateString) => {
+  if (!dateString || typeof dateString !== 'string') return '';
+  
+  // The incoming format is 'YYYY-MM-DD'.
+  const parts = dateString.split('T')[0].split('-');
+  if (parts.length !== 3) return dateString; // Return original if format is unexpected
+
+  const [year, month, day] = parts;
+  // Reassembles the date in 'DD/MM/YYYY' format without time zone conversion.
+  return `${day}/${month}/${year}`;
 };
 
   const fetchData = async () => {
