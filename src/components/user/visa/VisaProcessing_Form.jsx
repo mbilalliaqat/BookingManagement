@@ -36,10 +36,15 @@ const AutoCalculate = () => {
         const additionalCharges = parseFloat(values.additional_charges) || 0;
         const payForProtector = parseFloat(values.pay_for_protector) || 0;
         
+        // Calculate total payable to all vendors
+        const totalPayableToVendors = values.vendors?.reduce((sum, vendor) => {
+            return sum + (parseFloat(vendor.payable_amount) || 0);
+        }, 0) || 0;
+        
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining);
         
-        const profit = receivable - additionalCharges - payForProtector;
+        const profit = totalPayableToVendors > 0 ? receivable - totalPayableToVendors : receivable - additionalCharges - payForProtector;
         setFieldValue('profit', profit);
     }, [
         values.receivable_amount,
@@ -47,10 +52,113 @@ const AutoCalculate = () => {
         values.paid_in_bank,
         values.additional_charges,
         values.pay_for_protector,
+        values.vendors,
         setFieldValue
     ]);
     
     return null;
+};
+
+const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry }) => {
+    const addVendor = () => {
+        const newVendors = [...(values.vendors || []), { vendor_name: '', payable_amount: '' }];
+        setFieldValue('vendors', newVendors);
+    };
+
+    const removeVendor = (index) => {
+        const newVendors = values.vendors.filter((_, i) => i !== index);
+        setFieldValue('vendors', newVendors);
+    };
+
+    return (
+        <div className="col-span-2 border border-purple-200 rounded-lg p-4 bg-purple-50">
+            <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-semibold text-purple-700 flex items-center">
+                    <i className="fas fa-store mr-2"></i>
+                    Vendor Details
+                </h4>
+                <button
+                    type="button"
+                    onClick={addVendor}
+                    className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 flex items-center text-sm"
+                >
+                    <i className="fas fa-plus mr-2"></i> Add Vendor
+                </button>
+            </div>
+
+            {values.vendors && values.vendors.length > 0 ? (
+                <div className="space-y-4">
+                    {values.vendors.map((vendor, index) => (
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-md border border-gray-200"
+                        >
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Vendor Name
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <Field
+                                        as="select"
+                                        name={`vendors[${index}].vendor_name`}
+                                        className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={editEntry}
+                                    >
+                                        <option value="">Select vendor name</option>
+                                        {vendorNames.map((name) => (
+                                            <option key={name} value={name}>
+                                                {name}
+                                            </option>
+                                        ))}
+                                    </Field>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsVendorModalOpen(true)}
+                                        className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700"
+                                    >
+                                        <i className="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <ErrorMessage name={`vendors[${index}].vendor_name`} component="p" className="mt-1 text-sm text-red-500" />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Payable Amount
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <Field
+                                        type="number"
+                                        name={`vendors[${index}].payable_amount`}
+                                        placeholder="Enter payable amount"
+                                        className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        disabled={editEntry}
+                                    />
+                                    {values.vendors.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeVendor(index)}
+                                            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
+                                        >
+                                            <i className="fas fa-trash"></i>
+                                        </button>
+                                    )}
+                                </div>
+                                <ErrorMessage name={`vendors[${index}].payable_amount`} component="p" className="mt-1 text-sm text-red-500" />
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-4 text-gray-500">
+                    <i className="fas fa-info-circle mr-2"></i>
+                    Click "Add Vendor" to add vendor details
+                </div>
+            )}
+        </div>
+    );
 };
 
 const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
@@ -97,9 +205,10 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_in_bank: '',
         profit: '',
         remaining_amount: '',
+        detail: '', // New Detail field
         status: 'Processing', // Default status for new entries
         agent_name: '',
-        vendor_name: ''
+        vendors: [{ vendor_name: '', payable_amount: '' }]
     });
 
     const validationSchema = Yup.object({
@@ -108,7 +217,19 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             STATUS_OPTIONS.map(opt => opt.value),
             'Invalid status'
         ),
-        
+        vendors: Yup.array().of(
+            Yup.object().shape({
+                vendor_name: Yup.string().notRequired('Vendor name is required'),
+                payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
+            })
+        ).min(1, 'At least one vendor is required'),
+        receivable_amount: Yup.number().notRequired('Receivable Amount is required').typeError('Receivable Amount must be a number'),
+        paid_cash: Yup.number().min(0, 'Paid Cash cannot be negative').typeError('Paid Cash must be a number'),
+        paid_in_bank: Yup.number().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
+        bank_title: Yup.string(),
+        profit: Yup.number(),
+        remaining_amount: Yup.number(),
+        detail: Yup.string(), // Validation for new Detail field (optional)
     });
 
     useEffect(() => {
@@ -118,8 +239,12 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     axios.get(`${BASE_URL}/agent-names/existing`),
                     axios.get(`${BASE_URL}/vender-names/existing`),
                 ]);
-                setAgentNames(agentsRes.data.map(a => a.name));
-                setVendorNames(vendorsRes.data.map(v => v.name));
+                if (agentsRes.data.status === 'success') {
+                    setAgentNames(agentsRes.data.agentNames || []);
+                }
+                if (vendorsRes.data.status === 'success') {
+                    setVendorNames(vendorsRes.data.vendorNames || []);
+                }
             } catch (error) {
                 console.error('Error fetching names:', error);
             }
@@ -180,6 +305,15 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
             };
 
+            // Parse vendor data
+            let vendorsData = [{ vendor_name: '', payable_amount: '' }];
+            if (editEntry.vendor_name && editEntry.payable_to_vendor) {
+                vendorsData = [{ 
+                    vendor_name: editEntry.vendor_name, 
+                    payable_amount: editEntry.payable_to_vendor 
+                }];
+            }
+
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
                 file_number: editEntry.file_number || '',
@@ -214,9 +348,10 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_in_bank: editEntry.paid_in_bank || '',
                 profit: editEntry.profit || '',
                 remaining_amount: editEntry.remaining_amount || '',
+                detail: editEntry.detail || '', // Load Detail field for edit
                 status: editEntry.status || 'Processing',
                 agent_name: editEntry.agent_name || '',
-                vendor_name: editEntry.vendor_name || ''
+                vendors: vendorsData
             };
             
             setFormInitialValues(newValues);
@@ -225,7 +360,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, [editEntry, user]);
 
     const handleVendorAdded = (newVendor) => {
-        setVendorNames(prev => [...prev, newVendor.name]);
+        if (newVendor && newVendor.name && !vendorNames.includes(newVendor.name)) {
+            setVendorNames(prev => [...prev, newVendor.name]);
+        }
     };
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
@@ -240,6 +377,11 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             documentExpiry: values.documentExpiry,
             issueCountry: values.documentIssueCountry,
         });
+
+        // Calculate total payable to vendors
+        const totalPayableToVendor = values.vendors.reduce((sum, vendor) => {
+            return sum + (parseFloat(vendor.payable_amount) || 0);
+        }, 0);
 
         const requestData = {
             employee_name: values.employee_name,
@@ -266,9 +408,12 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             paid_in_bank: parseFloat(values.paid_in_bank) || 0,
             profit: parseFloat(values.profit) || 0,
             remaining_amount: parseFloat(values.remaining_amount) || 0,
+            detail: values.detail || '', // Include Detail field in submission
             status: values.status,
             agent_name: values.agent_name,
-            vendor_name: values.vendor_name
+            payable_to_vendor: totalPayableToVendor,
+            vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
+            vendors_detail: JSON.stringify(values.vendors)
         };
 
         try {
@@ -291,11 +436,57 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             await response.json();
 
+            if (!editEntry) {
+                // Submit vendor data for each vendor
+                for (const vendor of values.vendors) {
+                    if (vendor.vendor_name && vendor.payable_amount) {
+                        const vendorData = {
+                            vender_name: vendor.vendor_name,
+                            detail: values.detail || `Visa Processing - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
+                            credit: parseFloat(vendor.payable_amount) || 0,
+                            date: new Date().toISOString().split('T')[0],
+                            entry: values.entry,
+                            bank_title: values.bank_title,
+                            debit: null
+                        };
+                        const vendorResponse = await fetch(`${BASE_URL}/vender`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(vendorData),
+                        });
+                        if (!vendorResponse.ok) console.error('Vendor submission failed:', vendorResponse.status);
+                    }
+                }
+
+                // Submit agent data
+                if (values.agent_name) {
+                    const agentData = {
+                        agent_name: values.agent_name,
+                        employee: values.employee_name,
+                        detail: values.detail || `Visa Processing - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
+                        receivable_amount: parseFloat(values.receivable_amount) || 0,
+                        paid_cash: parseFloat(values.paid_cash) || 0,
+                        paid_bank: parseFloat(values.paid_in_bank) || 0,
+                        credit: parseFloat(values.remaining_amount) || 0,
+                        date: new Date().toISOString().split('T')[0],
+                        entry: values.entry,
+                        bank_title: values.bank_title,
+                        debit: null
+                    };
+                    const agentResponse = await fetch(`${BASE_URL}/agent`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(agentData),
+                    });
+                    if (!agentResponse.ok) console.error('Agent submission failed:', agentResponse.status);
+                }
+            }
+
             if (parseFloat(values.paid_in_bank) > 0 && values.bank_title) {
                 const bankData = {
                     bank_name: values.bank_title,
                     employee_name: values.employee_name,
-                    detail: `Visa Sale - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
+                    detail: values.detail || `Visa Sale - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
                     credit: parseFloat(values.paid_in_bank),
                     debit: 0,
                     date: new Date().toISOString().split('T')[0],
@@ -349,8 +540,6 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map(opt => opt.value), placeholder: 'Select status', icon: 'tasks' },
         { name: 'file_number', label: 'File No.', type: 'text', placeholder: 'Enter file number', icon: 'file-alt' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
-        { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
-        { name: 'vendor_name', label: 'Vendor Name', type: 'vendor_select', options: vendorNames, placeholder: 'Select vendor name', icon: 'store' },
         { name: 'sponsor_name', label: 'Sponsor Name', type: 'text', placeholder: 'Enter sponsor name', icon: 'user-tie' },
         { name: 'visa_number', label: 'Visa No.', type: 'text', placeholder: 'Enter visa number', icon: 'id-badge' },
         { name: 'id_number', label: 'ID No.', type: 'text', placeholder: 'Enter ID number', icon: 'id-card' },
@@ -365,11 +554,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'passengerFirstName', label: 'Full Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Father Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
         { name: 'passengerDob', label: 'Date of Birth', type: 'date', placeholder: 'Select date of birth', icon: 'calendar' },
-        // { name: 'passengerNationality', label: 'Nationality', type: 'text', placeholder: 'Enter nationality', icon: 'flag' },
-        { name: 'documentType', label: 'Document Type', type: 'select', options: ['Passport'], placeholder: 'Select document type', icon: 'id-card' },
-        { name: 'documentNo', label: 'Document No', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
+        { name: 'documentNo', label: 'Passsport No', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
         { name: 'documentExpiry', label: 'Expiry Date', type: 'date', placeholder: 'Select expiry date', icon: 'calendar-times' },
-        // { name: 'documentIssueCountry', label: 'Issue Country', type: 'text', placeholder: 'Enter issue country', icon: 'globe' },
     ];
 
     const section3Fields = [
@@ -383,12 +569,14 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section4Fields = [
         { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' },
         { name: 'additional_charges', label: 'Additional Charges', type: 'number', placeholder: 'Enter additional charges', icon: 'plus-circle' },
-        { name: 'pay_for_protector', label: 'Pay For Protector', type: 'number', placeholder: 'Enter pay for protector', icon: 'shield-alt' },
+                { name: 'detail', label: 'Detail', type: 'text', placeholder: 'Enter detail', icon: 'info-circle' }, // New Detail field      
+        { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
+        { name: 'pay_for_protector', label: 'Expence Emigrant', type: 'number', placeholder: 'Enter pay for protector', icon: 'shield-alt' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
         { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.value), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
-        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
+        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },
     ];
 
     const renderField = (field) => (
@@ -542,7 +730,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     onSubmit={handleSubmit}
                     enableReinitialize={true}
                 >
-                    {({ isSubmitting, errors }) => (
+                    {({ isSubmitting, errors, values, setFieldValue }) => (
                         <Form>
                             <AutoCalculate />
                             
@@ -556,7 +744,18 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 {activeSection === 1 && section1Fields.map(renderField)}
                                 {activeSection === 2 && section2Fields.map(renderField)}
                                 {activeSection === 3 && section3Fields.map(renderField)}
-                                {activeSection === 4 && section4Fields.map(renderField)}
+                                {activeSection === 4 && (
+                                    <>
+                                        {section4Fields.map(renderField)}
+                                        <VendorSelectionFields 
+                                            values={values} 
+                                            setFieldValue={setFieldValue} 
+                                            vendorNames={vendorNames}
+                                            setIsVendorModalOpen={setIsVendorModalOpen}
+                                            editEntry={editEntry}
+                                        />
+                                    </>
+                                )}
                             </motion.div>
 
                             {errors.general && (

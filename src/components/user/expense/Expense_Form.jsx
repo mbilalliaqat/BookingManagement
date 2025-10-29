@@ -8,6 +8,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
+    const [vendors, setVendors] = useState([]);
     
     const [data, setData] = useState({
         user_name: user?.username || '',
@@ -16,7 +17,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         detail: '',
         total_amount: '',
         selection: '',
-        withdraw: ''
+        withdraw: '',
+        vendor_id: ''
     });
 
     const [prevError, setPrevError] = useState({
@@ -26,8 +28,27 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         detail: '',
         total_amount: '',
         selection: '',
+        vendor_id: '',
         general: ''
     });
+
+    // Fetch vendors on component mount
+    useEffect(() => {
+        const fetchVendors = async () => {
+            try {
+                const response = await fetch(`${BASE_URL}/vender-names/existing`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.status === 'success' && result.vendorNames) {
+                        setVendors(result.vendorNames);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching vendors:', error);
+            }
+        };
+        fetchVendors();
+    }, [BASE_URL]);
 
     // Fetch entry counts on component mount
     useEffect(() => {
@@ -68,7 +89,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 detail: editEntry.detail || '',
                 total_amount: editEntry.total_amount || '',
                 selection: editEntry.selection || '',
-                withdraw: editEntry.withdraw || ''
+                withdraw: editEntry.withdraw || '',
+                vendor_id: editEntry.vendor_id || ''
             });
         }
     }, [editEntry, entryNumber, totalEntries, user]);
@@ -99,12 +121,14 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             newErrors.detail = 'Enter Detail';
             isValid = false;
         }
-        // if (!data.total_amount) {
-        //     newErrors.total_amount = 'Enter Total Amount';
-        //     isValid = false;
-        // }
         if (!data.selection) {
             newErrors.selection = 'Select Type';
+            isValid = false;
+        }
+        
+        // Validate vendor_id if withdraw value is provided
+        if (data.withdraw && !data.vendor_id) {
+            newErrors.vendor_id = 'Select Vendor for withdraw';
             isValid = false;
         }
 
@@ -129,10 +153,13 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 entry: data.entry,
                 date: data.date,
                 detail: data.detail,
-                total_amount: parseInt(data.total_amount),
+                total_amount: parseInt(data.total_amount) || 0,
                 selection: data.selection,
-                withdraw: data.withdraw
+                withdraw: data.withdraw ? parseInt(data.withdraw) : null,
+                vendor_name: data.vendor_id || null
             };
+
+            console.log('Submitting expense data:', requestData);
 
             try {
                 const url = editEntry
@@ -154,7 +181,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 }
 
                 const result = await response.json();
-                console.log('Success:', result);
+                console.log('Success response:', result);
 
                 setData({
                     user_name: user?.username || '',
@@ -163,7 +190,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     detail: '',
                     total_amount: '',
                     selection: '',
-                    withdraw: ''
+                    withdraw: '',
+                    vendor_id: ''
                 });
 
                 if (onSubmitSuccess) {
@@ -194,18 +222,18 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         <div className="flex items-center justify-center bg-white p-4">
             <div className="w-full max-w-3xl p-8 rounded-md">
                 <div className="flex items-center justify-between mb-6">
-    <div className="text-2xl font-semibold relative inline-block">
-        EXPENSE FORM
-        <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
-    </div>
-    <button
-        type="button"
-        onClick={onCancel}
-        className="text-gray-700 hover:text-gray-900 transition-colors"
-    >
-        <i className="fas fa-arrow-left text-xl"></i>
-    </button>
-</div>
+                    <div className="text-2xl font-semibold relative inline-block">
+                        EXPENSE FORM
+                        <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="text-gray-700 hover:text-gray-900 transition-colors"
+                    >
+                        <i className="fas fa-arrow-left text-xl"></i>
+                    </button>
+                </div>
                 <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
                     <div className="flex flex-wrap justify-between gap-4">
                         <div className="w-full sm:w-[calc(50%-10px)]">
@@ -244,16 +272,6 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             {prevError.date && <span className="text-red-500">{prevError.date}</span>}
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Withdraw</label>
-                            <input
-                                type="number"
-                                name="withdraw"
-                                value={data.withdraw}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            />
-                        </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Detail</label>
                             <input
                                 type="text"
@@ -264,17 +282,33 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.detail && <span className="text-red-500">{prevError.detail}</span>}
                         </div>
-                        {/* <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Total Amount</label>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Select Vendor</label>
+                            <select
+                                value={data.vendor_id}
+                                name="vendor_id"
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                            >
+                                <option value="">SELECT VENDOR</option>
+                                {vendors.map((vendorName, index) => (
+                                    <option key={index} value={vendorName}>
+                                        {vendorName}
+                                    </option>
+                                ))}
+                            </select>
+                            {prevError.vendor_id && <span className="text-red-500">{prevError.vendor_id}</span>}
+                        </div>
+                        <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Withdraw</label>
                             <input
                                 type="number"
-                                name="total_amount"
-                                value={data.total_amount}
+                                name="withdraw"
+                                value={data.withdraw}
                                 onChange={handleChange}
                                 className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
                             />
-                            {prevError.total_amount && <span className="text-red-500">{prevError.total_amount}</span>}
-                        </div> */}
+                        </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Select Type</label>
                             <select

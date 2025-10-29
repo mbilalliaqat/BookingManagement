@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, Users, Plane, MapPin, FileText, CreditCard, Wallet, Landmark } from 'lucide-react'; // Added Wallet and Landmark icons
+import { CheckCircle, Users, Plane, MapPin, FileText, CreditCard, Wallet, Landmark, Filter } from 'lucide-react'; // Added Wallet and Landmark icons
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
+import DateRangePicker from '../../ui/DateRangePicker';
 
 // Create axios instance with base URL
 const api = axios.create({
@@ -30,6 +31,8 @@ export default function UserDashboard() {
   });
   
   const [isLoading, setIsLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  const [filteredBookings, setFilteredBookings] = useState([]);
   const [errors, setErrors] = useState({
     dashboard: null,
     umrah: null,
@@ -65,6 +68,37 @@ export default function UserDashboard() {
     
     return response.data;
   }, []);
+
+  const handleDateRangeChange = useCallback((startDate, endDate) => {
+    setDateRange({ startDate, endDate });
+  }, []);
+
+  // Filter bookings based on date range
+  const filterBookingsByDateRange = useCallback((bookings, startDate, endDate) => {
+    if (!startDate || !endDate) return bookings;
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Set time to start and end of day for accurate comparison
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    
+    return bookings.filter(booking => {
+      const bookingDate = new Date(booking.booking_date);
+      return bookingDate >= start && bookingDate <= end;
+    });
+  }, []);
+
+  // Update filtered bookings when date range or dashboard data changes
+  useEffect(() => {
+    const filtered = filterBookingsByDateRange(
+      dashboardData.combinedBookings, 
+      dateRange.startDate, 
+      dateRange.endDate
+    );
+    setFilteredBookings(filtered);
+  }, [dashboardData.combinedBookings, dateRange, filterBookingsByDateRange]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -657,22 +691,44 @@ export default function UserDashboard() {
         </div>
       ) : (
         <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-700">All Bookings</h2>
-            {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken || errors.services || errors.protector) && ( 
-              <span className="text-xs text-red-500">
-                {Object.values(errors).filter(e => e).join(', ')}
-              </span>
+            <div className="flex items-center space-x-4">
+              {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken || errors.services || errors.protector) && ( 
+                <span className="text-xs text-red-500">
+                  {Object.values(errors).filter(e => e).join(', ')}
+                </span>
+              )}
+              <div className="flex items-center space-x-2">
+                <Filter size={16} className="text-indigo-600" />
+                <span className="text-sm text-gray-600 font-medium">Filter by Date:</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Date Range Picker */}
+          <div className="mb-4 flex items-center space-x-4">
+            <DateRangePicker
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onDateChange={handleDateRangeChange}
+              placeholder="Select date range to filter bookings"
+              className="max-w-md"
+            />
+            {(dateRange.startDate || dateRange.endDate) && (
+              <div className="text-sm text-gray-600">
+                Showing {filteredBookings.length} of {dashboardData.combinedBookings.length} bookings
+              </div>
             )}
           </div>
-          <div className="overflow-auto max-h-75">
+          <div className="overflow-y-auto max-h-[60vh] rounded-lg border border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 sticky top-0">
                 <tr>
                   {columns.map((col, index) => (
                     <th
                       key={index}
-                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-3 py-3 text-left text-xs font-bold text-white uppercase tracking-wider"
                     >
                       {col.header}
                     </th>
@@ -680,30 +736,43 @@ export default function UserDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {dashboardData.combinedBookings.length > 0 ? (
-                  dashboardData.combinedBookings.map((booking, index) => (
-                    <tr key={index}>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.booking_date}</td>
-                       <td className="px-3 py-2 whitespace-nowrap text-sm  text-gray-700">{booking.employee_name}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{booking.type}</td>   
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                        {booking.passengerName ? booking.passengerName : '--'}
-                      </td> {/* Updated to show '--' for empty names */}
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.receivable_amount}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.paid_cash}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.paid_in_bank}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.remaining_amount}</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">{booking.withdraw}</td> 
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                        {/* Display the running cash in office for each row */}
-                        {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : '--'} 
+                {(dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings).length > 0 ? (
+                  (dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings).map((booking, index) => (
+                    <tr 
+                      key={index}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-indigo-50/30 via-purple-50/20 to-pink-50/30'} hover:bg-gradient-to-r hover:from-indigo-100/40 hover:via-purple-100/30 hover:to-pink-100/40 transition-all duration-200`}
+                    >
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-700">{booking.booking_date}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 truncate" title={booking.employee_name}>{booking.employee_name}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold">
+                        <span className="px-2 py-1 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 inline-block">
+                          {booking.type}
+                        </span>
+                      </td>   
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 truncate" title={booking.passengerName}>
+                        {booking.passengerName ? booking.passengerName : <span className="text-gray-400">--</span>}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600">{booking.receivable_amount}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">{booking.paid_cash}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">{booking.paid_in_bank}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-amber-600">{booking.remaining_amount}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">{booking.withdraw}</td> 
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-indigo-600">
+                        {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : <span className="text-gray-400">--</span>} 
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="10" className="px-3 py-4 text-center text-sm text-gray-500"> {/* Updated colspan */}
-                      No recent bookings found
+                    <td colSpan="10" className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                          <span className="text-2xl text-indigo-400">📋</span>
+                        </div>
+                        <p className="text-sm text-gray-500 font-medium">
+                          {dateRange.startDate && dateRange.endDate ? 'No bookings found in the selected date range' : 'No recent bookings found'}
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 )}

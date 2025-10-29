@@ -426,14 +426,14 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ),
         vendors: Yup.array().of(
             Yup.object().shape({
-                vendor_name: Yup.string().required('Vendor name is required'),
-                payable_amount: Yup.number().required('Payable amount is required').min(0, 'Amount must be positive'),
+                vendor_name: Yup.string().notRequired('Vendor name is required'),
+                payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
             })
         ).min(1, 'At least one vendor is required'),
         receivableAmount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
         paidCash: Yup.number().required('Paid Cash is required').typeError('Paid Cash must be a number'),
-        bank_title: Yup.string().required('Bank Title is required'),
-        paidInBank: Yup.number().required('Paid In Bank is required').typeError('Paid In Bank must be a number'),
+        bank_title: Yup.string().notRequired('Bank Title is required'),
+        paidInBank: Yup.number().notRequired('Paid In Bank is required').typeError('Paid In Bank must be a number'),
         profit: Yup.number(),
         remainingAmount: Yup.number()
     });

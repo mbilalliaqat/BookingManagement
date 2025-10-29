@@ -436,8 +436,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ),
         vendors: Yup.array().of(
             Yup.object().shape({
-                vendor_name: Yup.string().required('Vendor name is required'),
-                payable_amount: Yup.number().required('Payable amount is required').min(0, 'Amount must be positive'),
+                vendor_name: Yup.string().notRequired('Vendor name is required'),
+                payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
             })
         ).min(1, 'At least one vendor is required'),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
