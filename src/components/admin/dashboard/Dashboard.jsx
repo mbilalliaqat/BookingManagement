@@ -288,60 +288,60 @@ const handleDateRangeChange = useCallback((startDate, endDate) => {
 
   // Calculate monthly summary data
 const calculateMonthlySummary = useCallback(() => {
-  const firstDayOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
-  const lastDayOfMonth = new Date(selectedMonthEnd.getFullYear(), selectedMonthEnd.getMonth() + 1, 0);
+  const startDate = new Date(selectedMonth);
+  const endDate = new Date(selectedMonthEnd);
   
-  firstDayOfMonth.setHours(0, 0, 0, 0);
-  lastDayOfMonth.setHours(23, 59, 59, 999);
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(23, 59, 59, 999);
 
-  const monthlyBookings = dashboardData.combinedBookings.filter(booking => {
+  const dateRangeBookings = dashboardData.combinedBookings.filter(booking => {
     const bookingDate = new Date(booking.timestamp);
-    return bookingDate >= firstDayOfMonth && bookingDate <= lastDayOfMonth;
+    return bookingDate >= startDate && bookingDate <= endDate;
   });
 
-  const summary = {
-    Ticket: 0,
-    Umrah: 0,
-    'Visa Processing': 0,
-    'GAMCA Token': 0,
-    Navtcc: 0,
-    Services: 0,
-    Vendor: 0,
-    Agent: 0,
-  };
-
-  monthlyBookings.forEach(booking => {
+  // Group bookings by date
+  const groupedByDate = {};
+  
+  dateRangeBookings.forEach(booking => {
+    const bookingDate = new Date(booking.timestamp);
+    const dateKey = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    if (!groupedByDate[dateKey]) {
+      groupedByDate[dateKey] = {
+        date: dateKey,
+        Ticket: 0,
+        Umrah: 0,
+        Visa: 0,
+        Gamca: 0,
+        NAVTCC: 0,
+        Services: 0,
+        Vendor: 0,
+        Banks: 0,
+      };
+    }
+    
     if (booking.type === 'Ticket' && booking.receivable_amount > 0) {
-      summary.Ticket++;
+      groupedByDate[dateKey].Ticket++;
     } else if (booking.type === 'Umrah' && booking.receivable_amount > 0) {
-      summary.Umrah++;
+      groupedByDate[dateKey].Umrah++;
     } else if (booking.type === 'Visa Processing') {
-      summary['Visa Processing']++;
+      groupedByDate[dateKey].Visa++;
     } else if (booking.type === 'GAMCA Token') {
-      summary['GAMCA Token']++;
+      groupedByDate[dateKey].Gamca++;
     } else if (booking.type === 'Navtcc') {
-      summary.Navtcc++;
+      groupedByDate[dateKey].NAVTCC++;
     } else if (booking.type === 'Services') {
-      summary.Services++;
+      groupedByDate[dateKey].Services++;
     } else if (booking.type === 'Vender') {
-      summary.Vendor++;
+      groupedByDate[dateKey].Vendor++;
+    }
+    
+    if (parseFloat(booking.paid_in_bank || 0) > 0) {
+      groupedByDate[dateKey].Banks++;
     }
   });
 
-  const bankTransactions = monthlyBookings.filter(
-    b => parseFloat(b.paid_in_bank || 0) > 0
-  ).length;
-
-  return [
-    { name: 'Ticket', count: summary.Ticket, color: '#1e3a8a' },
-    { name: 'Umrah', count: summary.Umrah, color: '#10b981' },
-    { name: 'Visa', count: summary['Visa Processing'], color: '#e11d48' },
-    { name: 'Gamca', count: summary['GAMCA Token'], color: '#0d9488' },
-    { name: 'NAVTCC', count: summary.Navtcc, color: '#6366f1' },
-    { name: 'Services', count: summary.Services, color: '#8b5cf6' },
-    { name: 'Vendor', count: summary.Vendor, color: '#f59e0b' },
-    { name: 'Banks', count: bankTransactions, color: '#06b6d4' },
-  ];
+  return Object.values(groupedByDate);
 }, [dashboardData.combinedBookings, selectedMonth, selectedMonthEnd]);
 
   // Get current table data and calculate totals
@@ -1445,102 +1445,131 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
         </div>
 
         {/* Monthly Summary Bar Chart */}
-<div className="bg-white p-4 rounded-2xl shadow-xl border border-indigo-100">
-  <div className="flex items-start justify-between flex-col">
-    <div>
-      <h2 className="font-bold text-sm text-black font-inter mb-3">
-      Monthly Summary
+{/* Monthly Summary Bar Chart */}
+<div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+  <div className="mb-6">
+    <h2 className="font-bold text-lg text-gray-800 font-inter mb-4">
+      Monthly Overview: Tickets & Services (Grouped Bar Chart)
     </h2>
-    </div>
-    <div className="flex items-center space-x-1">
-  <div className="flex items-center space-x-1 bg-slate-50 px-1 py-1 rounded-lg border border-slate-200">
-    <span className="text-sm font-semibold text-slate-600">From:</span>
-    <input
-      type="month"
-      value={`${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`}
-      onChange={(e) => {
-        const [year, month] = e.target.value.split('-');
-        setSelectedMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
-      }}
-      className="px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-  </div>
-  
-  <div className="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
-    <span className="text-xs font-semibold text-slate-600">To:</span>
-    <input
-      type="month"
-      value={`${selectedMonthEnd.getFullYear()}-${String(selectedMonthEnd.getMonth() + 1).padStart(2, '0')}`}
-      onChange={(e) => {
-        const [year, month] = e.target.value.split('-');
-        setSelectedMonthEnd(new Date(parseInt(year), parseInt(month) - 1, 1));
-      }}
-      max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`}
-      className="px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-  </div>
+    
+    {/* Date Range Selector */}
+    <div className="flex items-center space-x-3 flex-wrap gap-2">
+      <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-300">
+        <span className="text-xs font-semibold text-gray-700">From:</span>
+        <input
+          type="date"
+          value={selectedMonth.toISOString().split('T')[0]}
+          onChange={(e) => {
+            const date = new Date(e.target.value);
+            setSelectedMonth(date);
+          }}
+          className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      
+      <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-300">
+        <span className="text-xs font-semibold text-gray-700">To:</span>
+        <input
+          type="date"
+          value={selectedMonthEnd.toISOString().split('T')[0]}
+          onChange={(e) => {
+            const date = new Date(e.target.value);
+            setSelectedMonthEnd(date);
+          }}
+          max={new Date().toISOString().split('T')[0]}
+          className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
-  <button
-    onClick={() => {
-      setSelectedMonth(new Date());
-      setSelectedMonthEnd(new Date());
-    }}
-    className="px-3 py-1 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors text-xs font-semibold"
-  >
-    Reset
-  </button>
-</div>
+      <button
+        onClick={() => {
+          setSelectedMonth(new Date());
+          setSelectedMonthEnd(new Date());
+        }}
+        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-semibold"
+      >
+        Reset
+      </button>
+    </div>
   </div>
 
   {isLoading && !showPartialData ? (
-    <div className="flex justify-center items-center h-64">
+    <div className="flex justify-center items-center h-96">
       <TableSpinner />
     </div>
   ) : monthlySummaryData.length > 0 ? (
-    <div style={{ width: '100%', height: 350 }}>
+    <div style={{ width: '100%', height: 450 }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart 
           data={monthlySummaryData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+          margin={{ top: 20, right: 100, left: 20, bottom: 50 }}
+          barGap={2}
+          barCategoryGap="15%"
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={true} />
           <XAxis 
-            dataKey="name" 
-            angle={-45}
-            textAnchor="end"
-            height={80}
-            tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
+            dataKey="date" 
+            tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
+            label={{ 
+              value: 'Date', 
+              position: 'insideBottom', 
+              offset: -15, 
+              style: { fill: '#374151', fontWeight: 600, fontSize: 13 } 
+            }}
+            axisLine={{ stroke: '#9ca3af' }}
+            tickLine={{ stroke: '#9ca3af' }}
           />
           <YAxis 
-            tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
-            label={{ value: '', angle: -90, position: 'insideLeft', style: { fill: '#475569', fontWeight: 600 } }}
+            tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
+            label={{ 
+              value: 'Count (Sales/Services)', 
+              angle: -90, 
+              position: 'insideLeft', 
+              style: { fill: '#374151', fontWeight: 600, fontSize: 13 } 
+            }}
+            axisLine={{ stroke: '#9ca3af' }}
+            tickLine={{ stroke: '#9ca3af' }}
+            domain={[0, 'dataMax + 1']}
           />
           <Tooltip 
-            formatter={(value, name) => [value, 'Entries']}
             contentStyle={{ 
               backgroundColor: '#ffffff', 
-              border: '1px solid #e5e7eb',
+              border: '1px solid #d1d5db',
               borderRadius: '8px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+              padding: '10px'
             }}
+            labelStyle={{ fontWeight: 600, color: '#1f2937' }}
           />
-          <Bar 
-            dataKey="count" 
-            radius={[8, 8, 0, 0]}
-            label={{ position: 'top', fill: '#1f2937', fontWeight: 'bold', fontSize: 12 }}
-          >
-            {monthlySummaryData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Bar>
+          <Legend 
+            wrapperStyle={{ paddingTop: '10px' }}
+            iconType="rect"
+            iconSize={14}
+            formatter={(value) => <span style={{ color: '#374151', fontSize: '12px', fontWeight: 500 }}>{value}</span>}
+            layout="vertical"
+            align="right"
+            verticalAlign="middle"
+          />
+          
+          {/* Bars with image-matching colors */}
+          <Bar dataKey="Ticket" fill="#006BA6" radius={[4, 4, 0, 0]} maxBarSize={30} />
+          <Bar dataKey="Umrah" fill="#008C9E" radius={[4, 4, 0, 0]} maxBarSize={30} />
+          <Bar dataKey="Visa" fill="#7FD8FF" radius={[4, 4, 0, 0]} maxBarSize={30} />
+          <Bar dataKey="Gamca" fill="#FDB462" radius={[4, 4, 0, 0]} maxBarSize={30} />
+          <Bar dataKey="NAVTCC" fill="#FB8072" radius={[4, 4, 0, 0]} maxBarSize={30} />
+          <Bar dataKey="Services" fill="#B3DE69" radius={[4, 4, 0, 0]} maxBarSize={30} />
+          <Bar dataKey="Vendor" fill="#FCCDE5" radius={[4, 4, 0, 0]} maxBarSize={30} />
+          <Bar dataKey="Banks" fill="#BC80BD" radius={[4, 4, 0, 0]} maxBarSize={30} />
         </BarChart>
       </ResponsiveContainer>
       
-    
+     
     </div>
   ) : (
-    <div className="text-center py-12 text-slate-500">
-      No data available for this month.
+    <div className="text-center py-12 text-gray-500">
+      <div className="text-5xl mb-4">📊</div>
+      <p className="text-lg font-semibold">No data available for the selected date range</p>
+      <p className="text-sm text-gray-400 mt-2">Please select a different date range</p>
     </div>
   )}
 </div>
