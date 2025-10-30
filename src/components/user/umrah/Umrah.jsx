@@ -320,13 +320,13 @@ const Umrah = () => {
             <>
                 <button
                     className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
-                    onClick={() => handleUpdate(row)}
+                    onClick={() => handleUpdate(index)}
                 >
                     <i className="fas fa-edit"></i>
                 </button>
                 <button
                     className="text-red-500 hover:text-red-700 text-[13px]"
-                    onClick={() => openDeleteModal(row.id)}
+                    onClick={() => openDeleteModal(index.id)}
                 >
                     <i className="fas fa-trash"></i>
                 </button>
