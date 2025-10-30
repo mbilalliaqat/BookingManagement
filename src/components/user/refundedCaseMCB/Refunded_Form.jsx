@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
+import axios from 'axios';
 
 const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
@@ -10,6 +11,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const { user } = useAppContext();
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
+    const [banks, setBanks] = useState([]);
+    const [banksLoading, setBanksLoading] = useState(true);
 
     const [data, setData] = useState({
         employee: user?.username || '',
@@ -21,7 +24,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_fee_date: '',
         paid_refund_date: '',
         total_balance: '',
-        withdraw: ''
+        bank_name: '',
+        paid_bank: ''
     });
 
     const [prevError, setPrevError] = useState({
@@ -34,10 +38,57 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_fee_date: '',
         paid_refund_date: '',
         total_balance: '',
+        bank_name: '',
+        paid_bank: '',
         general: ''
     });
     
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Predefined bank options (similar to Navtcc)
+    const bankOptions = [
+        { value: "UBL M.A.R", label: "UBL M.A.R" },
+        { value: "UBL F.Z", label: "UBL F.Z" },
+        { value: "HBL M.A.R", label: "HBL M.A.R" },
+        { value: "HBL F.Z", label: "HBL F.Z" },
+        { value: "JAZ C", label: "JAZ C" },
+        { value: "MCB FIT", label: "MCB FIT" },
+    ];
+
+    // Fetch banks on component mount (keeping your original logic for additional banks)
+    useEffect(() => {
+        const fetchBanks = async () => {
+            setBanksLoading(true);
+            try {
+                const response = await fetch(`${BASE_URL}/bank`);
+                console.log('Bank fetch response status:', response.status);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Bank data received:', result);
+                    
+                    // Handle different possible response structures
+                    if (Array.isArray(result)) {
+                        setBanks(result);
+                    } else if (result.banks && Array.isArray(result.banks)) {
+                        setBanks(result.banks);
+                    } else if (result.data && Array.isArray(result.data)) {
+                        setBanks(result.data);
+                    } else {
+                        console.warn('Unexpected bank data structure:', result);
+                        setBanks([]);
+                    }
+                } else {
+                    console.error('Failed to fetch banks, status:', response.status);
+                }
+            } catch (error) {
+                console.error('Error fetching banks:', error);
+            } finally {
+                setBanksLoading(false);
+            }
+        };
+        fetchBanks();
+    }, [BASE_URL]);
 
     // Fetch entry counts on component mount
     useEffect(() => {
@@ -81,7 +132,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_fee_date: editEntry.paid_fee_date ? new Date(editEntry.paid_fee_date).toISOString().split('T')[0] : '',
                 paid_refund_date: editEntry.paid_refund_date ? new Date(editEntry.paid_refund_date).toISOString().split('T')[0] : '',
                 total_balance: editEntry.total_balance || '',
-                withdraw: editEntry.withdraw || ''
+                bank_name: editEntry.bank_name || '',
+                paid_bank: editEntry.paid_bank || ''
             });
         }
     }, [editEntry, entryNumber, totalEntries, user]);
@@ -167,6 +219,18 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             isValid = false;
         }
 
+        // Paid bank validation (should be a number if provided)
+        // if (data.paid_bank && isNaN(parseFloat(data.paid_bank))) {
+        //     newErrors.paid_bank = 'Paid bank must be a valid number';
+        //     isValid = false;
+        // }
+
+        // If paid_bank has value, bank_name is required
+        // if (data.paid_bank && parseFloat(data.paid_bank) > 0 && !data.bank_name) {
+        //     newErrors.bank_name = 'Bank name is required when paid bank amount is provided';
+        //     isValid = false;
+        // }
+
         if (isValid) {
             setIsSubmitting(true);
             const requestData = {
@@ -179,7 +243,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_fee_date: data.paid_fee_date || null,
                 paid_refund_date: data.paid_refund_date || null,
                 total_balance: parseFloat(data.total_balance) || 0,
-                withdraw: parseFloat(data.withdraw) || 0
+                bank_name: data.bank_name || null,
+                paid_bank: data.paid_bank ? parseFloat(data.paid_bank) : null
             };
 
             try {
@@ -204,6 +269,26 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 const result = await response.json();
                 console.log('Success:', result);
 
+                // Submit to accounts if bank payment exists (similar to Navtcc)
+                if (parseFloat(data.paid_bank) > 0 && data.bank_name) {
+                    const bankData = {
+                        bank_name: data.bank_name,
+                        employee_name: data.employee,
+                        detail: `Refunded - ${data.name} - ${data.reference}`,
+                        credit: parseFloat(data.paid_bank),
+                        debit: 0,
+                        date: data.date,
+                        entry: data.entry,
+                    };
+
+                    try {
+                        await axios.post(`${BASE_URL}/accounts`, bankData);
+                        console.log('Bank transaction stored successfully');
+                    } catch (error) {
+                        console.error('Error storing bank transaction:', error);
+                    }
+                }
+
                 setData({
                     employee: user?.username || '',
                     entry: `${entryNumber}/${totalEntries}`,
@@ -214,7 +299,8 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     paid_fee_date: '',
                     paid_refund_date: '',
                     total_balance: '',
-                    withdraw: ''
+                    bank_name: '',
+                    paid_bank: ''
                 });
 
                 if (onSubmitSuccess) {
@@ -237,18 +323,18 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         <div className="flex items-center justify-center bg-white p-4">
             <div className="w-full max-w-4xl p-8 rounded-md">
                 <div className="flex items-center justify-between mb-6">
-    <div className="text-2xl font-semibold relative inline-block">
-        REFUNDED FORM
-        <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
-    </div>
-    <button
-        type="button"
-        onClick={onCancel}
-        className="text-gray-700 hover:text-gray-900 transition-colors"
-    >
-        <i className="fas fa-arrow-left text-xl"></i>
-    </button>
-</div>
+                    <div className="text-2xl font-semibold relative inline-block">
+                        REFUNDED FORM
+                        <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="text-gray-700 hover:text-gray-900 transition-colors"
+                    >
+                        <i className="fas fa-arrow-left text-xl"></i>
+                    </button>
+                </div>
                 <form onSubmit={handleSubmit}>
                     <div className="flex flex-wrap justify-between gap-4">
                         <div className="w-full sm:w-[calc(50%-10px)]">
@@ -342,17 +428,6 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             {prevError.paid_refund_date && <span className="text-red-500 text-sm">{prevError.paid_refund_date}</span>}
                         </div>
                         <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">WITHDRAW </label>
-                            <input
-                                type="number"
-                                name="withdraw"
-                                value={data.withdraw}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                placeholder="0.00"
-                            />
-                        </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">Total Balance </label>
                             <input
                                 type="number"
@@ -365,6 +440,51 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.total_balance && <span className="text-red-500 text-sm">{prevError.total_balance}</span>}
                         </div>
+                        {/* <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Bank Title</label>
+                            <select
+                                name="bank_name"
+                                value={data.bank_name}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                disabled={banksLoading}
+                            >
+                                <option value="">
+                                    {banksLoading ? 'Loading banks...' : 'Select Bank Title'}
+                                </option>
+                                {/* Predefined bank options (like Navtcc) */}
+                                {/* {bankOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))} */}
+                                {/* Additional banks from API */}
+                                {/* {banks.length > 0 && (
+                                    <>
+                                        <option disabled>──────────</option>
+                                        {banks.map((bank) => (
+                                            <option key={bank.id} value={bank.bank_name}>
+                                                {bank.bank_name}
+                                            </option>
+                                        ))}
+                                    </>
+                                )}
+                            </select>
+                            {prevError.bank_name && <span className="text-red-500 text-sm">{prevError.bank_name}</span>}
+                        </div>  */}
+                        {/* <div className="w-full sm:w-[calc(50%-10px)]">
+                            <label className="block font-medium mb-1">Paid In Bank</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                name="paid_bank"
+                                value={data.paid_bank}
+                                onChange={handleChange}
+                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                placeholder="0.00"
+                            />
+                            {prevError.paid_bank && <span className="text-red-500 text-sm">{prevError.paid_bank}</span>}
+                        </div> */}
                     </div>
                     {prevError.general && <div className="text-red-500 mt-4">{prevError.general}</div>}
                     <div className="mt-10 flex justify-center">

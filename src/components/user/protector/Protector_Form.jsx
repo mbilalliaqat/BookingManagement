@@ -504,8 +504,9 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-md hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2"
+              className="px-8 py-3 bg-gray-300 text-black font-medium rounded-md hover:bg-gray-400 transition-all"
             >
+              
               {isLoading && <ButtonSpinner />}
               {editEntry ? 'Update' : 'Submit'}
             </button>

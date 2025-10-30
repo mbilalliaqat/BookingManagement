@@ -68,8 +68,9 @@ const Refunded = () => {
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'PAID FEE DATE', accessor: 'paid_fee_date' },
         { header: 'PAID REFUND DATE', accessor: 'paid_refund_date' },
-        {header:'WITHDRAW', accessor:'withdraw'},
         { header: 'TOTAL BALANCE', accessor: 'total_balance' },
+        // { header: 'BANK NAME', accessor: 'bank_name' },
+        // { header: 'PAID BANK', accessor: 'paid_bank' },
         
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
