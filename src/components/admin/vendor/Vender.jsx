@@ -23,8 +23,7 @@ const Vender = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [loadingActionId, setLoadingActionId] = useState(null);
 
-  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-
+  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL ;
   const location = useLocation();
 
 // Set initial selected vendor from navigation state

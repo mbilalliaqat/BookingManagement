@@ -569,7 +569,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section4Fields = [
         { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' },
         { name: 'additional_charges', label: 'Additional Charges', type: 'number', placeholder: 'Enter additional charges', icon: 'plus-circle' },
-                { name: 'detail', label: 'Detail', type: 'text', placeholder: 'Enter detail', icon: 'info-circle' }, // New Detail field      
+                { name: 'detail', label: 'Additional Detail', type: 'text', placeholder: 'Enter detail', icon: 'info-circle' }, // New Detail field      
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
         { name: 'pay_for_protector', label: 'Expence Emigrant', type: 'number', placeholder: 'Enter pay for protector', icon: 'shield-alt' },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },

@@ -62,22 +62,23 @@ const Visa = () => {
                     initial_paid_in_bank: initialBank,
                     paid_cash: totalCashPaid,
                     paid_in_bank: totalBankPaid,
-                    created_at: new Date(visa.created_at).toLocaleDateString('en-GB'),  
-                    embassy_send_date: visa.embassy_send_date
-                        ? new Date(visa.embassy_send_date).toLocaleDateString('en-GB')
-                        : 'N/A',
-                    embassy_return_date: visa.embassy_return_date
-                        ? new Date(visa.embassy_return_date).toLocaleDateString('en-GB')
-                        : 'N/A',
-                    protector_date: visa.protector_date
-                        ? new Date(visa.protector_date).toLocaleDateString('en-GB')
-                        : 'N/A',
-                    expiry_medical_date: visa.expiry_medical_date
-                        ? new Date(visa.expiry_medical_date).toLocaleDateString('en-GB')
-                        : 'N/A',
-                    passport_deliver_date: visa.passport_deliver_date
-                        ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB')
-                        : 'N/A',
+                  created_at: new Date(visa.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' }),  
+    embassy_send_date: visa.embassy_send_date
+        ? new Date(visa.embassy_send_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+        : 'N/A',
+    embassy_return_date: visa.embassy_return_date
+        ? new Date(visa.embassy_return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+        : 'N/A',
+    protector_date: visa.protector_date
+        ? new Date(visa.protector_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+        : 'N/A',
+    expiry_medical_date: visa.expiry_medical_date
+        ? new Date(visa.expiry_medical_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+        : 'N/A',
+    passport_deliver_date: visa.passport_deliver_date
+        ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+        : 'N/A',
+                    
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',

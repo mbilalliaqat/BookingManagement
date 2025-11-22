@@ -84,9 +84,15 @@ const fetchTickets = async () => {
                 paid_cash: totalCashPaid,
                 paid_in_bank: totalBankPaid,
                 
-                depart_date: new Date(ticket.depart_date).toLocaleDateString('en-GB'),
-                return_date: new Date(ticket.return_date).toLocaleDateString('en-GB'),
-                booking_date: new Date(ticket.booking_date).toLocaleDateString('en-GB'),
+                depart_date: ticket.depart_date 
+        ? new Date(ticket.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+        : '',
+                return_date: ticket.return_date 
+        ? new Date(ticket.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+        : '',
+    booking_date: ticket.booking_date 
+        ? new Date(ticket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+        : '',
                 allPassengerDetails: parsedPassengerDetails,
             };
         });
@@ -126,9 +132,18 @@ const fetchTickets = async () => {
             const formattedTicket = {
                 ...updatedTicket,
                 serialNo: entries[entryIndex].serialNo,
-                depart_date: new Date(updatedTicket.depart_date).toLocaleDateString('en-GB'),
-                return_date: new Date(updatedTicket.return_date).toLocaleDateString('en-GB'),
-                created_at: new Date(updatedTicket.created_at).toLocaleDateString('en-GB'),
+               depart_date: updatedTicket.depart_date 
+        ? new Date(updatedTicket.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+        : '',
+    return_date: updatedTicket.return_date 
+        ? new Date(updatedTicket.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+        : '',
+    created_at: updatedTicket.created_at 
+        ? new Date(updatedTicket.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+        : '',
+         booking_date: ticket.booking_date 
+        ? new Date(ticket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+        : '',
                 allPassengerDetails: parsedPassengerDetails, // Ensure this is also updated
             };
 

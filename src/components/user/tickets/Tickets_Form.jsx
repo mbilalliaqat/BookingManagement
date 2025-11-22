@@ -384,6 +384,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave', readOnly: !!editEntry },
             { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.value), placeholder: 'Select bank title', icon: 'university' },
             { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university', readOnly: !!editEntry },
+            { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: 'Select remaining date', icon: 'calendar-check' },
             { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
             { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
         ]
@@ -408,6 +409,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_cash: '',
         bank_title: '',
         paid_in_bank: '',
+        remaining_date: '',
         vendors: [{ vendor_name: '', payable_amount: '' }],
         profit: '',
         remaining_amount: '0'
@@ -444,6 +446,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_cash: Yup.number().min(0, 'Paid Cash cannot be negative').typeError('Paid Cash must be a number'),
         paid_in_bank: Yup.number().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
         bank_title: Yup.string(),
+        remaining_date: Yup.date().nullable().notRequired().typeError('Invalid date'),
         profit: Yup.number(),
         remaining_amount: Yup.number(),
         reference: Yup.string(),
@@ -548,6 +551,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_cash: editEntry.paid_cash || '',
                 bank_title: editEntry.bank_title || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
+                remaining_date: formatDateForInput(editEntry.remaining_date),
                 vendors: vendorsData,
                 profit: editEntry.profit || '',
                 remaining_amount: editEntry.remaining_amount || ''
@@ -616,6 +620,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_cash: parseFloat(values.paid_cash) || 0,
                 bank_title: values.bank_title || null,
                 paid_in_bank: parseFloat(values.paid_in_bank) || 0,
+                remaining_date: values.remaining_date || null,
                 payable_to_vendor: totalPayableToVendor,
                 vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
                 vendors_detail: JSON.stringify(values.vendors),

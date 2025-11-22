@@ -1,12 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plane, MapPin, FileText, CreditCard, Landmark, Shield, X, ChevronRight, DollarSign, User, Filter } from 'lucide-react';
+// --- MODIFIED: Removed Recharts imports ---
+import { Plane, MapPin, FileText, CreditCard, Landmark, Shield, X, ChevronRight, DollarSign, User, Filter, Send, MessageSquare, Minimize2 } from 'lucide-react';
+// --------------------------------------------------------------------------
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import DateRangePicker from '../../ui/DateRangePicker';
 import { useNavigate } from 'react-router-dom';
-// --- ADDED: Recharts Imports for Pie Chart and Bar Chart ---
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
-// ----------------------------------------------
+
+// --- NEW CHART IMPORTS ---
+
+import FinancialOverviewChart from '../../ui/FinancialOverviewChart';
+import MonthlyBookingsChart from '../../ui/MonthlyBookingsChart';
+// -------------------------
 
 // --- Custom Color Palette ---
 const COLOR_MAP = {
@@ -22,6 +27,7 @@ const ACCOUNT_COLORS = ['midnight', 'emerald', 'rose', 'teal', 'indigo', 'ivory'
 // Create axios instance with base URL
 const api = axios.create({
   baseURL: import.meta.env.VITE_LIVE_API_BASE_URL
+  
 });
 
 // Add caching for responses
@@ -110,10 +116,11 @@ export default function Dashboard() {
     return isNaN(date.getTime()) ? 0 : date.getTime();
   };
 
-  const safeLocaleDateString = (dateValue) => {
+ const safeLocaleDateString = (dateValue) => {
     if (!dateValue) return '--';
     const date = new Date(dateValue);
-    return isNaN(date.getTime()) ? '--' : date.toLocaleDateString();
+    // Added 'en-GB' for DD/MM/YYYY format and 'UTC' to fix the previous day issue
+    return isNaN(date.getTime()) ? '--' : date.toLocaleDateString('en-GB', { timeZone: 'UTC' });
   };
 
   const handleModuleClick = (moduleName) => {
@@ -348,10 +355,12 @@ const calculateMonthlySummary = useCallback(() => {
   const currentTableData = dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings;
   const summaryTotals = calculateSummaryTotals(currentTableData);
   const monthlySummaryData = calculateMonthlySummary();
-const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth() && 
+  
+  const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth() && 
                          selectedMonth.getFullYear() === selectedMonthEnd.getFullYear()
-  ? selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  : `${selectedMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${selectedMonthEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    ? selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : `${selectedMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${selectedMonthEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
@@ -489,7 +498,7 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
           paid_cash: umrah.paidCash, 
           paid_in_bank: umrah.paidInBank, 
           remaining_amount: umrah.remainingAmount, 
-          booking_date: safeLocaleDateString(umrah.createdAt), 
+          booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt), 
           timestamp: safeTimestamp(umrah.createdAt), 
           withdraw: 0, 
           passengerName: null,
@@ -558,7 +567,7 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
             paid_cash: ticket.paid_cash, 
             paid_in_bank: ticket.paid_in_bank, 
             remaining_amount: ticket.remaining_amount, 
-            booking_date: safeLocaleDateString(ticket.created_at), 
+            booking_date: safeLocaleDateString(ticket.booking_date || ticket.created_at), 
             timestamp: safeTimestamp(ticket.created_at), 
             withdraw: 0, 
             passengerName: firstPassengerName || ticket.customer_add || null,
@@ -843,9 +852,6 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
         const totalExpensesWithdraw = expensesBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
         const totalRefundedWithdraw = refundedBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
         const totalVendorWithdraw = venderBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
-        const totalPaidCash = finalCombinedBookings.reduce((sum, booking) => sum + parseFloat(booking.paid_cash || 0), 0);
-        
-        const cashInOffice = totalPaidCash - totalProtectorWithdraw - totalExpensesWithdraw - totalRefundedWithdraw - totalVendorWithdraw;
         const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw;
 
         setDashboardData({
@@ -853,47 +859,32 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
           totalBookings: dashboardStats.data.totalBookings,
           bookingsByType: dashboardStats.data.bookingsByType,
           totalRevenue: dashboardStats.data.totalRevenue,
-          totalProtectorWithdraw, 
-          totalExpenseWithdraw: totalExpensesWithdraw, 
-          totalRefundedWithdraw, 
-          totalVendorWithdraw,
-          cashInOffice, 
-          TotalWithdraw, 
-          accounts: accountsData, 
-          vendors: aggregatedVendors, 
+          totalProtectorWithdraw: totalProtectorWithdraw,
+          totalExpenseWithdraw: totalExpensesWithdraw,
+          totalRefundedWithdraw: totalRefundedWithdraw,
+          totalVendorWithdraw: totalVendorWithdraw,
+          TotalWithdraw: TotalWithdraw,
+          cashInOffice: runningCashInOffice,
+          accounts: accountsData,
+          vendors: aggregatedVendors,
           agents: aggregatedAgents,
-          totalVendorPayable,
-          totalVendorPaid,
-          totalAgentPayable,
-          totalAgentPaid,
+          totalVendorPayable: totalVendorPayable,
+          totalVendorPaid: totalVendorPaid,
+          totalAgentPayable: totalAgentPayable,
+          totalAgentPaid: totalAgentPaid,
         });
-        
-        console.log("Dashboard data loaded successfully");
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
+
+      } catch (error) {
+        console.error('Final fetch error:', error);
       } finally {
         setIsLoading(false);
       }
     };
-
-    const handlePaymentUpdate = () => {
-      cache.data.clear();
-      cache.timestamp.clear();
-      fetchDashboardData();
-    };
     
-    window.addEventListener('paymentUpdated', handlePaymentUpdate);
     fetchDashboardData();
-    
-    return () => {
-      window.removeEventListener('paymentUpdated', handlePaymentUpdate);
-      if (delayHandler) {
-        clearTimeout(delayHandler);
-      }
-    };
-  }, [fetchWithCache]); 
+  }, [fetchWithCache]);
 
-  const booking = dashboardData.bookingsByType || [];
+  const booking = dashboardData.bookingsByType;
   const ticketCount = booking.find(item => item.type === 'Ticket')?.count || 0;
   const umrahCount = booking.find(item => item.type === 'Umrah')?.count || 0;
   const visaCount = booking.find(item => item.type === 'Visa Processing')?.count || 0;
@@ -921,15 +912,12 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
   }, {});
 
   const profitBreakdownArray = Object.keys(profitBreakdown)
-    .map(type => ({
-      name: type,
-      amount: profitBreakdown[type],
-    }))
+    .map(type => ({ name: type, amount: profitBreakdown[type], }))
     .filter(item => item.amount !== 0);
 
   const totalProfit = profitBreakdownArray.reduce((sum, item) => sum + item.amount, 0);
 
-  const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);  
+  const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
   const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.remaining_amount || 0), 0);
 
   const totalVendorPayable = dashboardData.totalVendorPayable || 0;
@@ -942,30 +930,34 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
   const remainingBreakdown = dashboardData.combinedBookings.reduce((acc, booking) => {
     if (booking.receivable_amount > 0) {
       const remaining = parseFloat(booking.remaining_amount || 0);
-      acc[booking.type] = (acc[booking.type] || 0) + remaining;
+      if (remaining > 0) {
+        acc[booking.type] = (acc[booking.type] || 0) + remaining;
+      }
     }
     return acc;
   }, {});
   
   const remainingBreakdownArray = Object.keys(remainingBreakdown)
-    .map(type => ({
-      name: type,
+    .map(type => ({ 
+      name: type, 
       amount: remainingBreakdown[type],
+      color: moduleBreakdown.find(m => m.name === type)?.color || 'ivory',
     }))
-    .filter(item => item.amount > 0);
+    .filter(item => item.amount !== 0);
 
-  // --- MODIFIED: Data calculation for the Financial Overview Pie Chart ---
+  // --- DERIVED DATA FOR CHARTS (Kept in Dashboard as it depends on main state) ---
   const financialOverviewData = [
-    { name: 'Bank Amount', value: totalAccountsBalance, color: '#6366f1' }, // Indigo
-    { name: 'Total Profit', value: totalProfit, color: '#10b981' }, // Emerald
-    { name: 'Cash in Office', value: dashboardData.cashInOffice, color: '#f97316' }, // Orange
-    { name: 'Remaining Receivable', value: totalRemainingAmount, color: '#f43f5e' }, // Rose
-  ].filter(item => item.value > 0); // Only show segments with a value > 0
-  // -------------------------------------------------------------------
-
+    { name: 'Receivable Amount', value: summaryTotals.receivable_amount, color: '#3b82f6' }, 
+    { name: 'Paid Cash', value: summaryTotals.paid_cash, color: '#10b981' }, 
+    { name: 'Paid In Bank', value: summaryTotals.paid_in_bank, color: '#f59e0b' }, 
+    { name: 'Remaining Amount', value: summaryTotals.remaining_amount, color: '#ef4444' }, 
+    { name: 'Total Withdraw', value: summaryTotals.withdraw, color: '#8b5cf6' }, 
+  ].filter(item => item.value > 0);
+  // -------------------------------------------------------------------------------
+  
+  // Table Structure
   const columns = [
     { header: 'DATE', accessor: 'booking_date' },
-    { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
     { header: 'ENTRY', accessor: 'entry' },
     { header: 'TYPE', accessor: 'type' },
     { header: 'NAME', accessor: 'passengerName' },
@@ -978,19 +970,11 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
   ];
 
   return (
-    <div className="bg-[#f8fafc] p-6 rounded-2xl shadow-md overflow-hidden font-inter">
-      {/* Stats Cards Section - Adjusted for 8 columns */}
+    <div className=""> {/* Stats Cards Section - Adjusted for 8 columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
         {/* Total Bookings Card */}
-        <div
-          className="relative w-full"
-          onMouseEnter={() => handleMouseEnter('bookings')}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div
-            className="relative bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
-            title="Total Bookings"
-          >
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('bookings')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-blue-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Total Bookings" >
             <div className="relative z-10">
               <h2 className="text-black text-[0.65rem] font-bold uppercase tracking-wide font-inter mb-1 truncate">Total Bookings</h2>
               <p className="text-sm font-bold text-white">
@@ -1011,36 +995,92 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
               ) : (
                 <div className="space-y-1">
                   {moduleBreakdown.map((module, index) => (
-                    <div
-                      key={index}
-                      className="list-item text-[0.65rem] text-[#333] cursor-pointer hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150"
-                      onClick={() => handleModuleClick(module.name)}
-                    >
-                      {module.name} ({module.count})
+                    <div key={index} className="list-item text-[0.65rem] text-[#333] cursor-pointer hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center" onClick={() => handleModuleClick(module.name)}>
+                      <span className={`font-semibold ${COLOR_MAP[module.color].textBold} flex items-center space-x-1`}>
+                        {module.icon && <module.icon className={`w-3 h-3 ${COLOR_MAP[module.color].text}`} />}
+                        <span className="truncate pr-2 hover:underline">{module.name}</span>
+                      </span>
+                      <span className={`font-bold text-sm ${COLOR_MAP[module.color].textBold} flex-shrink-0`}>
+                        {module.count.toLocaleString()}
+                      </span>
                     </div>
                   ))}
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2">
-                    Total: {dashboardData.totalBookings}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
+       
+
+        {/* Total Withdraw Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('withdraw')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Total Withdraw" >
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-1">
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Total Withdraw</h2>
+              </div>
+              <p className="text-sm font-bold text-white mt-0 break-all">
+                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.TotalWithdraw.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          {hoveredCard === 'withdraw' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" onClick={handleProtectorClick} >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Protector</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalProtectorWithdraw.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" onClick={handleExpensesClick} >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Expenses</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalExpenseWithdraw.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" onClick={handleRefundedClick} >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Refunded</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalRefundedWithdraw.toLocaleString()}</span>
+                  </div>
+                   <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Vendor</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalVendorWithdraw.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total:</span>
+                    <span className="text-fuchsia-600">{dashboardData.TotalWithdraw.toLocaleString()}</span>
                   </div>
                 </div>
               )}
             </div>
           )}
         </div>
-
-        {/* Bank Accounts Card */}
-        <div
-          className="relative w-full"
-          onMouseEnter={() => handleMouseEnter('accounts')}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div
-            className="relative bg-gradient-to-br from-emerald-600 via-green-700 to-teal-800 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
-            title="Total Paid In Bank Amount"
-          >
+        
+        {/* Cash in Office Card */}
+        <div className="bg-red-500 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group cursor-pointer">
+          <div className="relative z-10 w-full">
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Cash in Office</h2>
+            </div>
+            <p className="text-sm font-bold text-white mt-0 break-all">
+              {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.cashInOffice.toLocaleString()}
+            </p>
+          </div>
+        </div>
+        
+        {/* Accounts Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('accounts')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-blue-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Bank Accounts" >
             <div className="relative z-10">
               <div className="flex justify-between items-center mb-1">
-                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Bank Amount</h2>
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Accounts</h2>
               </div>
               <p className="text-sm font-bold text-white mt-0 break-all">
                 {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalAccountsBalance.toLocaleString()}
@@ -1060,11 +1100,7 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
               ) : (
                 <div className="space-y-1">
                   {dashboardData.accounts.map((account, index) => (
-                    <div
-                      key={account.name}
-                      className="list-item text-[0.65rem] text-[#333] cursor-pointer hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-start"
-                      onClick={() => handleAccountClick(account)}
-                    >
+                    <div key={account.name} className="list-item text-[0.65rem] text-[#333] cursor-pointer hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-start" onClick={() => handleAccountClick(account)}>
                       <span className="font-semibold text-[#1e3a8a]">
                         {`${account.name} (${account.balance.toLocaleString()})`}
                       </span>
@@ -1085,15 +1121,8 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
         </div>
 
         {/* Vendor Card */}
-        <div
-          className="relative w-full"
-          onMouseEnter={() => handleMouseEnter('vendors')}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div
-            className="relative bg-gradient-to-br from-red-600 via-rose-700 to-red-800 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
-            title="Vendors"
-          >
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('vendors')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Vendors" >
             <div className="relative z-10">
               <div className="flex justify-between items-center mb-1">
                 <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Vendors</h2>
@@ -1115,13 +1144,9 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {dashboardData.vendors.map((vendor, index) => (
-                    <div
-                      key={vendor.vender_name}
-                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer"
-                      onClick={() => handleVendorClick(vendor.vender_name)}
-                    >
-                      <span className="font-semibold text-[#1e3a8a] truncate pr-2 hover:underline">
+                  {dashboardData.vendors.map((vendor) => (
+                    <div key={vendor.vender_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleVendorClick(vendor.vender_name)} >
+                      <span className="font-semibold text-red-700 truncate pr-2 hover:underline">
                         {vendor.vender_name}
                       </span>
                       <span className={`font-bold ${vendor.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
@@ -1135,10 +1160,12 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
                     </div>
                   )}
                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
-                    <span>Total Payable:</span> <span className="text-emerald-600">{totalVendorPayable.toLocaleString()}</span>
+                    <span>Total Payable:</span>
+                    <span className="text-emerald-600">{totalVendorPayable.toLocaleString()}</span>
                   </div>
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
-                    <span>Total Paid:</span> <span className="text-red-600">{totalVendorPaid.toLocaleString()}</span>
+                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
+                    <span>Total Paid:</span>
+                    <span className="text-red-600">{totalVendorPaid.toLocaleString()}</span>
                   </div>
                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
                     Total Vendors: {dashboardData.vendors.length}
@@ -1149,22 +1176,15 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
           )}
         </div>
 
-        {/* Agent Card */}
-        <div
-          className="relative w-full"
-          onMouseEnter={() => handleMouseEnter('agents')}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div
-            className="relative bg-gradient-to-br from-cyan-600 via-teal-700 to-cyan-800 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
-            title="Agents"
-          >
-            <div className="relative z-8">
+        {/* Agents Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('agents')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-blue-500  p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Agents" >
+            <div className="relative z-10">
               <div className="flex justify-between items-center mb-1">
                 <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Agents</h2>
               </div>
-              <p className="text-sm font-bold text-white mt-0 break-all">
-                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()}`}
+              <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
+                 {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()} / ${totalAgentPaid.toLocaleString()}`}
               </p>
             </div>
           </div>
@@ -1181,14 +1201,10 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
               ) : (
                 <div className="space-y-1">
                   {dashboardData.agents.map((agent, index) => (
-                    <div
-                      key={agent.agent_name}
-                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer"
-                      onClick={() => handleAgentClick(agent.agent_name)}
-                    >
+                    <div key={agent.agent_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleAgentClick(agent.agent_name)} >
                       <span className="font-semibold text-cyan-700 truncate pr-2 hover:underline">
                         {agent.agent_name}
-                      </span> 
+                      </span>
                       <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
                         {agent.remaining_amount.toLocaleString()}
                       </span>
@@ -1200,10 +1216,12 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
                     </div>
                   )}
                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
-                    <span>Total Payable:</span> <span className="text-emerald-600">{totalAgentPayable.toLocaleString()}</span>
+                    <span>Total Payable:</span>
+                    <span className="text-emerald-600">{totalAgentPayable.toLocaleString()}</span>
                   </div>
                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
-                    <span>Total Paid:</span> <span className="text-red-600">{totalAgentPaid.toLocaleString()}</span>
+                    <span>Total Paid:</span>
+                    <span className="text-red-600">{totalAgentPaid.toLocaleString()}</span>
                   </div>
                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
                     Total Agents: {dashboardData.agents.length}
@@ -1213,20 +1231,13 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
             </div>
           )}
         </div>
-
+        
         {/* Remaining Amount Card */}
-        <div
-          className="relative w-full"
-          onMouseEnter={() => handleMouseEnter('remaining')}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div
-            className="relative bg-gradient-to-br from-gray-700 via-slate-800 to-stone-900 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group cursor-pointer"
-            title="Total Remaining Amount"
-          >
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('remaining')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Remaining Amount" >
             <div className="relative z-10">
               <div className="flex justify-between items-center mb-1">
-                <h2 className="text-white/90 text-[0.65rem] font-bold tracking-wide font-inter truncate">Remaining Amount</h2>
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Remaining Amount</h2>
               </div>
               <p className="text-sm font-bold text-white mt-0 break-all">
                 {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalRemainingAmount.toLocaleString()}
@@ -1237,7 +1248,7 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
             <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
               {isLoading && !showPartialData ? (
                 <div className="space-y-1">
-                  {Array.from({ length: 3 }).map((_, index) => (
+                  {Array.from({ length: 6 }).map((_, index) => (
                     <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
                       <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
                     </div>
@@ -1246,46 +1257,32 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
               ) : remainingBreakdownArray.length > 0 ? (
                 <div className="space-y-1">
                   {remainingBreakdownArray.map((item, index) => (
-                    <div
-                      key={item.name}
-                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer"
-                      onClick={() => handleRemainingAmountClick(item.name)}
-                    >
-                      <span className="font-semibold text-slate-700 truncate pr-2 hover:underline">
+                    <div key={item.name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleRemainingAmountClick(item.name)}>
+                      <span className={`font-semibold ${COLOR_MAP[item.color].textBold} truncate pr-2 hover:underline`}>
                         {item.name}
                       </span>
-                      <span className="font-bold text-amber-600 flex-shrink-0">
+                      <span className={`font-bold text-amber-600 flex-shrink-0`}>
                         {item.amount.toLocaleString()}
                       </span>
                     </div>
                   ))}
-                  <div 
-                    className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between cursor-pointer hover:bg-[#e0e0e0]"
-                    onClick={() => handleRemainingAmountClick('all')}
-                  >
-                    <span className="hover:underline">Total:</span> 
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total:</span>
                     <span className="text-amber-600">{totalRemainingAmount.toLocaleString()}</span>
                   </div>
                 </div>
               ) : (
-                <div className="text-center text-[0.65rem] text-slate-500 py-2">
-                  No remaining amounts.
+                <div className="text-gray-500 text-[0.65rem] text-center p-1">
+                  No pending remaining amounts.
                 </div>
               )}
             </div>
           )}
         </div>
-
+        
         {/* New Profit Card */}
-        <div
-          className="relative w-full"
-          onMouseEnter={() => handleMouseEnter('profit')}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div
-            className="relative bg-gradient-to-br from-yellow-500 via-amber-600 to-orange-700 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer"
-            title="Total Profit"
-          >
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('profit')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-yellow-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Total Profit" >
             <div className="relative z-10">
               <div className="flex justify-between items-center mb-1">
                 <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Profit</h2>
@@ -1308,10 +1305,7 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
               ) : profitBreakdownArray.length > 0 ? (
                 <div className="space-y-1">
                   {profitBreakdownArray.map((item, index) => (
-                    <div
-                      key={item.name}
-                      className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center"
-                    >
+                    <div key={item.name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center" >
                       <span className="font-semibold text-yellow-700 truncate pr-2">
                         {item.name}
                       </span>
@@ -1321,404 +1315,187 @@ const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth(
                     </div>
                   ))}
                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
-                    <span>Total:</span> <span className="text-emerald-600">{totalProfit.toLocaleString()}</span>
+                    <span>Total:</span>
+                    <span className="text-emerald-600">{totalProfit.toLocaleString()}</span>
                   </div>
                 </div>
               ) : (
-                <div className="text-center text-[0.65rem] text-slate-500 py-2">
-                  No profit data available.
+                <div className="text-gray-500 text-[0.65rem] text-center p-1">
+                  No profits recorded yet.
                 </div>
               )}
             </div>
           )}
-        </div>
-
-        {/* Total Withdraw Card */}
-        <div
-          className="relative w-full"
-          onMouseEnter={() => handleMouseEnter('withdraw')}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="bg-gradient-to-br from-fuchsia-600 via-pink-700 to-purple-800 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group cursor-pointer">
-            <div className="relative z-10 w-full">
-              <div className="flex justify-between items-center mb-1">
-                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Total Withdraw</h2>
-              </div>
-              <p className="text-sm font-bold text-white mt-0 break-all">
-                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.TotalWithdraw.toLocaleString()}
-              </p>
-            </div>
-          </div>
-          {hoveredCard === 'withdraw' && (
-            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
-              {isLoading && !showPartialData ? (
-                <div className="space-y-1">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
-                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <div 
-                    className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer"
-                    onClick={handleProtectorClick}
-                  >
-                    <span className="font-semibold text-fuchsia-700 hover:underline">Protector</span>
-                    <span className="font-bold text-fuchsia-600">{dashboardData.totalProtectorWithdraw.toLocaleString()}</span>
-                  </div>
-                  <div 
-                    className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer"
-                    onClick={handleExpensesClick}
-                  >
-                    <span className="font-semibold text-fuchsia-700 hover:underline">Expenses</span>
-                    <span className="font-bold text-fuchsia-600">{dashboardData.totalExpenseWithdraw.toLocaleString()}</span>
-                  </div>
-                  <div 
-                    className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer"
-                    onClick={handleRefundedClick}
-                  >
-                    <span className="font-semibold text-fuchsia-700 hover:underline">Refunded</span>
-                    <span className="font-bold text-fuchsia-600">{dashboardData.totalRefundedWithdraw.toLocaleString()}</span>
-                  </div>
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
-                    <span>Total:</span> <span className="text-fuchsia-600">{dashboardData.TotalWithdraw.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Cash in Office Card */}
-        <div className="bg-gradient-to-br from-lime-500 via-green-600 to-teal-700 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group cursor-pointer">
-          <div className="relative z-10 w-full">
-            <div className="flex justify-between items-center mb-1">
-              <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Cash in Office</h2>
-            </div>
-            <p className="text-sm font-bold text-white mt-0 break-all">
-              {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.cashInOffice.toLocaleString()}
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* --- CHART SECTIONS --- */}
-      <div className="grid grid-cols-2 lg:grid-cols-2 gap-8 mb-8">
+      {/* --- CHART SECTIONS: NOW USING SEPARATED COMPONENTS --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8"> 
         {/* Financial Overview Pie Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl border border-indigo-100">
-          <h2 className="font-bold text-xl text-black font-inter mb-4">Financial Overview</h2>
-          {isLoading && !showPartialData ? (
-            <div className="flex justify-center items-center h-64">
-              <TableSpinner />
-            </div>
-          ) : financialOverviewData.length > 0 ? (
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={financialOverviewData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
-                  >
-                    {financialOverviewData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value, name) => [value.toLocaleString(), name]} 
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-slate-500">
-              No financial data to display in the chart.
-            </div>
+        <FinancialOverviewChart
+          isLoading={isLoading}
+          financialOverviewData={financialOverviewData}
+        />
+
+        {/* Monthly Bookings Bar Chart */}
+        <MonthlyBookingsChart
+          isLoading={isLoading}
+          monthlySummaryData={monthlySummaryData}
+          currentMonthName={currentMonthName}
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          setSelectedMonthEnd={setSelectedMonthEnd}
+        />
+      </div>
+
+
+      {/* --- RECENT BOOKINGS TABLE --- */}
+      <div className="px-4 py-3 bg-white rounded-xl shadow-lg border border-indigo-100 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-800 font-inter">All Bookings</h2>
+         
+        </div>
+        
+        {/* Date Range Filter */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
+          <div className="flex items-center space-x-2">
+            <Filter size={18} className="text-indigo-600" />
+            <span className="text-sm text-gray-600 font-medium">Filter by Date:</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input 
+              type="date" 
+              value={dateRange.startDate || ''} 
+              onChange={(e) => handleDateRangeChange(e.target.value, dateRange.endDate)} 
+              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+              placeholder="Start Date" 
+            />
+            <span className="text-sm font-medium text-gray-600">to</span>
+            <input 
+              type="date" 
+              value={dateRange.endDate || ''} 
+              onChange={(e) => handleDateRangeChange(dateRange.startDate, e.target.value)} 
+              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+              placeholder="End Date" 
+            />
+          </div>
+          {(dateRange.startDate || dateRange.endDate) && (
+            <button 
+              onClick={() => setDateRange({ startDate: null, endDate: null })} 
+              className="text-xs px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors self-start sm:self-auto" 
+            > 
+              Clear Filter 
+            </button>
           )}
         </div>
 
-        {/* Monthly Summary Bar Chart */}
-{/* Monthly Summary Bar Chart */}
-<div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-  <div className="mb-6">
-    <h2 className="font-bold text-lg text-gray-800 font-inter mb-4">
-      Monthly Overview: Tickets & Services (Grouped Bar Chart)
-    </h2>
-    
-    {/* Date Range Selector */}
-    <div className="flex items-center space-x-3 flex-wrap gap-2">
-      <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-300">
-        <span className="text-xs font-semibold text-gray-700">From:</span>
-        <input
-          type="date"
-          value={selectedMonth.toISOString().split('T')[0]}
-          onChange={(e) => {
-            const date = new Date(e.target.value);
-            setSelectedMonth(date);
-          }}
-          className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
-      
-      <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-300">
-        <span className="text-xs font-semibold text-gray-700">To:</span>
-        <input
-          type="date"
-          value={selectedMonthEnd.toISOString().split('T')[0]}
-          onChange={(e) => {
-            const date = new Date(e.target.value);
-            setSelectedMonthEnd(date);
-          }}
-          max={new Date().toISOString().split('T')[0]}
-          className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+        {/* Table Totals Summary */}
+        <div className="mb-4 grid grid-cols-2 md:grid-cols-5 gap-4 bg-indigo-50 p-3 rounded-xl border border-indigo-200">
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Receivable Total</p>
+            <p className="font-bold text-indigo-700">{summaryTotals.receivable_amount.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Cash Paid Total</p>
+            <p className="font-bold text-emerald-700">{summaryTotals.paid_cash.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Bank Paid Total</p>
+            <p className="font-bold text-amber-700">{summaryTotals.paid_in_bank.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Remaining Total</p>
+            <p className="font-bold text-rose-700">{summaryTotals.remaining_amount.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Withdraw Total</p>
+            <p className="font-bold text-fuchsia-700">{summaryTotals.withdraw.toLocaleString()}</p>
+          </div>
+        </div>
 
-      <button
-        onClick={() => {
-          setSelectedMonth(new Date());
-          setSelectedMonthEnd(new Date());
-        }}
-        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-semibold"
-      >
-        Reset
-      </button>
-    </div>
-  </div>
-
-  {isLoading && !showPartialData ? (
-    <div className="flex justify-center items-center h-96">
-      <TableSpinner />
-    </div>
-  ) : monthlySummaryData.length > 0 ? (
-    <div style={{ width: '100%', height: 450 }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart 
-          data={monthlySummaryData}
-          margin={{ top: 20, right: 100, left: 20, bottom: 50 }}
-          barGap={2}
-          barCategoryGap="15%"
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={true} />
-          <XAxis 
-            dataKey="date" 
-            tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
-            label={{ 
-              value: 'Date', 
-              position: 'insideBottom', 
-              offset: -15, 
-              style: { fill: '#374151', fontWeight: 600, fontSize: 13 } 
-            }}
-            axisLine={{ stroke: '#9ca3af' }}
-            tickLine={{ stroke: '#9ca3af' }}
-          />
-          <YAxis 
-            tick={{ fill: '#374151', fontSize: 12, fontWeight: 500 }}
-            label={{ 
-              value: 'Count (Sales/Services)', 
-              angle: -90, 
-              position: 'insideLeft', 
-              style: { fill: '#374151', fontWeight: 600, fontSize: 13 } 
-            }}
-            axisLine={{ stroke: '#9ca3af' }}
-            tickLine={{ stroke: '#9ca3af' }}
-            domain={[0, 'dataMax + 1']}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: '#ffffff', 
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              padding: '10px'
-            }}
-            labelStyle={{ fontWeight: 600, color: '#1f2937' }}
-          />
-          <Legend 
-            wrapperStyle={{ paddingTop: '10px' }}
-            iconType="rect"
-            iconSize={14}
-            formatter={(value) => <span style={{ color: '#374151', fontSize: '12px', fontWeight: 500 }}>{value}</span>}
-            layout="vertical"
-            align="right"
-            verticalAlign="middle"
-          />
-          
-          {/* Bars with image-matching colors */}
-          <Bar dataKey="Ticket" fill="#006BA6" radius={[4, 4, 0, 0]} maxBarSize={30} />
-          <Bar dataKey="Umrah" fill="#008C9E" radius={[4, 4, 0, 0]} maxBarSize={30} />
-          <Bar dataKey="Visa" fill="#7FD8FF" radius={[4, 4, 0, 0]} maxBarSize={30} />
-          <Bar dataKey="Gamca" fill="#FDB462" radius={[4, 4, 0, 0]} maxBarSize={30} />
-          <Bar dataKey="NAVTCC" fill="#FB8072" radius={[4, 4, 0, 0]} maxBarSize={30} />
-          <Bar dataKey="Services" fill="#B3DE69" radius={[4, 4, 0, 0]} maxBarSize={30} />
-          <Bar dataKey="Vendor" fill="#FCCDE5" radius={[4, 4, 0, 0]} maxBarSize={30} />
-          <Bar dataKey="Banks" fill="#BC80BD" radius={[4, 4, 0, 0]} maxBarSize={30} />
-        </BarChart>
-      </ResponsiveContainer>
+        {/* Actual Table */}
+        <div className="overflow-x-auto rounded-xl border border-gray-200 font-semibold
+ shadow-md">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-indigo-600 text-white">
+              <tr>
+                {columns.map(column => (
+                  <th key={column.header} scope="col" className="px-1 py-2 text-center text-[0.6rem] font-bold uppercase tracking-wider">
+                    {column.header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {isLoading && !showPartialData ? (
+                <tr>
+                  <td colSpan={columns.length} className="py-8 text-center">
+                    <TableSpinner message="Loading dashboard data..." />
+                  </td>
+                </tr>
+              ) : currentTableData.length > 0 ? (
+                <>
+                  {currentTableData.map((booking, index) => (
+                    <tr key={index} className="hover:bg-indigo-50 transition-colors duration-150">
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate">
+                        {booking.booking_date}
+                      </td>
+                      <td 
+                        className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate cursor-pointer hover:text-indigo-600 hover:underline" 
+                        title={booking.entry} 
+                        onClick={() => handleEntryClick(booking)} 
+                      >
+                        {booking.entry ? booking.entry : <span className="text-slate-400">--</span>}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] font-bold font-large truncate">
+                        <span className="px-1 py-0.5 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 text-[0.70rem] font-semibold">
+                          {booking.type}
+                        </span>
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate">
+                        {booking.passengerName || booking.employee_name || '--'}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-emerald-600 font-bold font-large truncate">
+                        {booking.receivable_amount.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-teal-600 font-bold font-large truncate">
+                        {booking.paid_cash.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-cyan-600 font-bold font-large truncate">
+                        {booking.paid_in_bank.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-amber-600 font-bold font-large truncate">
+                        {booking.remaining_amount.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate">
+                        {booking.withdraw.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-indigo-600 font-bold font-large truncate">
+                        {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : <span className="text-slate-400">--</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              ) : (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-8 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-2xl text-indigo-400">📋</span>
+                      </div>
+                      <p className="text-sm text-black font-bold">
+                        {dateRange.startDate && dateRange.endDate ? 'No bookings found in the selected date range' : 'No recent bookings found'}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
       
      
     </div>
-  ) : (
-    <div className="text-center py-12 text-gray-500">
-      <div className="text-5xl mb-4">📊</div>
-      <p className="text-lg font-semibold">No data available for the selected date range</p>
-      <p className="text-sm text-gray-400 mt-2">Please select a different date range</p>
-    </div>
-  )}
-</div>
-      </div>
-      {/* ----------------------------------------------------------------- */}
-
-      {/* Table Section */}
-      {isLoading && !showPartialData ? (
-        <div className="flex justify-center py-12">
-          <TableSpinner />
-        </div>
-      ) : (
-        <div className="bg-gradient-to-br from-slate-50 via-white to-indigo-50 p-6 rounded-2xl shadow-xl border border-indigo-100">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-bold text-2xl text-black font-inter">
-              All Bookings
-            </h2>
-            <div className="flex items-center space-x-4">
-              {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken || errors.services || errors.navtcc || errors.protector || errors.vendor || errors.agent) && (
-                <span className="text-xs text-rose-600 font-inter bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-                  {Object.values(errors).filter(e => e).join(', ')}
-                </span>
-              )}
-              <div className="flex items-center space-x-2">
-                <Filter size={18} className="text-indigo-600" />
-                <span className="text-sm text-gray-600 font-medium">Filter by Date:</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Date Range Picker */}
-          <div className="mb-6 flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="date"
-                value={dateRange.startDate || ''}
-                onChange={(e) => handleDateRangeChange(e.target.value, dateRange.endDate)}
-                className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Start Date"
-              />
-              <span className="text-sm font-medium text-gray-600">to</span>
-              <input
-                type="date"
-                value={dateRange.endDate || ''}
-                onChange={(e) => handleDateRangeChange(dateRange.startDate, e.target.value)}
-                className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="End Date"
-              />
-            </div>
-            {(dateRange.startDate || dateRange.endDate) && (
-              <button
-                onClick={() => setDateRange({ startDate: null, endDate: null })}
-                className="ml-2 text-xs px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors"
-              >
-                Clear
-              </button>
-            )}
-            {(dateRange.startDate || dateRange.endDate) && (
-              <div className="text-sm text-gray-600">
-                Showing {filteredBookings.length} of {dashboardData.combinedBookings.length} bookings
-              </div>
-            )}
-          </div>
-          <div className="overflow-y-auto max-h-[75vh] rounded-xl border border-indigo-100">
-            <table className="w-full table-fixed divide-y divide-indigo-100">
-              <thead className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 sticky top-0">
-                <tr>
-                  <th className="w-[7%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">DATE</th>
-                  <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">EMPLOYEE</th>
-                  <th className="w-[6%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">ENTRY</th>
-                  <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">TYPE</th>
-                  <th className="w-[10%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">NAME</th>
-                  <th className="w-[10%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">RECEIVABLE</th>
-                  <th className="w-[8%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">PAID CASH</th>
-                  <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">PAID BANK</th>
-                  <th className="w-[9%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">REMAINING</th>
-                  <th className="w-[8%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">WITHDRAW</th>
-                  <th className="w-[10%] px-1 py-2 text-left text-[0.6rem] font-bold text-black uppercase tracking-wider font-inter">CASH OFFICE</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-indigo-50">
-                {(dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings).length > 0 ? (
-                  <>
-                  {(dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings).map((booking, index) => (
-  <tr 
-    key={index} 
-    className={`${index % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-indigo-50/30 via-purple-50/20 to-pink-50/30'} hover:bg-gradient-to-r hover:from-indigo-100/40 hover:via-purple-100/30 hover:to-pink-100/40 transition-all duration-200`}
-  >
-    <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-bold font-large truncate">
-      {booking.booking_date}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-bold font-large truncate" title={booking.employee_name}>
-      {booking.employee_name}
-    </td>
-    <td 
-      className="px-1 py-2 text-[0.65rem] text-slate-700 font-bold font-large truncate cursor-pointer hover:text-indigo-600 hover:underline" 
-      title={booking.entry}
-      onClick={() => handleEntryClick(booking)}
-    >
-      {booking.entry ? booking.entry : <span className="text-slate-400">--</span>}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] font-bold font-large truncate">
-      <span className="px-1 py-0.5 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 inline-block">
-        {booking.type}
-      </span>
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-bold font-large truncate" title={booking.passengerName}>
-      {booking.passengerName ? booking.passengerName : <span className="text-slate-400">--</span>}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-emerald-600 font-bold font-large truncate">
-      {booking.receivable_amount}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-bold font-large truncate">
-      {booking.paid_cash}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-bold font-large truncate">
-      {booking.paid_in_bank}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-amber-600 font-bold font-large truncate">
-      {booking.remaining_amount}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-slate-700 font-bold font-large truncate">
-      {booking.withdraw}
-    </td>
-    <td className="px-1 py-2 text-[0.65rem] text-indigo-600 font-bold font-large truncate">
-      {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : <span className="text-slate-400">--</span>}
-    </td>
-  </tr>
-))}
-                  </>
-                ) : (
-                  <tr>
-                    <td colSpan="11" className="px-4 py-8 text-center">
-                      <div className="flex flex-col items-center justify-center space-y-2">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
-                          <span className="text-2xl text-indigo-400">📋</span>
-                        </div>
-                        <p className="text-sm text-black font-bold">
-                          {dateRange.startDate && dateRange.endDate ? 'No bookings found in the selected date range' : 'No recent bookings found'}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div> 
-     );
+  );
 }

@@ -72,10 +72,10 @@ const Umrah = () => {
                     initial_paid_in_bank: initialBank,
                     paidCash: parseFloat(booking.paidCash || 0),
                     paidInBank: parseFloat(booking.paidInBank || 0),
-                    booking_date: new Date(booking.booking_date).toLocaleDateString('en-GB'),
-                    depart_date: new Date(booking.depart_date).toLocaleDateString('en-GB'),
-                    return_date: new Date(booking.return_date).toLocaleDateString('en-GB'),
-                    createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB'),
+                   booking_date: new Date(booking.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+    depart_date: new Date(booking.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+    return_date: new Date(booking.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+    createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
                     allPassengerDetails: parsedPassengerDetails,
                     passportDetail: booking.passportDetail
                 };
@@ -385,10 +385,12 @@ const Umrah = () => {
                         : parseFloat(updatedBooking.paidInBank || 0),
                     paidCash: parseFloat(updatedBooking.paidCash || 0),
                     paidInBank: parseFloat(updatedBooking.paidInBank || 0),
-                    booking_date: new Date(updatedBooking.booking_date).toLocaleDateString('en-GB'),
-                    depart_date: new Date(updatedBooking.depart_date).toLocaleDateString('en-GB'),
-                    return_date: new Date(updatedBooking.return_date).toLocaleDateString('en-GB'),
-                    createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB'),
+                   // ... inside formattedBooking ...
+booking_date: new Date(updatedBooking.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+depart_date: new Date(updatedBooking.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+return_date: new Date(updatedBooking.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+// ...
                     allPassengerDetails: parsedPassengerDetails,
                     passportDetail: updatedBooking.passportDetail
                 };

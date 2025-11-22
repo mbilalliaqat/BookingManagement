@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
-import logo from '../../assets/cfimages (2).avif';
+import logo from '../../assets/LogoF.jpeg';
 
 const Sidebar = ({ isAdmin }) => {
   const { isSidebarOpen, toggleSidebar } = useAppContext();
@@ -77,7 +77,7 @@ const Sidebar = ({ isAdmin }) => {
       )}
       
       <div 
-        className={`bg-[#111827] text-white fixed md:sticky top-0 z-30 h-screen transition-all duration-300
+        className={`bg-[#111827] text-white fixed md:sticky top-0 z-30  h-screen transition-all duration-300
                     ${isMobile ? 
                       (isSidebarOpen ? 'left-0 w-56' : '-left-64') : 
                       (isSidebarOpen ? 'w-53' : 'w-20')}`}
@@ -103,7 +103,7 @@ const Sidebar = ({ isAdmin }) => {
                 className={({ isActive }) =>
                   `flex items-center ${(isSidebarOpen || isMobile) ? 'justify-start px-4 py-1 mx-3' : 'justify-center p-2 mx-4 my-1'}  rounded-md transition-all duration-400 ${
                     isActive
-                      ? 'rounded-md bg-gray-200  text-[#151A2D]'
+                      ? 'rounded-md bg-gray-200  text-[#151A2D] font-bold text-[17px]'
                       : 'text-white hover:bg-white hover:text-black'
                   }`
                 }
@@ -111,7 +111,7 @@ const Sidebar = ({ isAdmin }) => {
                 onMouseEnter={() => !isSidebarOpen && !isMobile  && setHoveredItem(index)}
                 onMouseLeave={() => setHoveredItem(null)}
               >
-                <i className={`fas ${link.icon} text-md`}></i>
+                <i className={`fas ${link.icon} text-[21px]`}></i>
                 {isSidebarOpen && <span className="ml-3">{link.label}</span>}
                 
                 {/* Tooltip for collapsed sidebar */}
