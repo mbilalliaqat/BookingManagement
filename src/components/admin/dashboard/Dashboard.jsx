@@ -1189,7 +1189,7 @@ const calculateMonthlySummary = useCallback(() => {
             </div>
           </div>
           {hoveredCard === 'agents' && (
-            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-[50] p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
               {isLoading && !showPartialData ? (
                 <div className="space-y-1">
                   {Array.from({ length: 6 }).map((_, index) => (

@@ -93,6 +93,9 @@ const fetchTickets = async () => {
     booking_date: ticket.booking_date 
         ? new Date(ticket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
         : '',
+         remaining_date: ticket.remaining_date    // Add this line
+            ? new Date(ticket.remaining_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+            : '',
                 allPassengerDetails: parsedPassengerDetails,
             };
         });
@@ -141,9 +144,13 @@ const fetchTickets = async () => {
     created_at: updatedTicket.created_at 
         ? new Date(updatedTicket.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
         : '',
-         booking_date: ticket.booking_date 
-        ? new Date(ticket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+         booking_date: updatedTicket.booking_date 
+        ? new Date(updatedTicket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
         : '',
+         remaining_date: updatedTicket.remaining_date    // Add this line
+            ? new Date(updatedTicket.remaining_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+            : '',
+        
                 allPassengerDetails: parsedPassengerDetails, // Ensure this is also updated
             };
 
@@ -387,6 +394,7 @@ const handlePaymentSuccess = (paymentData) => {
                 </div>
             )
         },
+        { header: 'REMAINING DATE', accessor: 'remaining_date' },
     ];
     const actionColumns = user.role === 'admin' ? [{
         header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
@@ -435,7 +443,10 @@ const handlePaymentSuccess = (paymentData) => {
     };
 
     const handleUpdate = (entry) => {
-        setEditEntry(entry);
+        const actualEntry = typeof entry === 'number' 
+        ? filteredData[entry] 
+        : entry;
+        setEditEntry(actualEntry);
         setShowForm(true);
     };
 

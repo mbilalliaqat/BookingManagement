@@ -14,7 +14,7 @@ const Header = ({ isAdmin }) => {
   const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(false);
 
-   const isExpanded = isSidebarOpen || isMobile;
+  const isExpanded = isSidebarOpen || false;
 
   const [customerForm, setCustomerForm] = useState({
     name: '',
@@ -296,7 +296,7 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
   };
 
   return (
-    <header className=" py-2 md:py-4 px-3 md:px-6 flex justify-between items-center  sticky top-0 z-10 border-b-2">
+    <header className="py-2 md:py-4 px-3 md:px-6 flex justify-between items-center sticky top-0 z-[100] border-b-2 bg-white">
       <div className="flex items-center space-x-2">
         <button
           onClick={toggleSidebar}
@@ -310,19 +310,30 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
       <div className="flex items-center space-x-3 md:space-x-6 ">
         <span className="font-bold text-sm md:hidden bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Booking System</span>
 
+        {/* Click outside to close search - BACKDROP MOVED HERE */}
+        {showSearch && (
+          <div
+            className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              setShowSearch(false);
+              setSearchTerm('');
+            }}
+          />
+        )}
+
         {/* Search Button & Dropdown */}
-        <div className="relative z-100">
+        <div className="relative">
           <button
             onClick={() => setShowSearch(!showSearch)}
-            className=" rounded-xl text-black z-100"
+            className="rounded-xl text-black relative z-[1000]"
           >
             <i className="fas fa-search"></i>
           </button>
 
           {showSearch && (
-            <div className="absolute right-0 top-12 w-80 md:w-96 bg-white border-2 border-indigo-200 rounded-2xl shadow-2xl z-500 max-h-[80vh] flex flex-col">
-              <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50  rounded-t-2xl">
-                <div className="flex items-center gap-2 ">
+            <div className="fixed right-3 top-16 md:absolute md:right-0 md:top-12 w-[calc(100vw-1.5rem)] md:w-96 bg-white border-2 border-indigo-200 rounded-2xl shadow-2xl z-[1000] max-h-[80vh] flex flex-col">
+              <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-2xl">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     placeholder="Search by name, entry, employee..."
@@ -338,7 +349,7 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
                     }}
                     className="p-2 text-slate-500 hover:text-slate-700"
                   >
-                    {/* <i className="fas fa-times"></i> */}
+                    <i className="fas fa-times"></i>
                   </button>
                 </div>
                 <div className="mt-2 text-xs text-slate-600">
@@ -446,7 +457,7 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
 
         <button
           className="flex items-center text-black font-semibold "
-          onClick={() => setAddCustomer(!AddCustomer)}
+          onClick={() => setAddCustomer()}
         >
           <i className="fa-solid fa-bell"></i>
           
@@ -551,17 +562,6 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
           </div>
         </div>
       </div>
-
-      {/* Click outside to close search */}
-      {showSearch && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => {
-            setShowSearch(false);
-            setSearchTerm('');
-          }}
-        />
-      )}
     </header>
   );
 };
