@@ -1,4 +1,4 @@
-// Modified Visa.jsx
+// Modified Visa.jsx with Date Range Filter
 import React, { useEffect, useState } from 'react';
 import Table from '../../ui/Table';
 import VisaProcessing_Form from './VisaProcessing_Form';
@@ -22,6 +22,11 @@ const Visa = () => {
     const [showPassportFields, setShowPassportFields] = useState(false);
     const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
     const [selectedVisaForPay, setSelectedVisaForPay] = useState(null);
+    
+    // Date filter states
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -62,22 +67,23 @@ const Visa = () => {
                     initial_paid_in_bank: initialBank,
                     paid_cash: totalCashPaid,
                     paid_in_bank: totalBankPaid,
-                  created_at: new Date(visa.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' }),  
-    embassy_send_date: visa.embassy_send_date
-        ? new Date(visa.embassy_send_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
-        : 'N/A',
-    embassy_return_date: visa.embassy_return_date
-        ? new Date(visa.embassy_return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
-        : 'N/A',
-    protector_date: visa.protector_date
-        ? new Date(visa.protector_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
-        : 'N/A',
-    expiry_medical_date: visa.expiry_medical_date
-        ? new Date(visa.expiry_medical_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
-        : 'N/A',
-    passport_deliver_date: visa.passport_deliver_date
-        ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
-        : 'N/A',
+                    created_at: new Date(visa.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                    created_at_raw: visa.created_at, // Store raw date for filtering
+                    embassy_send_date: visa.embassy_send_date
+                        ? new Date(visa.embassy_send_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                        : 'N/A',
+                    embassy_return_date: visa.embassy_return_date
+                        ? new Date(visa.embassy_return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                        : 'N/A',
+                    protector_date: visa.protector_date
+                        ? new Date(visa.protector_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                        : 'N/A',
+                    expiry_medical_date: visa.expiry_medical_date
+                        ? new Date(visa.expiry_medical_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                        : 'N/A',
+                    passport_deliver_date: visa.passport_deliver_date
+                        ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                        : 'N/A',
                     
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
@@ -138,107 +144,79 @@ const Visa = () => {
     const baseColumns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
         {
-    header: 'FILE NO. EMBASSY',
-    accessor: 'file_embassy',
-    render: (cellValue, row) => (
-        <div>
-            <div> {row.file_number || 'N/A'}</div>
-            <div>{row.embassy || 'N/A'}</div>
-        </div>
-    )
-},
-{ header: 'REFERENCE', accessor: 'reference' },
-{
-    header: 'VISA NO. ID NO.',
-    accessor: 'visa_id',
-    render: (cellValue, row) => (
-        <div>
-            <div>{row.visa_number || 'N/A'}</div>
-            <div>{row.id_number || 'N/A'}</div>
-        </div>
-    )
-},
-{
-    header: 'FULL NAME  FATHER NAME',
-    accessor: 'passenger_name',
-    render: (cellValue, row) => (
-        <div>
-            <div> {row.passengerFirstName || 'N/A'}</div>
-            <div> {row.passengerLastName || 'N/A'}</div>
-        </div>
-    )
-},
-{
-    header: 'E-NUMBER  MEDICAL EXPIRY',
-    accessor: 'e_number_medical',
-    render: (cellValue, row) => (
-        <div>
-            <div> {row.e_number || 'N/A'}</div>
-            <div> {row.expiry_medical_date || 'N/A'}</div>
-        </div>
-    )
-},
+            header: 'FILE NO. EMBASSY',
+            accessor: 'file_embassy',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row.file_number || 'N/A'}</div>
+                    <div>{row.embassy || 'N/A'}</div>
+                </div>
+            )
+        },
+        { header: 'REFERENCE', accessor: 'reference' },
+        {
+            header: 'VISA NO. ID NO.',
+            accessor: 'visa_id',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row.visa_number || 'N/A'}</div>
+                    <div>{row.id_number || 'N/A'}</div>
+                </div>
+            )
+        },
+        {
+            header: 'FULL NAME  FATHER NAME',
+            accessor: 'passenger_name',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row.passengerFirstName || 'N/A'}</div>
+                    <div>{row.passengerLastName || 'N/A'}</div>
+                </div>
+            )
+        },
+        {
+            header: 'E-NUMBER  MEDICAL EXPIRY',
+            accessor: 'e_number_medical',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row.e_number || 'N/A'}</div>
+                    <div>{row.expiry_medical_date || 'N/A'}</div>
+                </div>
+            )
+        },
         { header: 'PTN/PERMISSION', accessor: 'ptn_permission' },
-
-        // { header: 'ENTRY', accessor: 'entry' },
-       {
-        header: 'STATUS',
-        accessor: 'status',
-        render: (cellValue, row) => (
-            <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    row.status === 'Processing'
-                        ? 'bg-red-100 text-red-500'
-                        : row.status === 'Complete'
-                        ? 'bg-green-100 text-green-500'
-                        : row.status === 'Deliver'
-                        ? 'bg-blue-100 text-blue-500'
-                        : 'bg-gray-100 text-gray-500'
-                }`}
-            >
-                {row.status || 'N/A'}
-            </span>
-        )
-    }, 
-        
-        
+        {
+            header: 'STATUS',
+            accessor: 'status',
+            render: (cellValue, row) => (
+                <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        row.status === 'Processing'
+                            ? 'bg-red-100 text-red-500'
+                            : row.status === 'Complete'
+                            ? 'bg-green-100 text-green-500'
+                            : row.status === 'Deliver'
+                            ? 'bg-blue-100 text-blue-500'
+                            : 'bg-gray-100 text-gray-500'
+                    }`}
+                >
+                    {row.status || 'N/A'}
+                </span>
+            )
+        }, 
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'VENDOR NAME', accessor: 'vendor_name' },
-        // { header: 'SPONSOR NAME', accessor: 'sponsor_name' },
-       
-        
-        
-        // { header: 'CUSTOMER ADD', accessor: 'customer_add' },
-        // { header: 'EMBASSY SEND DATE', accessor: 'embassy_send_date' },
-        // { header: 'EMBASSY RETURN DATE', accessor: 'embassy_return_date' },
-        // { header: 'PROTECTOR DATE', accessor: 'protector_date' },
-        
-        // { header: 'PASSPORT DELIVER DATE', accessor: 'passport_deliver_date' },
-        // {
-        //     header: 'PASSENGERS',
-        //     accessor: 'passengerCount',
-        //     render: (row, index) => {
-        //         const adults = index.adults === undefined ? 0 : index.adults;
-        //         const children = index.children === undefined ? 0 : index.children;
-        //         const infants = index.infants === undefined ? 0 : index.infants;
-        //         return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
-        //     }
-        // },
-        // { header: 'TITLE', accessor: 'passengerTitle' },
-        
     ];
+
     const passportColumns = [
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-    
         { header: 'PASSPORT NO', accessor: 'documentNo' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
-        
     ];
 
     const financialColumns = [
         { header: 'RECEIVE ABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'ADDITIONAL CHARGES', accessor: 'additional_charges' },
-        // { header: 'PAY FOR PROTECTOR', accessor: 'pay_for_protector' },
         {
             header: 'PAID CASH',
             accessor: 'paid_cash_details',
@@ -259,7 +237,6 @@ const Visa = () => {
                 </div>
             )
         },
-        // { header: 'PROFIT', accessor: 'profit' },
         {
             header: 'REMAINING AMOUNT',
             accessor: 'remaining_amount',
@@ -304,11 +281,39 @@ const Visa = () => {
         ...actionColumns
     ];
 
-    const filteredData = entries?.filter((index) =>
-        Object.values(index).some((value) =>
+    // Enhanced filtering with date range
+    const filteredData = entries?.filter((entry) => {
+        // Search filter
+        const matchesSearch = Object.values(entry).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
-        )
-    );
+        );
+
+        // Date range filter
+        let matchesDateRange = true;
+        if (startDate || endDate) {
+            const createdDate = entry.created_at_raw ? new Date(entry.created_at_raw) : null;
+            
+            if (createdDate) {
+                if (startDate && endDate) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999); // Include the entire end date
+                    matchesDateRange = createdDate >= start && createdDate <= end;
+                } else if (startDate) {
+                    const start = new Date(startDate);
+                    matchesDateRange = createdDate >= start;
+                } else if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    matchesDateRange = createdDate <= end;
+                }
+            } else {
+                matchesDateRange = false;
+            }
+        }
+
+        return matchesSearch && matchesDateRange;
+    });
 
     const handleCancel = () => {
         setShowForm(false);
@@ -363,6 +368,11 @@ const Visa = () => {
         }
     };
 
+    const clearDateFilter = () => {
+        setStartDate('');
+        setEndDate('');
+    };
+
     return (
         <div className="h-full flex flex-col">
             {showForm ? (
@@ -381,6 +391,39 @@ const Visa = () => {
                                 />
                                 <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
+
+                            {/* Date Range Filter */}
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="Start Date"
+                                    />
+                                </div>
+                                <span className="text-gray-500">to</span>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="End Date"
+                                    />
+                                </div>
+                                {(startDate || endDate) && (
+                                    <button
+                                        onClick={clearDateFilter}
+                                        className="text-red-500 hover:text-red-700 px-2"
+                                        title="Clear date filter"
+                                    >
+                                        <i className="fas fa-times"></i>
+                                    </button>
+                                )}
+                            </div>
+
                             <button
                                 className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
                                     showPassportFields 
@@ -401,6 +444,16 @@ const Visa = () => {
                             <i className="fas fa-plus mr-1"></i> Add New
                         </button>
                     </div>
+
+                    {/* Display filtered count */}
+                    {(startDate || endDate) && (
+                        <div className="mb-2 text-sm text-gray-600">
+                            Showing {filteredData?.length || 0} of {entries?.length || 0} visa records
+                            {startDate && ` from ${new Date(startDate).toLocaleDateString('en-GB')}`}
+                            {endDate && ` to ${new Date(endDate).toLocaleDateString('en-GB')}`}
+                        </div>
+                    )}
+
                     <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
                         {
                             isLoading ? (

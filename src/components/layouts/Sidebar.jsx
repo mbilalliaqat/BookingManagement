@@ -88,10 +88,10 @@ const Sidebar = ({ isAdmin }) => {
             <img
               src={logo}
               alt="Logo"
-              className="w-12 h-12 object-cover rounded-2xl"
+              className="w-50 h-12 object-cover rounded-2xl"
             />
           </div>
-          {(isSidebarOpen || isMobile) && <span className='pl-2 font-bold'>Booking System</span>}
+          {/* {(isSidebarOpen || isMobile) && <span className='pl-2 font-bold'>Booking System</span>} */}
         </div>
         
         <nav className="flex-1 px-2 text-sm">

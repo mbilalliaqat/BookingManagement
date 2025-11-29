@@ -21,6 +21,11 @@ const Umrah = () => {
     const [showPassportFields, setShowPassportFields] = useState(false);
     const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
     const [selectedUmrahForPay, setSelectedUmrahForPay] = useState(null);
+    
+    // Date filter states
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -72,10 +77,11 @@ const Umrah = () => {
                     initial_paid_in_bank: initialBank,
                     paidCash: parseFloat(booking.paidCash || 0),
                     paidInBank: parseFloat(booking.paidInBank || 0),
-                   booking_date: new Date(booking.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-    depart_date: new Date(booking.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-    return_date: new Date(booking.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-    createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                    booking_date: new Date(booking.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                    depart_date: new Date(booking.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                    return_date: new Date(booking.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                    createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                    booking_date_raw: booking.booking_date, // Store raw date for filtering
                     allPassengerDetails: parsedPassengerDetails,
                     passportDetail: booking.passportDetail
                 };
@@ -86,6 +92,50 @@ const Umrah = () => {
             setError('Failed to load data. Please try again later.');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const updateSingleEntry = async (updatedBooking) => {
+        try {
+            const entryIndex = entries.findIndex(entry => entry.id === updatedBooking.id);
+            if (entryIndex === -1) return;
+
+            let parsedPassengerDetails = [];
+            try {
+                if (typeof updatedBooking.passportDetail === 'string') {
+                    const parsed = JSON.parse(updatedBooking.passportDetail);
+                    if (Array.isArray(parsed)) {
+                        parsedPassengerDetails = parsed;
+                    } else if (typeof parsed === 'object' && parsed !== null) {
+                        parsedPassengerDetails = [parsed];
+                    }
+                } else if (Array.isArray(updatedBooking.passportDetail)) {
+                    parsedPassengerDetails = updatedBooking.passportDetail;
+                } else if (typeof updatedBooking.passportDetail === 'object' && updatedBooking.passportDetail !== null) {
+                    parsedPassengerDetails = [updatedBooking.passportDetail];
+                }
+            } catch (e) {
+                console.error("Error parsing passport details:", e);
+                parsedPassengerDetails = [];
+            }
+
+            const formattedBooking = {
+                ...updatedBooking,
+                serialNo: entries[entryIndex].serialNo,
+                booking_date: new Date(updatedBooking.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                depart_date: new Date(updatedBooking.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                return_date: new Date(updatedBooking.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
+                booking_date_raw: updatedBooking.booking_date,
+                allPassengerDetails: parsedPassengerDetails,
+            };
+
+            const updatedEntries = [...entries];
+            updatedEntries[entryIndex] = formattedBooking;
+            setEntries(updatedEntries);
+        } catch (error) {
+            console.error('Error updating single entry:', error);
+            fetchUmrah();
         }
     };
 
@@ -117,6 +167,7 @@ const Umrah = () => {
             }
             return umrah;
         }));
+
         closeRemainingPayModal();
         fetchUmrah();
     };
@@ -341,11 +392,39 @@ const Umrah = () => {
         ...actionColumns
     ];
 
-    const filteredData = entries.filter((entry) =>
-        Object.values(entry).some((value) =>
+    // Enhanced filtering with date range
+    const filteredData = entries.filter((entry) => {
+        // Search filter
+        const matchesSearch = Object.values(entry).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
-        )
-    );
+        );
+
+        // Date range filter
+        let matchesDateRange = true;
+        if (startDate || endDate) {
+            const bookingDate = entry.booking_date_raw ? new Date(entry.booking_date_raw) : null;
+            
+            if (bookingDate) {
+                if (startDate && endDate) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999); // Include the entire end date
+                    matchesDateRange = bookingDate >= start && bookingDate <= end;
+                } else if (startDate) {
+                    const start = new Date(startDate);
+                    matchesDateRange = bookingDate >= start;
+                } else if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    matchesDateRange = bookingDate <= end;
+                }
+            } else {
+                matchesDateRange = false;
+            }
+        }
+
+        return matchesSearch && matchesDateRange;
+    });
 
     const handleCancel = () => {
         setShowForm(false);
@@ -354,51 +433,7 @@ const Umrah = () => {
 
     const handleFormSubmit = (updatedBooking = null) => {
         if (updatedBooking && editEntry) {
-            const entryIndex = entries.findIndex(entry => entry.id === updatedBooking.id);
-            if (entryIndex !== -1) {
-                let parsedPassengerDetails = [];
-                try {
-                    if (typeof updatedBooking.passportDetail === 'string') {
-                        const parsed = JSON.parse(updatedBooking.passportDetail);
-                        if (Array.isArray(parsed)) {
-                            parsedPassengerDetails = parsed;
-                        } else if (typeof parsed === 'object' && parsed !== null) {
-                            parsedPassengerDetails = [parsed];
-                        }
-                    } else if (Array.isArray(updatedBooking.passportDetail)) {
-                        parsedPassengerDetails = updatedBooking.passportDetail;
-                    } else if (typeof updatedBooking.passportDetail === 'object' && updatedBooking.passportDetail !== null) {
-                        parsedPassengerDetails = [updatedBooking.passportDetail];
-                    }
-                } catch (e) {
-                    console.error("Error parsing passport details:", e);
-                    parsedPassengerDetails = [];
-                }
-
-                const formattedBooking = {
-                    ...updatedBooking,
-                    initial_paid_cash: updatedBooking.initial_paid_cash !== undefined
-                        ? parseFloat(updatedBooking.initial_paid_cash)
-                        : parseFloat(updatedBooking.paidCash || 0),
-                    initial_paid_in_bank: updatedBooking.initial_paid_in_bank !== undefined
-                        ? parseFloat(updatedBooking.initial_paid_in_bank)
-                        : parseFloat(updatedBooking.paidInBank || 0),
-                    paidCash: parseFloat(updatedBooking.paidCash || 0),
-                    paidInBank: parseFloat(updatedBooking.paidInBank || 0),
-                   // ... inside formattedBooking ...
-booking_date: new Date(updatedBooking.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-depart_date: new Date(updatedBooking.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-return_date: new Date(updatedBooking.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
-// ...
-                    allPassengerDetails: parsedPassengerDetails,
-                    passportDetail: updatedBooking.passportDetail
-                };
-
-                const updatedEntries = [...entries];
-                updatedEntries[entryIndex] = formattedBooking;
-                setEntries(updatedEntries);
-            }
+            updateSingleEntry(updatedBooking);
         } else {
             fetchUmrah();
         }
@@ -407,7 +442,10 @@ createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { time
     };
 
     const handleUpdate = (entry) => {
-        setEditEntry(entry);
+        const actualEntry = typeof entry === 'number' 
+            ? filteredData[entry] 
+            : entry;
+        setEditEntry(actualEntry);
         setShowForm(true);
     };
 
@@ -448,6 +486,99 @@ createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { time
         }
     };
 
+    const clearDateFilter = () => {
+        setStartDate('');
+        setEndDate('');
+    };
+
+    const DeleteConfirmationModal = () => {
+        if (!showDeleteModal) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto bg-black bg-opacity-50">
+                <div className="relative w-full max-w-md mx-auto bg-[#161925] rounded-lg shadow-lg">
+                    <div className="p-6">
+                        <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
+                            <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                        </div>
+                        <h3 className="mb-5 text-lg font-medium text-center text-white">
+                            Delete Confirmation
+                        </h3>
+                        <p className="text-sm text-center text-white mb-6">
+                            Are you sure you want to delete this ticket?
+                        </p>
+                        <div className="flex items-center justify-center space-x-4">
+                            <button
+                                onClick={closeDeleteModal}
+                                className="px-4 py-2 text-sm font-medium text-white bg-[#161925] border rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDelete(deleteId)}
+                                className="px-4 py-2 text-sm font-medium text-white bg-[#161925] border rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <ButtonSpinner />
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : (
+                                    'Delete'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const RemainingPayModal = () => {
+        if (!showRemainingPayModal || !selectedTicketForPay) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold">Payment Details</h2>
+                        <button
+                            onClick={closeRemainingPayModal}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <i className="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div className="bg-gray-100 p-4 rounded mb-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <strong>Ticket ID:</strong> {selectedTicketForPay.id}
+                            </div>
+                            <div>
+                                <strong>Customer:</strong> {selectedTicketForPay.customer_add}
+                            </div>
+                            <div>
+                                <strong>Reference:</strong> {selectedTicketForPay.reference}
+                            </div>
+                            <div>
+                                <strong>Remaining Amount:</strong> {selectedTicketForPay.remaining_amount || '0'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <RemainingPay
+                        ticketId={selectedTicketForPay.id}
+                        onClose={closeRemainingPayModal}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="h-full flex flex-col">
             {showForm ? (
@@ -470,6 +601,39 @@ createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { time
                                 />
                                 <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
+
+                            {/* Date Range Filter */}
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="Start Date"
+                                    />
+                                </div>
+                                <span className="text-gray-500">to</span>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="End Date"
+                                    />
+                                </div>
+                                {(startDate || endDate) && (
+                                    <button
+                                        onClick={clearDateFilter}
+                                        className="text-red-500 hover:text-red-700 px-2"
+                                        title="Clear date filter"
+                                    >
+                                        <i className="fas fa-times"></i>
+                                    </button>
+                                )}
+                            </div>
+
                             <button
                                 className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
                                     showPassportFields
@@ -489,6 +653,16 @@ createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { time
                             <i className="fas fa-plus mr-1"></i> Add New
                         </button>
                     </div>
+
+                    {/* Display filtered count */}
+                    {(startDate || endDate) && (
+                        <div className="mb-2 text-sm text-gray-600">
+                            Showing {filteredData.length} of {entries.length} umrah bookings
+                            {startDate && ` from ${new Date(startDate).toLocaleDateString('en-GB')}`}
+                            {endDate && ` to ${new Date(endDate).toLocaleDateString('en-GB')}`}
+                        </div>
+                    )}
+
                     <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
                         {isLoading ? (
                             <TableSpinner />

@@ -15,7 +15,7 @@ const Agent = () => {
     const [data, setData] = useState([]);
     const [showForm, setShowForm] = useState(false);
     const [agentNames, setAgentNames] = useState([]);
-    const [selectedAgent, setSelectedAgent] = useState('');
+    const [selectedAgent, setSelectedAgent] = useState('all');
     const [filteredData, setFilteredData] = useState([]);
     const [editingEntry, setEditingEntry] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -80,9 +80,21 @@ useEffect(() => {
 
     // Filter data based on selected agent
     useEffect(() => {
-        if (selectedAgent === '' || selectedAgent === 'all') {
-            setFilteredData(data);
+        if (selectedAgent === 'all') {
+            // Show only unique agents (one entry per agent)
+            const uniqueAgents = [];
+            const seenAgents = new Set();
+            
+            data.forEach(item => {
+                if (!seenAgents.has(item.agent_name)) {
+                    seenAgents.add(item.agent_name);
+                    uniqueAgents.push(item);
+                }
+            });
+            
+            setFilteredData(uniqueAgents);
         } else {
+            // Show all entries for the selected agent
             setFilteredData(data.filter(item => item.agent_name === selectedAgent));
         }
     }, [data, selectedAgent]);
@@ -187,8 +199,27 @@ useEffect(() => {
         setSelectedAgent(e.target.value);
     };
 
+    // Handle clicking on an agent name in the table
+    const handleAgentClick = useCallback((agentName) => {
+        setSelectedAgent(agentName);
+    }, []);
+
     const columns = useMemo(() => [
-        { header: 'AGENT NAME', accessor: 'agent_name' },
+        { 
+            header: 'AGENT NAME', 
+            accessor: 'agent_name',
+            render: (row, fullRow) => {
+                const agentName = fullRow?.agent_name || row?.agent_name || row;
+                return (
+                    <span 
+                        className={selectedAgent === 'all' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : ''}
+                        onClick={() => selectedAgent === 'all' && handleAgentClick(agentName)}
+                    >
+                        {agentName}
+                    </span>
+                );
+            }
+        },
         { header: 'DATE', accessor: 'date' },
         { header: 'EMPLOYEE', accessor: 'employee' },
         { header: 'ENTRY', accessor: 'entry' },
@@ -225,7 +256,7 @@ useEffect(() => {
                   },
               ]
             : []),
-    ], [user.role, loadingActionId, handleUpdate, openDeleteModal]);
+    ], [user.role, loadingActionId, handleUpdate, openDeleteModal, selectedAgent, handleAgentClick]);
     
     return (
         <div className='flex flex-col h-full'>

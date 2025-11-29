@@ -1,3 +1,4 @@
+// Modified GamcaToken.jsx with Date Range Filter
 import React, { useEffect, useState } from 'react';
 import Table from '../../ui/Table';
 import GamcaToken_Form from './GamcaToken_Form';
@@ -18,18 +19,22 @@ const GamcaToken = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const { user } = useAppContext();
     const [showRemainingPay, setShowRemainingPay] = useState(false);
     const [selectedGamcaToken, setSelectedGamcaToken] = useState(null);
+    
+    // Date filter states
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    
+    const { user } = useAppContext();
 
-     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-     const fetchData = async () => {
+    const fetchData = async () => {
         setIsLoading(true);
         setError(null); 
         
-      try {
-           
+        try {
             if (!BASE_URL) {
                 throw new Error('API base URL is not defined. Please check your environment configuration.');
             }
@@ -45,7 +50,6 @@ const GamcaToken = () => {
             });
             
             console.log('Raw API response:', response);
-            
             
             if (!response.data) {
                 console.error('Empty response data:', response);
@@ -78,8 +82,8 @@ const GamcaToken = () => {
                 }
                 return {
                     ...token,
-                    
                     created_at: new Date(token.created_at).toLocaleDateString('en-GB'),
+                    created_at_raw: token.created_at, // Store raw date for filtering
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
@@ -122,56 +126,54 @@ const GamcaToken = () => {
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
         { 
-        header: 'EMPLOYEE & ENTRY', 
-        accessor: 'employee_entry', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.employee_name || ''}</div>
-                <div>{row?.entry || ''}</div>
-            </div>
-        )
-    },
+            header: 'EMPLOYEE & ENTRY', 
+            accessor: 'employee_entry', 
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.employee_name || ''}</div>
+                    <div>{row?.entry || ''}</div>
+                </div>
+            )
+        },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'COUNTRY', accessor: 'country' },
         { 
-        header: 'PASSENGER DETAILS', 
-        accessor: 'passenger_details', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
-            </div>
-        )
-    },
+            header: 'PASSENGER DETAILS', 
+            accessor: 'passenger_details', 
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
+                </div>
+            )
+        },
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-        // { header: 'NATIONALITY', accessor: 'passengerNationality' },
         { header: 'DOCUMENT TYPE', accessor: 'documentType' },
         { header: 'DOCUMENT NO', accessor: 'documentNo' },
-         {
-        header: 'VENDOR & PAYABLE',
-        accessor: 'vendor_payable',
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.vendor_name || ''}</div>
-                <div >{row?.payable_to_vendor || ''}</div>
-            </div>
-        )
-    },
-    { header: 'AGENT NAME', accessor: 'agent_name' },
+        {
+            header: 'VENDOR & PAYABLE',
+            accessor: 'vendor_payable',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.vendor_name || ''}</div>
+                    <div>{row?.payable_to_vendor || ''}</div>
+                </div>
+            )
+        },
+        { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
-        // { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
-          { 
-        header: 'PAID FROM & IN BANK', 
-        accessor: 'paid_bank', 
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.paid_from_bank || ''}</div>
-                <div>{row?.paid_in_bank || ''}</div>
-            </div>
-        )
-    },
+        { 
+            header: 'PAID FROM & IN BANK', 
+            accessor: 'paid_bank', 
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.paid_from_bank || ''}</div>
+                    <div>{row?.paid_in_bank || ''}</div>
+                </div>
+            )
+        },
         { header: 'PROFIT', accessor: 'profit' },
         {
             header: 'REMAINING AMOUNT',
@@ -190,7 +192,7 @@ const GamcaToken = () => {
             )
         },
         ...(user.role === 'admin' ? [{
-            header: 'ACTIONS', accessor: 'actions', render: (row,index) => (
+            header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
                     <button
                         className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
@@ -209,11 +211,39 @@ const GamcaToken = () => {
         }] : [])
     ];
 
-    const filteredData = entries?.filter((index) =>
-        Object.values(index).some((value) =>
+    // Enhanced filtering with date range
+    const filteredData = entries?.filter((entry) => {
+        // Search filter
+        const matchesSearch = Object.values(entry).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
-        )
-    );
+        );
+
+        // Date range filter
+        let matchesDateRange = true;
+        if (startDate || endDate) {
+            const createdDate = entry.created_at_raw ? new Date(entry.created_at_raw) : null;
+            
+            if (createdDate) {
+                if (startDate && endDate) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999); // Include the entire end date
+                    matchesDateRange = createdDate >= start && createdDate <= end;
+                } else if (startDate) {
+                    const start = new Date(startDate);
+                    matchesDateRange = createdDate >= start;
+                } else if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    matchesDateRange = createdDate <= end;
+                }
+            } else {
+                matchesDateRange = false;
+            }
+        }
+
+        return matchesSearch && matchesDateRange;
+    });
 
     const handleCancel = () => {
         setShowForm(false);
@@ -273,6 +303,11 @@ const GamcaToken = () => {
         }
     };
 
+    const clearDateFilter = () => {
+        setStartDate('');
+        setEndDate('');
+    };
+
     return (
         <div className="h-full flex flex-col">
             {showForm ? (
@@ -284,14 +319,51 @@ const GamcaToken = () => {
             ) : (
                 <div className="flex flex-col h-full">
                     <div className="flex justify-between items-center mb-4 relative">
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
-                        />
-                        <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
+                                />
+                                <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+
+                            {/* Date Range Filter */}
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="Start Date"
+                                    />
+                                </div>
+                                <span className="text-gray-500">to</span>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="End Date"
+                                    />
+                                </div>
+                                {(startDate || endDate) && (
+                                    <button
+                                        onClick={clearDateFilter}
+                                        className="text-red-500 hover:text-red-700 px-2"
+                                        title="Clear date filter"
+                                    >
+                                        <i className="fas fa-times"></i>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
                             onClick={() => setShowForm(true)}
@@ -299,6 +371,16 @@ const GamcaToken = () => {
                             <i className="fas fa-plus mr-1"></i> Add New
                         </button>
                     </div>
+
+                    {/* Display filtered count */}
+                    {(startDate || endDate) && (
+                        <div className="mb-2 text-sm text-gray-600">
+                            Showing {filteredData?.length || 0} of {entries?.length || 0} GAMCA tokens
+                            {startDate && ` from ${new Date(startDate).toLocaleDateString('en-GB')}`}
+                            {endDate && ` to ${new Date(endDate).toLocaleDateString('en-GB')}`}
+                        </div>
+                    )}
+
                     <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
                         {isLoading ? (
                             <TableSpinner />
@@ -343,7 +425,7 @@ const GamcaToken = () => {
                     </button>
                 </div>
             </Modal>
-             <Modal
+            <Modal
                 isOpen={showRemainingPay}
                 onClose={() => setShowRemainingPay(false)}
                 title={`Remaining Payment for Gamca Token ID: ${selectedGamcaToken?.id}`}>

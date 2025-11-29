@@ -15,7 +15,7 @@ const Vender = () => {
   const [data, setData] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [vendorNames, setVendorNames] = useState([]);
-  const [selectedVendor, setSelectedVendor] = useState('');
+  const [selectedVendor, setSelectedVendor] = useState('all');
   const [filteredData, setFilteredData] = useState([]);
   const [editingEntry, setEditingEntry] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -92,10 +92,23 @@ const formatDate = (dateString) => {
     fetchVendorNames();
   }, []);
 
+  // Filter data based on selected vendor
   useEffect(() => {
-    if (selectedVendor === '' || selectedVendor === 'all') {
-      setFilteredData(data);
+    if (selectedVendor === 'all') {
+      // Show only unique vendors (one entry per vendor)
+      const uniqueVendors = [];
+      const seenVendors = new Set();
+      
+      data.forEach(item => {
+        if (!seenVendors.has(item.vender_name)) {
+          seenVendors.add(item.vender_name);
+          uniqueVendors.push(item);
+        }
+      });
+      
+      setFilteredData(uniqueVendors);
     } else {
+      // Show all entries for the selected vendor
       setFilteredData(data.filter(item => item.vender_name === selectedVendor));
     }
   }, [data, selectedVendor]);
@@ -212,44 +225,63 @@ const formatDate = (dateString) => {
     setSelectedVendor(e.target.value);
   };
 
+  // Handle clicking on a vendor name in the table
+  const handleVendorClick = useCallback((vendorName) => {
+    setSelectedVendor(vendorName);
+  }, []);
+
   const columns = useMemo(
     () => [
-      { header: 'VENDOR NAME', accessor: 'vender_name' },
+      { 
+        header: 'VENDOR NAME', 
+        accessor: 'vender_name',
+        render: (row, fullRow) => {
+          const vendorName = fullRow?.vender_name || row?.vender_name || row;
+          return (
+            <span 
+              className={selectedVendor === 'all' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : ''}
+              onClick={() => selectedVendor === 'all' && handleVendorClick(vendorName)}
+            >
+              {vendorName}
+            </span>
+          );
+        }
+      },
       { header: 'DATE', accessor: 'date' },
       { header: 'ENTRY', accessor: 'entry' },
       { header: 'BANK TITLE', accessor: 'bank_title' },
       { header: 'DETAIL', accessor: 'detail' },
-     { header: 'PAYABLE', accessor: 'credit' },
-        { header: 'PAYED', accessor: 'debit' },
-        { header: 'BALANCE', accessor: 'remaining_amount' },
-     ...(user.role === 'admin'
-                 ? [
-                       {
-                           header: 'ACTIONS',
-                           accessor: 'actions',
-                           render: (row, index) => (
-                               <>
-                                   <button
-                                       className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
-                                       onClick={() => handleUpdate(index)}
-                                       disabled={loadingActionId === index.id}
-                                   >
-                                       {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
-                                   </button>
-                                   <button
-                                       className="text-red-500 hover:text-red-700 text-[13px]"
-                                       onClick={() => openDeleteModal(index.id)}
-                                       disabled={loadingActionId === index.id}
-                                   >
-                                       <i className="fas fa-trash"></i>
-                                   </button>
-                               </>
-                           ),
-                       },
-                   ]
-                 : []),
+      { header: 'PAYABLE', accessor: 'credit' },
+      { header: 'PAYED', accessor: 'debit' },
+      { header: 'BALANCE', accessor: 'remaining_amount' },
+      ...(user.role === 'admin'
+        ? [
+            {
+              header: 'ACTIONS',
+              accessor: 'actions',
+              render: (row, index) => (
+                <>
+                  <button
+                    className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
+                    onClick={() => handleUpdate(index)}
+                    disabled={loadingActionId === index.id}
+                  >
+                    {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
+                  </button>
+                  <button
+                    className="text-red-500 hover:text-red-700 text-[13px]"
+                    onClick={() => openDeleteModal(index.id)}
+                    disabled={loadingActionId === index.id}
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                </>
+              ),
+            },
+          ]
+        : []),
     ],
-    [user.role, loadingActionId, handleUpdate, openDeleteModal]
+    [user.role, loadingActionId, handleUpdate, openDeleteModal, selectedVendor, handleVendorClick]
   );
 
   return (

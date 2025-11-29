@@ -121,10 +121,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             newErrors.detail = 'Enter Detail';
             isValid = false;
         }
-        if (!data.selection) {
-            newErrors.selection = 'Select Type';
-            isValid = false;
-        }
+        
         
         // Validate vendor_id if withdraw value is provided
         if (data.withdraw && !data.vendor_id) {

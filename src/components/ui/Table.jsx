@@ -1,6 +1,6 @@
 // FILEPATH: d:/Projects/booking-management/src/components/ui/Table.jsx
 
-function Table({ data, columns, maxHeight = '500px' }) {
+function Table({ data, columns, maxHeight = '430px' }) {
   return (
     <div className="h-full flex flex-col" style={{ maxHeight: maxHeight }}>
       <div className="overflow-x-auto h-full rounded-2xl shadow-md">
