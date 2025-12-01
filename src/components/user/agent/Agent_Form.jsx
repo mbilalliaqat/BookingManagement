@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useAppContext } from '../../contexts/AppContext';
 import AgentNameModal from '../../ui/AgentNameModal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
-import { fetchEntryCounts,incrementFormEntry  } from '../../ui/api';
+import { fetchEntryCounts, incrementFormEntry } from '../../ui/api';
 
 const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const { user } = useAppContext();
@@ -13,8 +13,9 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const [isLoadingNames, setIsLoadingNames] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-        const [entryNumber, setEntryNumber] = useState(0); // Add entryNumber state
+    const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
+    const [hideFields, setHideFields] = useState(false);
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const isEditing = !!editingEntry;
@@ -27,8 +28,9 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         detail: editingEntry?.detail || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
         debit: editingEntry?.debit ? editingEntry.debit.toString() : '',
-            paid_cash: editingEntry?.paid_cash ? editingEntry.paid_cash.toString() : '', 
-    paid_bank: editingEntry?.paid_bank ? editingEntry.paid_bank.toString() : '', 
+        paid_cash: editingEntry?.paid_cash ? editingEntry.paid_cash.toString() : '', 
+        paid_bank: editingEntry?.paid_bank ? editingEntry.paid_bank.toString() : '',
+        balance: '',
     };
 
     const validationSchema = Yup.object({
@@ -39,19 +41,41 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         detail: Yup.string().required('Detail is required'),
         credit: Yup.number().min(0, 'Credit must be positive'),
         debit: Yup.number().min(0, 'Debit must be positive'),
-            paid_cash: Yup.number().min(0, 'Paid Cash must be positive'),  // Added
-    paid_bank: Yup.number().min(0, 'Paid Bank must be positive'),
-    }).test('credit-debit-test', 'Either Credit or Debit is required', (values) => {
-        return values.credit || values.debit;
+        paid_cash: Yup.number().min(0, 'Paid Cash must be positive'),
+        paid_bank: Yup.number().min(0, 'Paid Bank must be positive'),
+        balance: Yup.number().when('$hideFields', {
+            is: true,
+            then: (schema) => schema.required('Opening Balance is required'),
+            otherwise: (schema) => schema
+        }),
+    }).test('credit-debit-balance-test', null, function(values) {
+        if (hideFields && !isEditing) {
+            // When opening balance is checked, only balance is required
+            if (!values.balance && values.balance !== 0) {
+                return this.createError({
+                    path: 'balance',
+                    message: 'Enter Opening Balance'
+                });
+            }
+        } else {
+            // Normal mode - either credit or debit is required
+            if (!values.credit && !values.debit) {
+                return this.createError({
+                    path: 'credit',
+                    message: 'Either Credit or Debit is required'
+                });
+            }
+        }
+        return true;
     });
 
-       useEffect(() => {
+    useEffect(() => {
         const getCounts = async () => {
             const counts = await fetchEntryCounts();
             if (counts) {
                 const agentCounts = counts.find(c => c.form_type === 'agent');
                 if (agentCounts) {
-                    setEntryNumber(agentCounts.current_count + 1) ; // Use counts as-is
+                    setEntryNumber(agentCounts.current_count + 1);
                     setTotalEntries(agentCounts.global_count + 1);
                 } else {
                     setEntryNumber(1);
@@ -67,12 +91,10 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
 
     useEffect(() => {
         if (!isEditing) {
-            // Update entry field in form when counts change
-            setAgentNames(prev => [...prev]); // Trigger re-render if needed
+            setAgentNames(prev => [...prev]);
         }
     }, [entryNumber, totalEntries, isEditing]);
 
-    // Fetch existing agent names
     const fetchAgentNames = async () => {
         try {
             setIsLoadingNames(true);
@@ -92,18 +114,34 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     }, []);
 
     const handleAgentAdded = async (newAgentName) => {
-        // Add the new agent name to the list
         if (!agentNames.includes(newAgentName)) {
             setAgentNames(prev => [...prev, newAgentName].sort());
         }
         return Promise.resolve();
     };
 
+    const handleCheckboxChange = (e, setFieldValue) => {
+        // Don't allow changing to "Opening Balance" mode when editing
+        if (isEditing) return;
+        
+        const isChecked = e.target.checked;
+        setHideFields(isChecked);
+        
+        if (isChecked) {
+            setFieldValue('credit', '');
+            setFieldValue('debit', '');
+            setFieldValue('paid_cash', '');
+            setFieldValue('paid_bank', '');
+        } else {
+            setFieldValue('balance', '');
+        }
+    };
+
     const onSubmit = async (values, { setSubmitting, resetForm }) => {
         try {
             setIsSubmitting(true);
             setSubmitting(true);
-             const entryValue = isEditing ? values.entry : `AG ${entryNumber}/${totalEntries}`;
+            const entryValue = isEditing ? values.entry : `AG ${entryNumber}/${totalEntries}`;
 
             const submitData = {
                 agent_name: values.agent_name,
@@ -111,18 +149,32 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                 employee: values.employee,
                 entry: entryValue,
                 detail: values.detail,
-                credit: parseFloat(values.credit) || 0,
-                debit: parseFloat(values.debit) || 0,
-                 paid_cash: parseFloat(values.paid_cash) || 0,  // Added
-            paid_bank: parseFloat(values.paid_bank) || 0,
             };
+
+            // Handle opening balance mode
+            if (hideFields && !isEditing) {
+                const balanceValue = parseFloat(values.balance) || 0;
+                if (balanceValue >= 0) {
+                    submitData.credit = balanceValue;
+                    submitData.debit = 0;
+                } else {
+                    submitData.credit = 0;
+                    submitData.debit = Math.abs(balanceValue);
+                }
+                submitData.paid_cash = 0;
+                submitData.paid_bank = 0;
+            } else {
+                // Normal mode
+                submitData.credit = parseFloat(values.credit) || 0;
+                submitData.debit = parseFloat(values.debit) || 0;
+                submitData.paid_cash = parseFloat(values.paid_cash) || 0;
+                submitData.paid_bank = parseFloat(values.paid_bank) || 0;
+            }
 
             let response;
             if (isEditing) {
-                // Update existing entry
                 response = await axios.put(`${BASE_URL}/agent/${editingEntry.id}`, submitData);
             } else {
-                // Create new entry
                 response = await axios.post(`${BASE_URL}/agent`, submitData);
                 if (response.data.status === 'success') {
                     await incrementFormEntry('agent', entryNumber);
@@ -132,6 +184,7 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             if (response.data.status === 'success') {
                 console.log(`Agent entry ${isEditing ? 'updated' : 'created'} successfully:`); 
                 resetForm();
+                setHideFields(false);
                 onSubmitSuccess();
             }
         } catch (error) {
@@ -156,9 +209,25 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                     validationSchema={validationSchema} 
                     onSubmit={onSubmit}
                     enableReinitialize={true}
+                    context={{ hideFields }}
                 >
                     {formik => (
                         <Form className="flex-1 overflow-hidden p-6">
+                            {/* Opening Balance Checkbox */}
+                            <div className="w-full mb-4">
+                                {!isEditing && (
+                                    <label className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={hideFields}
+                                            onChange={(e) => handleCheckboxChange(e, formik.setFieldValue)}
+                                            className="mr-2"
+                                        />
+                                        <span className="font-medium">Opening Balance</span>
+                                    </label>
+                                )}
+                            </div>
+
                             <div className="flex flex-wrap justify-between gap-4">
                                 {/* Agent Name with Dropdown and Add Button */}
                                 <div className="w-full sm:w-[calc(50%-10px)]">
@@ -217,7 +286,7 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                     <ErrorMessage name="employee" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>
 
-                                 <div className="w-full sm:w-[calc(50%-10px)]">
+                                <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Entry</label>
                                     <Field
                                         type="text"
@@ -226,7 +295,6 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                         disabled
                                         readOnly
                                         value={isEditing ? formik.values.entry : `AG ${entryNumber}/${totalEntries}`}
-
                                     />
                                     <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>  
@@ -241,46 +309,60 @@ const AgentForm = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                     <ErrorMessage name="detail" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>
 
-                                <div className="w-full sm:w-[calc(50%-10px)]">
-                                    <label className="block font-medium mb-1">Credit</label>
-                                    <Field
-                                        type="number"
-                                        name="credit"
-                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                    />
-                                    <ErrorMessage name="credit" component="div" className="text-red-500 text-sm mt-1" />
-                                </div>
+                                {/* Conditional Fields based on Opening Balance checkbox */}
+                                {!hideFields ? (
+                                    <>
+                                        <div className="w-full sm:w-[calc(50%-10px)]">
+                                            <label className="block font-medium mb-1">Credit</label>
+                                            <Field
+                                                type="number"
+                                                name="credit"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                            />
+                                            <ErrorMessage name="credit" component="div" className="text-red-500 text-sm mt-1" />
+                                        </div>
 
-                                <div className="w-full sm:w-[calc(50%-10px)]">
-                                    <label className="block font-medium mb-1">Debit</label>
-                                    <Field
-                                        type="number"
-                                        name="debit"
-                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                    />
-                                    <ErrorMessage name="debit" component="div" className="text-red-500 text-sm mt-1" />
-                                </div>
+                                        <div className="w-full sm:w-[calc(50%-10px)]">
+                                            <label className="block font-medium mb-1">Debit</label>
+                                            <Field
+                                                type="number"
+                                                name="debit"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                            />
+                                            <ErrorMessage name="debit" component="div" className="text-red-500 text-sm mt-1" />
+                                        </div>
 
-                                 <div className="w-full sm:w-[calc(50%-10px)]">
-                        <label className="block font-medium mb-1">Paid Cash</label>
-                        <Field
-                            type="number"
-                            name="paid_cash"
-                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        />
-                        <ErrorMessage name="paid_cash" component="div" className="text-red-500 text-sm mt-1" />
-                    </div>
+                                        <div className="w-full sm:w-[calc(50%-10px)]">
+                                            <label className="block font-medium mb-1">Paid Cash</label>
+                                            <Field
+                                                type="number"
+                                                name="paid_cash"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                            />
+                                            <ErrorMessage name="paid_cash" component="div" className="text-red-500 text-sm mt-1" />
+                                        </div>
 
-                    {/* New Paid Bank field */}
-                    <div className="w-full sm:w-[calc(50%-10px)]">
-                        <label className="block font-medium mb-1">Paid Bank</label>
-                        <Field
-                            type="number"
-                            name="paid_bank"
-                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        />
-                        <ErrorMessage name="paid_bank" component="div" className="text-red-500 text-sm mt-1" />
-                    </div>
+                                        <div className="w-full sm:w-[calc(50%-10px)]">
+                                            <label className="block font-medium mb-1">Paid Bank</label>
+                                            <Field
+                                                type="number"
+                                                name="paid_bank"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                            />
+                                            <ErrorMessage name="paid_bank" component="div" className="text-red-500 text-sm mt-1" />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="w-full sm:w-[calc(50%-10px)]">
+                                        <label className="block font-medium mb-1">Balance</label>
+                                        <Field
+                                            type="number"
+                                            name="balance"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                        />
+                                        <ErrorMessage name="balance" component="div" className="text-red-500 text-sm mt-1" />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-10 flex justify-center">

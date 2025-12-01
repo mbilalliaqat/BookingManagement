@@ -65,6 +65,7 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  
   const [selectedMonthEnd, setSelectedMonthEnd] = useState(new Date());
   const navigate = useNavigate();
  
@@ -122,6 +123,9 @@ export default function Dashboard() {
     // Added 'en-GB' for DD/MM/YYYY format and 'UTC' to fix the previous day issue
     return isNaN(date.getTime()) ? '--' : date.toLocaleDateString('en-GB', { timeZone: 'UTC' });
   };
+  // Calculate outstanding balances for vendors and agents
+const vendorOutstandingBalance = dashboardData.vendors.reduce((sum, vendor) => sum + (vendor.remaining_amount || 0), 0);
+const agentOutstandingBalance = dashboardData.agents.reduce((sum, agent) => sum + (agent.remaining_amount || 0), 0);
 
   const handleModuleClick = (moduleName) => {
     if (moduleName === 'Ticket') {
@@ -1121,116 +1125,136 @@ const calculateMonthlySummary = useCallback(() => {
         </div>
 
         {/* Vendor Card */}
-        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('vendors')} onMouseLeave={handleMouseLeave} >
-          <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Vendors" >
-            <div className="relative z-10">
-              <div className="flex justify-between items-center mb-1">
-                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Vendors</h2>
-              </div>
-              <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
-                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalVendorPayable.toLocaleString()} / ${totalVendorPaid.toLocaleString()}`}
-              </p>
+       {/* Vendor Card */}
+<div className="relative w-full" onMouseEnter={() => handleMouseEnter('vendors')} onMouseLeave={handleMouseLeave} >
+  <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Vendors" >
+    <div className="relative z-10">
+      <div className="flex justify-between items-center mb-1">
+        <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Vendors</h2>
+      </div>
+      {/* <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
+        {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalVendorPayable.toLocaleString()} / ${totalVendorPaid.toLocaleString()}`}
+      </p> */}
+      <p className="text-[0.75rem] font-semibold text-black mt-1">
+         <span className={vendorOutstandingBalance >= 0 ? 'text-white' : 'text-red-200'}>{vendorOutstandingBalance >= 0 ? '+' : ''}{vendorOutstandingBalance.toLocaleString()}</span>
+      </p>
+    </div>
+  </div>
+  {hoveredCard === 'vendors' && (
+    <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+      {isLoading && !showPartialData ? (
+        <div className="space-y-1">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+              <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
             </div>
-          </div>
-          {hoveredCard === 'vendors' && (
-            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
-              {isLoading && !showPartialData ? (
-                <div className="space-y-1">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
-                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {dashboardData.vendors.map((vendor) => (
-                    <div key={vendor.vender_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleVendorClick(vendor.vender_name)} >
-                      <span className="font-semibold text-red-700 truncate pr-2 hover:underline">
-                        {vendor.vender_name}
-                      </span>
-                      <span className={`font-bold ${vendor.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
-                        {vendor.remaining_amount.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                  {errors.vendor && (
-                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
-                      {errors.vendor}
-                    </div>
-                  )}
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
-                    <span>Total Payable:</span>
-                    <span className="text-emerald-600">{totalVendorPayable.toLocaleString()}</span>
-                  </div>
-                   <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
-                    <span>Total Paid:</span>
-                    <span className="text-red-600">{totalVendorPaid.toLocaleString()}</span>
-                  </div>
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
-                    Total Vendors: {dashboardData.vendors.length}
-                  </div>
-                </div>
-              )}
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {dashboardData.vendors.map((vendor) => (
+            <div key={vendor.vender_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleVendorClick(vendor.vender_name)} >
+              <span className="font-semibold text-red-700 truncate pr-2 hover:underline">
+                {vendor.vender_name}
+              </span>
+              <span className={`font-bold ${vendor.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
+                {vendor.remaining_amount.toLocaleString()}
+              </span>
+            </div>
+          ))}
+          {errors.vendor && (
+            <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+              {errors.vendor}
             </div>
           )}
+          {/* <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+            <span>Total Payable:</span>
+            <span className="text-emerald-600">{totalVendorPayable.toLocaleString()}</span>
+          </div>
+          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
+            <span>Total Paid:</span>
+            <span className="text-red-600">{totalVendorPaid.toLocaleString()}</span>
+          </div> */}
+          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between border-t border-gray-200 pt-2">
+            <span>Outstanding Balance:</span>
+            <span className={vendorOutstandingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+              {vendorOutstandingBalance >= 0 ? '+' : ''}{vendorOutstandingBalance.toLocaleString()}
+            </span>
+          </div>
+          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
+            Total Vendors: {dashboardData.vendors.length}
+          </div>
         </div>
+      )}
+    </div>
+  )}
+</div>
 
+        
         {/* Agents Card */}
-        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('agents')} onMouseLeave={handleMouseLeave} >
-          <div className="relative bg-blue-500  p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Agents" >
-            <div className="relative z-10">
-              <div className="flex justify-between items-center mb-1">
-                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Agents</h2>
-              </div>
-              <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
-                 {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()} / ${totalAgentPaid.toLocaleString()}`}
-              </p>
+<div className="relative w-full" onMouseEnter={() => handleMouseEnter('agents')} onMouseLeave={handleMouseLeave} >
+  <div className="relative bg-blue-500  p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Agents" >
+    <div className="relative z-10">
+      <div className="flex justify-between items-center mb-1">
+        <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Agents</h2>
+      </div>
+      {/* <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
+         {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()} / ${totalAgentPaid.toLocaleString()}`}
+      </p> */}
+      <p className="text-[0.75rem] font-semibold text-black mt-1">
+         <span className={agentOutstandingBalance >= 0 ? 'text-white' : 'text-red-200'}>{agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}</span>
+      </p>
+    </div>
+  </div>
+  {hoveredCard === 'agents' && (
+    <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-[50] p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+      {isLoading && !showPartialData ? (
+        <div className="space-y-1">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+              <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
             </div>
-          </div>
-          {hoveredCard === 'agents' && (
-            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-[50] p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
-              {isLoading && !showPartialData ? (
-                <div className="space-y-1">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
-                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {dashboardData.agents.map((agent, index) => (
-                    <div key={agent.agent_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleAgentClick(agent.agent_name)} >
-                      <span className="font-semibold text-cyan-700 truncate pr-2 hover:underline">
-                        {agent.agent_name}
-                      </span>
-                      <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
-                        {agent.remaining_amount.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                  {errors.agent && (
-                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
-                      {errors.agent}
-                    </div>
-                  )}
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
-                    <span>Total Payable:</span>
-                    <span className="text-emerald-600">{totalAgentPayable.toLocaleString()}</span>
-                  </div>
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
-                    <span>Total Paid:</span>
-                    <span className="text-red-600">{totalAgentPaid.toLocaleString()}</span>
-                  </div>
-                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
-                    Total Agents: {dashboardData.agents.length}
-                  </div>
-                </div>
-              )}
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {dashboardData.agents.map((agent, index) => (
+            <div key={agent.agent_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleAgentClick(agent.agent_name)} >
+              <span className="font-semibold text-cyan-700 truncate pr-2 hover:underline">
+                {agent.agent_name}
+              </span>
+              <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
+                {agent.remaining_amount.toLocaleString()}
+              </span>
+            </div>
+          ))}
+          {errors.agent && (
+            <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+              {errors.agent}
             </div>
           )}
+          {/* <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+            <span>Total Payable:</span>
+            <span className="text-emerald-600">{totalAgentPayable.toLocaleString()}</span>
+          </div>
+          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
+            <span>Total Paid:</span>
+            <span className="text-red-600">{totalAgentPaid.toLocaleString()}</span>
+          </div> */}
+          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between border-t border-gray-200 pt-2">
+            <span>Outstanding Balance:</span>
+            <span className={agentOutstandingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+              {agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}
+            </span>
+          </div>
+          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
+            Total Agents: {dashboardData.agents.length}
+          </div>
         </div>
+      )}
+    </div>
+  )}
+</div>
         
         {/* Remaining Amount Card */}
         <div className="relative w-full" onMouseEnter={() => handleMouseEnter('remaining')} onMouseLeave={handleMouseLeave} >

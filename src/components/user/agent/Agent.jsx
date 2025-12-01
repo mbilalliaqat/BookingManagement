@@ -25,21 +25,21 @@ const Agent = () => {
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-   const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('en-GB'); 
-};
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('en-GB'); 
+    };
 
-const location = useLocation();
+    const location = useLocation();
 
-// Set initial selected agent from navigation state
-useEffect(() => {
-  if (location.state?.selectedAgent) {
-    setSelectedAgent(location.state.selectedAgent);
-  }
-}, [location.state]);
+    // Set initial selected agent from navigation state
+    useEffect(() => {
+        if (location.state?.selectedAgent) {
+            setSelectedAgent(location.state.selectedAgent);
+        }
+    }, [location.state]);
 
     const fetchData = async () => {
         try {
@@ -96,6 +96,24 @@ useEffect(() => {
         } else {
             // Show all entries for the selected agent
             setFilteredData(data.filter(item => item.agent_name === selectedAgent));
+        }
+    }, [data, selectedAgent]);
+
+    // Calculate outstanding balance (total of all agent balances)
+    const outstandingBalance = useMemo(() => {
+        if (selectedAgent === 'all') {
+            // Calculate unique agent balances
+            const agentBalances = {};
+            data.forEach(item => {
+                if (!agentBalances[item.agent_name]) {
+                    agentBalances[item.agent_name] = item.balance || 0;
+                }
+            });
+            return Object.values(agentBalances).reduce((sum, balance) => sum + balance, 0);
+        } else {
+            // For individual agent, return their total balance
+            const agentData = data.filter(item => item.agent_name === selectedAgent);
+            return agentData.length > 0 ? (agentData[0].balance || 0) : 0;
         }
     }, [data, selectedAgent]);
 
@@ -269,18 +287,28 @@ useEffect(() => {
             ) : (
                 <>
                     <div className='flex justify-between items-center mb-4 relative'>
-                        <select 
-                            className="p-2 border border-gray-300 rounded-md"
-                            value={selectedAgent}
-                            onChange={handleAgentChange}
-                        >
-                            <option value="all">All Agents</option>
-                            {agentNames.map((name, index) => (
-                                <option key={index} value={name}>
-                                    {name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="flex items-center gap-4">
+                            <select 
+                                className="p-2 border border-gray-300 rounded-md"
+                                value={selectedAgent}
+                                onChange={handleAgentChange}
+                            >
+                                <option value="all">All Agents</option>
+                                {agentNames.map((name, index) => (
+                                    <option key={index} value={name}>
+                                        {name}
+                                    </option>
+                                ))}
+                            </select>
+                            
+                            <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 shadow-sm">
+                                <span className="text-sm font-semibold text-gray-700">Outstanding Balance:</span>
+                                <span className={`text-lg font-bold ${outstandingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {outstandingBalance >= 0 ? '+' : ''}{outstandingBalance.toLocaleString('en-PK')}
+                                </span>
+                            </div>
+                        </div>
+                        
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
                             onClick={() => setShowForm(true)}

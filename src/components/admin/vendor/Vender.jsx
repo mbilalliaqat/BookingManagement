@@ -23,27 +23,25 @@ const Vender = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [loadingActionId, setLoadingActionId] = useState(null);
 
-  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL ;
+  const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
   const location = useLocation();
 
-// Set initial selected vendor from navigation state
-useEffect(() => {
-  if (location.state?.selectedVendor) {
-    setSelectedVendor(location.state.selectedVendor);
-  }
-}, [location.state]);
+  // Set initial selected vendor from navigation state
+  useEffect(() => {
+    if (location.state?.selectedVendor) {
+      setSelectedVendor(location.state.selectedVendor);
+    }
+  }, [location.state]);
 
-const formatDate = (dateString) => {
-  if (!dateString || typeof dateString !== 'string') return '';
-  
-  // The incoming format is 'YYYY-MM-DD'.
-  const parts = dateString.split('T')[0].split('-');
-  if (parts.length !== 3) return dateString; // Return original if format is unexpected
+  const formatDate = (dateString) => {
+    if (!dateString || typeof dateString !== 'string') return '';
+    
+    const parts = dateString.split('T')[0].split('-');
+    if (parts.length !== 3) return dateString;
 
-  const [year, month, day] = parts;
-  // Reassembles the date in 'DD/MM/YYYY' format without time zone conversion.
-  return `${day}/${month}/${year}`;
-};
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  };
 
   const fetchData = async () => {
     try {
@@ -92,10 +90,27 @@ const formatDate = (dateString) => {
     fetchVendorNames();
   }, []);
 
+  // Calculate outstanding balance (total of all vendor balances)
+  const outstandingBalance = useMemo(() => {
+    if (selectedVendor === 'all') {
+      // Calculate unique vendor balances
+      const vendorBalances = {};
+      data.forEach(item => {
+        if (!vendorBalances[item.vender_name]) {
+          vendorBalances[item.vender_name] = item.remaining_amount;
+        }
+      });
+      return Object.values(vendorBalances).reduce((sum, balance) => sum + balance, 0);
+    } else {
+      // For individual vendor, return their total balance
+      const vendorData = data.filter(item => item.vender_name === selectedVendor);
+      return vendorData.length > 0 ? vendorData[0].remaining_amount : 0;
+    }
+  }, [data, selectedVendor]);
+
   // Filter data based on selected vendor
   useEffect(() => {
     if (selectedVendor === 'all') {
-      // Show only unique vendors (one entry per vendor)
       const uniqueVendors = [];
       const seenVendors = new Set();
       
@@ -108,7 +123,6 @@ const formatDate = (dateString) => {
       
       setFilteredData(uniqueVendors);
     } else {
-      // Show all entries for the selected vendor
       setFilteredData(data.filter(item => item.vender_name === selectedVendor));
     }
   }, [data, selectedVendor]);
@@ -144,7 +158,6 @@ const formatDate = (dateString) => {
     setLoadingActionId(entry.id);
     console.log('Updating entry:', entry);
     
-    // Prepare entry for editing
     const entryForEdit = {
       id: entry.id,
       vender_name: entry.vender_name || '',
@@ -169,12 +182,10 @@ const formatDate = (dateString) => {
   const convertToInputDate = (formattedDate) => {
     if (!formattedDate) return '';
     
-    // If already in YYYY-MM-DD format
     if (formattedDate.includes('-') && formattedDate.length === 10) {
       return formattedDate;
     }
     
-    // If in MM/DD/YYYY format
     const parts = formattedDate.split('/');
     if (parts.length === 3) {
       const [month, day, year] = parts;
@@ -186,7 +197,6 @@ const formatDate = (dateString) => {
 
   const handleDelete = useCallback(
     async (id) => {
-      // Handle both direct ID and object with ID
       const parsedId = typeof id === 'object' && id !== null ? id.id : id;
       
       if (!parsedId || isNaN(Number(parsedId))) {
@@ -203,7 +213,6 @@ const formatDate = (dateString) => {
         
         if (response.data.status === 'success') {
           console.log('Vendor entry deleted successfully');
-          // Refresh data to get updated balances
           await fetchData();
         } else {
           throw new Error(response.data.message || 'Failed to delete vendor entry');
@@ -225,7 +234,6 @@ const formatDate = (dateString) => {
     setSelectedVendor(e.target.value);
   };
 
-  // Handle clicking on a vendor name in the table
   const handleVendorClick = useCallback((vendorName) => {
     setSelectedVendor(vendorName);
   }, []);
@@ -252,7 +260,7 @@ const formatDate = (dateString) => {
       { header: 'BANK TITLE', accessor: 'bank_title' },
       { header: 'DETAIL', accessor: 'detail' },
       { header: 'PAYABLE', accessor: 'credit' },
-      { header: 'PAYED', accessor: 'debit' },
+      { header: 'PAID', accessor: 'debit' },
       { header: 'BALANCE', accessor: 'remaining_amount' },
       ...(user.role === 'admin'
         ? [
@@ -295,18 +303,28 @@ const formatDate = (dateString) => {
       ) : (
         <>
           <div className="flex justify-between items-center mb-4 relative">
-            <select 
-              className="p-2 border border-gray-300 rounded-md" 
-              value={selectedVendor} 
-              onChange={handleVendorChange}
-            >
-              <option value="all">All Vendors</option>
-              {vendorNames.map((name, index) => (
-                <option key={index} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-4">
+              <select 
+                className="p-2 border border-gray-300 rounded-md" 
+                value={selectedVendor} 
+                onChange={handleVendorChange}
+              >
+                <option value="all">All Vendors</option>
+                {vendorNames.map((name, index) => (
+                  <option key={index} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 shadow-sm">
+                <span className="text-sm font-semibold text-gray-700">Outstanding Balance:</span>
+                <span className={`text-lg font-bold ${outstandingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {outstandingBalance >= 0 ? '+' : ''}{outstandingBalance.toLocaleString('en-PK')}
+                </span>
+              </div>
+            </div>
+            
             <button
               className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
               onClick={() => setShowForm(true)}
