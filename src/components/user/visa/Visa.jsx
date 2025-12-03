@@ -84,6 +84,15 @@ const Visa = () => {
                     passport_deliver_date: visa.passport_deliver_date
                         ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                         : 'N/A',
+                        booking_date: visa.booking_date 
+                          ? new Date(visa.booking_date).toLocaleDateString('en-GB') 
+                                    : '-',
+                         booking_date_raw: visa.booking_date,
+
+                       remaining_date: visa.remaining_date 
+                       ? new Date(visa.remaining_date).toLocaleDateString('en-GB') 
+                            : '-',
+                         remaining_date_raw: visa.remaining_date,
                     
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
@@ -142,7 +151,7 @@ const Visa = () => {
     };
 
     const baseColumns = [
-        { header: 'BOOKING DATE', accessor: 'created_at' },
+        { header: 'BOOKING DATE', accessor: 'booking_date' },
         {
             header: 'FILE NO. EMBASSY',
             accessor: 'file_embassy',
@@ -253,6 +262,7 @@ const Visa = () => {
                 </div>
             )
         },
+        { header: 'REMAINING DATE', accessor: 'remaining_date' },
     ];
        
     const actionColumns = user.role === 'admin' ? [{

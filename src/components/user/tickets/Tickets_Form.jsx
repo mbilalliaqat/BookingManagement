@@ -413,6 +413,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         vendors: [{ vendor_name: '', payable_amount: '' }],
         profit: '',
         remaining_amount: '0'
+        
     };
 
     const [formInitialValues, setFormInitialValues] = useState(initialValuesTemplate);
@@ -443,10 +444,10 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             })
         ).min(1, 'At least one vendor is required'),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
-        paid_cash: Yup.number().min(0, 'Paid Cash cannot be negative').typeError('Paid Cash must be a number'),
-        paid_in_bank: Yup.number().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
-        bank_title: Yup.string(),
-        remaining_date: Yup.date().nullable().notRequired().typeError('Invalid date'),
+        paid_cash: Yup.number().notRequired().min(0, 'Paid Cash cannot be negative').typeError('Paid Cash must be a number'),
+        paid_in_bank: Yup.number().notRequired().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
+        bank_title: Yup.string().notRequired(),
+        remaining_date: Yup.date().notRequired().nullable().notRequired().typeError('Invalid date'),
         profit: Yup.number(),
         remaining_amount: Yup.number(),
         reference: Yup.string(),

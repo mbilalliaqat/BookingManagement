@@ -58,6 +58,7 @@ const Expense = () => {
         {header:'ENTRY', accessor:'entry'},
         { header: 'DETAIL', accessor: 'detail' },
           { header: 'WITHDRAW', accessor: 'withdraw' },
+          { header: 'CASH OFFICE', accessor: 'cash_office' },
         { header: 'TOTAL AMOUNT', accessor: 'total_amount' },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (

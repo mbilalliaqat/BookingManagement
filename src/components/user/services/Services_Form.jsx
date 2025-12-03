@@ -19,6 +19,11 @@ const BANK_OPTIONS = [
     { value: "JAZ C", label: "JAZ C" },
     { value: "MCB FIT", label: "MCB FIT" },
 ];
+const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
+};
 
 // --- Auto-calculation component ---
 const AutoCalculate = () => {
@@ -199,6 +204,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             vendors: [{ vendor_name: '', payable_amount: '' }],
             agent_name: '',
             profit: '',
+            remaining_date: '',
             remaining_amount: '0'
         };
 
@@ -226,6 +232,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     [{ vendor_name: '', payable_amount: '' }],
                 agent_name: editEntry.agent_name || '',
                 profit: editEntry.profit || '',
+                remaining_date: formatDate(editEntry.remaining_date) || '',
                 remaining_amount: editEntry.remaining_amount || '0'
             };
         }
@@ -239,13 +246,13 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         specific_detail: Yup.string().required('Specific Detail is required'),
         visa_type: Yup.string().required('Visa Type is required').oneOf(VISA_TYPES, 'Invalid Visa Type'),
         receivable_amount: Yup.number().typeError('Receivable Amount must be a number').required('Receivable Amount is required').min(0, 'Amount cannot be negative'),
-        paid_cash: Yup.number().typeError('Paid Cash must be a number').required('Paid Cash is required').min(0, 'Amount cannot be negative'),
+        paid_cash: Yup.number().typeError('Paid Cash must be a number').notRequired().min(0, 'Amount cannot be negative'),
         paid_from_bank: Yup.string().notRequired(),
         paid_in_bank: Yup.number().typeError('Paid In Bank must be a number').notRequired().min(0, 'Amount cannot be negative'),
         vendors: Yup.array().of(
             Yup.object().shape({
-                vendor_name: Yup.string().required('Vendor name is required'),
-                payable_amount: Yup.number().required('Payable amount is required').min(0, 'Amount must be positive'),
+                vendor_name: Yup.string().notRequired('Vendor name is required'),
+                payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
             })
         ).min(1, 'At least one vendor is required'),
         agent_name: Yup.string().notRequired(),
@@ -302,6 +309,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             vendors_detail: JSON.stringify(values.vendors),
             agent_name: values.agent_name || null,
             profit: parseFloat(values.profit) || 0,
+            remaining_date: values.remaining_date || null,
             remaining_amount: parseFloat(values.remaining_amount) || 0
         };
 
@@ -466,7 +474,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
-        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
+        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },        { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: '', icon: 'calendar-times' },
     ];
 
     const renderField = (field, values, setFieldValue) => (

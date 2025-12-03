@@ -84,6 +84,10 @@ const GamcaToken = () => {
                     ...token,
                     created_at: new Date(token.created_at).toLocaleDateString('en-GB'),
                     created_at_raw: token.created_at, // Store raw date for filtering
+                    booking_date: token.booking_date ? new Date(token.booking_date).toLocaleDateString('en-GB') : '-',
+                    booking_date_raw: token.booking_date,
+                    remaining_date: token.remaining_date ? new Date(token.remaining_date).toLocaleDateString('en-GB') : '-',
+                    remaining_date_raw: token.remaining_date,
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
@@ -191,6 +195,11 @@ const GamcaToken = () => {
                 </div>
             )
         },
+        { 
+  header: 'REMAINING DATE', 
+  accessor: 'remaining_date_raw',
+  render: (date) => date ? new Date(date).toLocaleDateString('en-GB') : '-'
+},
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>

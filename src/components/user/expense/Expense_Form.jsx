@@ -9,6 +9,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
     const [vendors, setVendors] = useState([]);
+    const [hideFields, setHideFields] = useState(false);
     
     const [data, setData] = useState({
         user_name: user?.username || '',
@@ -18,7 +19,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         total_amount: '',
         selection: '',
         withdraw: '',
-        vendor_id: ''
+        vendor_id: '',
+        cash_office: ''
     });
 
     const [prevError, setPrevError] = useState({
@@ -29,8 +31,11 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         total_amount: '',
         selection: '',
         vendor_id: '',
+        cash_office: '',
         general: ''
     });
+
+    const isEditing = !!editEntry;
 
     // Fetch vendors on component mount
     useEffect(() => {
@@ -90,7 +95,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 total_amount: editEntry.total_amount || '',
                 selection: editEntry.selection || '',
                 withdraw: editEntry.withdraw || '',
-                vendor_id: editEntry.vendor_id || ''
+                vendor_id: editEntry.vendor_id || '',
+                cash_office: editEntry.cash_office || ''
             });
         }
     }, [editEntry, entryNumber, totalEntries, user]);
@@ -100,11 +106,37 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setPrevError({ ...prevError, [e.target.name]: '' });
     };
 
+    const handleCheckboxChange = (e) => {
+        // Don't allow changing to "Opening Balance" mode when editing
+        if (isEditing) return;
+        
+        const isChecked = e.target.checked;
+        setHideFields(isChecked);
+        
+        if (isChecked) {
+            // Clear fields not needed for opening balance
+            setData(prev => ({
+                ...prev,
+                total_amount: '',
+                selection: '',
+                withdraw: '',
+                vendor_id: ''
+            }));
+        } else {
+            // Clear cash_office when unchecking
+            setData(prev => ({
+                ...prev,
+                cash_office: ''
+            }));
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         let newErrors = {};
         let isValid = true;
 
+        // Common validations
         if (!data.user_name) {
             newErrors.user_name = 'Enter Name';
             isValid = false;
@@ -121,12 +153,21 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             newErrors.detail = 'Enter Detail';
             isValid = false;
         }
-        
-        
-        // Validate vendor_id if withdraw value is provided
-        if (data.withdraw && !data.vendor_id) {
-            newErrors.vendor_id = 'Select Vendor for withdraw';
-            isValid = false;
+
+        // Conditional validations based on opening balance mode
+        if (hideFields && !isEditing) {
+            // Opening Balance mode - only cash_office is required
+            if (!data.cash_office && data.cash_office !== '0') {
+                newErrors.cash_office = 'Enter Cash Office amount';
+                isValid = false;
+            }
+        } else {
+            // Normal mode validations
+            // Validate vendor_id if withdraw value is provided
+            if (data.withdraw && !data.vendor_id) {
+                newErrors.vendor_id = 'Select Vendor for withdraw';
+                isValid = false;
+            }
         }
 
         // Validate date format
@@ -150,11 +191,24 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 entry: data.entry,
                 date: data.date,
                 detail: data.detail,
-                total_amount: parseInt(data.total_amount) || 0,
-                selection: data.selection,
-                withdraw: data.withdraw ? parseInt(data.withdraw) : null,
-                vendor_name: data.vendor_id || null
             };
+
+            // Handle opening balance mode
+            if (hideFields && !isEditing) {
+                const cashOfficeValue = parseFloat(data.cash_office) || 0;
+                requestData.total_amount = 0;
+                requestData.selection = 'OPENING BALANCE';
+                requestData.withdraw = cashOfficeValue < 0 ? Math.abs(cashOfficeValue) : 0;
+                requestData.vendor_name = null;
+                // Store cash_office for the backend to handle
+                requestData.cash_office = cashOfficeValue;
+            } else {
+                // Normal mode
+                requestData.total_amount = parseInt(data.total_amount) || 0;
+                requestData.selection = data.selection;
+                requestData.withdraw = data.withdraw ? parseInt(data.withdraw) : null;
+                requestData.vendor_name = data.vendor_id || null;
+            }
 
             console.log('Submitting expense data:', requestData);
 
@@ -188,8 +242,10 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     total_amount: '',
                     selection: '',
                     withdraw: '',
-                    vendor_id: ''
+                    vendor_id: '',
+                    cash_office: ''
                 });
+                setHideFields(false);
 
                 if (onSubmitSuccess) {
                     onSubmitSuccess();
@@ -220,7 +276,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             <div className="w-full max-w-3xl p-8 rounded-md">
                 <div className="flex items-center justify-between mb-6">
                     <div className="text-2xl font-semibold relative inline-block">
-                        EXPENSE FORM
+                        {isEditing ? 'UPDATE EXPENSE ENTRY' : 'EXPENSE FORM'}
                         <div className="absolute bottom-0 left-0 w-8 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded"></div>
                     </div>
                     <button
@@ -232,6 +288,21 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     </button>
                 </div>
                 <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-6'>
+                    {/* Opening Balance Checkbox */}
+                    {!isEditing && (
+                        <div className="w-full mb-4">
+                            <label className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={hideFields}
+                                    onChange={handleCheckboxChange}
+                                    className="mr-2"
+                                />
+                                <span className="font-medium">Opening Balance</span>
+                            </label>
+                        </div>
+                    )}
+
                     <div className="flex flex-wrap justify-between gap-4">
                         <div className="w-full sm:w-[calc(50%-10px)]">
                             <label className="block font-medium mb-1">EMPLOYEE NAME</label>
@@ -279,53 +350,72 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             />
                             {prevError.detail && <span className="text-red-500">{prevError.detail}</span>}
                         </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Select Vendor</label>
-                            <select
-                                value={data.vendor_id}
-                                name="vendor_id"
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            >
-                                <option value="">SELECT VENDOR</option>
-                                {vendors.map((vendorName, index) => (
-                                    <option key={index} value={vendorName}>
-                                        {vendorName}
-                                    </option>
-                                ))}
-                            </select>
-                            {prevError.vendor_id && <span className="text-red-500">{prevError.vendor_id}</span>}
-                        </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Withdraw</label>
-                            <input
-                                type="number"
-                                name="withdraw"
-                                value={data.withdraw}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            />
-                        </div>
-                        <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Select Type</label>
-                            <select
-                                value={data.selection}
-                                name="selection"
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            >
-                                <option value="">SELECT TYPE</option>
-                                <option value="UTILITY BILL">UTILITY BILL</option>
-                                <option value="EMPLOYEE">EMPLOYEE</option>
-                                <option value="REFUND TO CUSTOMER">REFUND TO CUSTOMER</option>
-                                <option value="OFFICE EXPENSE">OFFICE EXPENSE</option>
-                                <option value="OWNER RECEIVING">OWNER RECEIVING</option>
-                                <option value="OFFICE BANK">OFFICE BANK</option>
-                                <option value="VENDER SEND">VENDER SEND</option>
-                                <option value="OTHER">OTHER</option>
-                            </select>
-                            {prevError.selection && <span className="text-red-500">{prevError.selection}</span>}
-                        </div>
+
+                        {/* Conditional Fields based on Opening Balance checkbox */}
+                        {!hideFields ? (
+                            <>
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Select Vendor</label>
+                                    <select
+                                        value={data.vendor_id}
+                                        name="vendor_id"
+                                        onChange={handleChange}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    >
+                                        <option value="">SELECT VENDOR</option>
+                                        {vendors.map((vendorName, index) => (
+                                            <option key={index} value={vendorName}>
+                                                {vendorName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {prevError.vendor_id && <span className="text-red-500">{prevError.vendor_id}</span>}
+                                </div>
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Withdraw</label>
+                                    <input
+                                        type="number"
+                                        name="withdraw"
+                                        value={data.withdraw}
+                                        onChange={handleChange}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    />
+                                </div>
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Select Type</label>
+                                    <select
+                                        value={data.selection}
+                                        name="selection"
+                                        onChange={handleChange}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    >
+                                        <option value="">SELECT TYPE</option>
+                                        <option value="UTILITY BILL">UTILITY BILL</option>
+                                        <option value="EMPLOYEE">EMPLOYEE</option>
+                                        <option value="REFUND TO CUSTOMER">REFUND TO CUSTOMER</option>
+                                        <option value="OFFICE EXPENSE">OFFICE EXPENSE</option>
+                                        <option value="OWNER RECEIVING">OWNER RECEIVING</option>
+                                        <option value="OFFICE BANK">OFFICE BANK</option>
+                                        <option value="VENDER SEND">VENDER SEND</option>
+                                        <option value="OTHER">OTHER</option>
+                                    </select>
+                                    {prevError.selection && <span className="text-red-500">{prevError.selection}</span>}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="w-full sm:w-[calc(50%-10px)]">
+                                <label className="block font-medium mb-1">Cash Office</label>
+                                <input
+                                    type="number"
+                                    name="cash_office"
+                                    value={data.cash_office}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    placeholder="Enter opening balance amount"
+                                />
+                                {prevError.cash_office && <span className="text-red-500">{prevError.cash_office}</span>}
+                            </div>
+                        )}
                     </div>
                     {prevError.general && <div className="text-red-500 mt-4">{prevError.general}</div>}
                     <div className="mt-10 flex justify-center">

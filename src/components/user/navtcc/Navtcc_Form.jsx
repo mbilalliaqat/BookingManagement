@@ -39,6 +39,13 @@ const AutoCalculate = () => {
     return null;
 };
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
+};
+
+
 const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
@@ -73,6 +80,8 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         agent_name: '',
         vendors: [{ vendor_name: '', amount: '' }],
         profit: '',
+        booking_date: new Date().toISOString().split('T')[0],  // Default today
+remaining_date: '',
         remaining_amount: '0'
     });
 
@@ -242,6 +251,8 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 agent_name: editEntry.agent_name || '',
                 vendors: vendorsArray,
                 profit: editEntry.profit || '',
+                booking_date: formatDate(editEntry.booking_date) || new Date().toISOString().split('T')[0],
+remaining_date: formatDate(editEntry.remaining_date) || '',
                 remaining_amount: editEntry.remaining_amount || ''
             };
             
@@ -280,6 +291,8 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             agent_name: values.agent_name || null,
             vendors: JSON.stringify(validVendors),
             profit: parseInt(values.profit),
+            booking_date: values.booking_date,
+remaining_date: values.remaining_date || null,
             remaining_amount: parseInt(values.remaining_amount)
         };
 
@@ -407,6 +420,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+       { name: 'booking_date', label: 'Booking Date', type: 'date' },
         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
@@ -433,7 +447,8 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
         { name: 'payed_to_bank', label: 'Payed To Bank', type: 'number', placeholder: 'Enter amount paid to bank', icon: 'university' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true},
-        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
+        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },
+        { name: 'remaining_date', label: 'Remaining Date', type: 'date' },
     ];
 
     const renderField = (field) => (

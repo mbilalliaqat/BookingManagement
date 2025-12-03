@@ -36,8 +36,10 @@ const Navtcc = () => {
             console.log("Fetched data:", data);
 
             const formattedData = data.navtcc?.map((navtcc) => {
+                
                 let passportDetails = {};
                 let vendorsList = [];
+                
                 
                 try {
                     if (typeof navtcc.passport_detail === 'string') {
@@ -65,6 +67,7 @@ const Navtcc = () => {
                     created_at: new Date(navtcc.created_at).toLocaleDateString('en-GB'),
                     created_at_raw: navtcc.created_at, // Store raw date for filtering
                     passengerTitle: passportDetails.title || '',
+                    remaining_date_raw: navtcc.remaining_date,
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
                     passengerDob: passportDetails.dob ? new Date(passportDetails.dob).toLocaleDateString('en-GB') : '',
@@ -91,7 +94,7 @@ const Navtcc = () => {
     }, []);
 
     const columns = [
-        { header: 'BOOKING DATE', accessor: 'created_at' },
+        { header: 'BOOKING DATE', accessor: 'booking_date' },
         { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
@@ -132,6 +135,11 @@ const Navtcc = () => {
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
+        { 
+  header: 'REMAINING DATE', 
+  accessor: 'remaining_date_raw',
+  render: (date) => date ? new Date(date).toLocaleDateString('en-GB') : '-'
+},
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>

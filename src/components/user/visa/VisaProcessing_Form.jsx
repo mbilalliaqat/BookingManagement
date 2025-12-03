@@ -208,6 +208,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         detail: '', // New Detail field
         status: 'Processing', // Default status for new entries
         agent_name: '',
+        booking_date: '',
+        remaining_date: '',
         vendors: [{ vendor_name: '', payable_amount: '' }]
     });
 
@@ -224,9 +226,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             })
         ).min(1, 'At least one vendor is required'),
         receivable_amount: Yup.number().notRequired('Receivable Amount is required').typeError('Receivable Amount must be a number'),
-        paid_cash: Yup.number().min(0, 'Paid Cash cannot be negative').typeError('Paid Cash must be a number'),
-        paid_in_bank: Yup.number().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
-        bank_title: Yup.string(),
+        paid_cash: Yup.number().notRequired().min(0, 'Paid Cash cannot be negative').typeError('Paid Cash must be a number'),
+        paid_in_bank: Yup.number().notRequired().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
+        bank_title: Yup.string().notRequired(),
         profit: Yup.number(),
         remaining_amount: Yup.number(),
         detail: Yup.string(), // Validation for new Detail field (optional)
@@ -351,7 +353,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 detail: editEntry.detail || '', // Load Detail field for edit
                 status: editEntry.status || 'Processing',
                 agent_name: editEntry.agent_name || '',
-                vendors: vendorsData
+                vendors: vendorsData,
+                booking_date: formatDate(editEntry.booking_date),
+                remaining_date: formatDate(editEntry.remaining_date),
             };
             
             setFormInitialValues(newValues);
@@ -413,7 +417,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             agent_name: values.agent_name,
             payable_to_vendor: totalPayableToVendor,
             vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
-            vendors_detail: JSON.stringify(values.vendors)
+            vendors_detail: JSON.stringify(values.vendors),
+            booking_date: values.booking_date ? new Date(values.booking_date) : null,
+            remaining_date: values.remaining_date ? new Date(values.remaining_date) : null,
         };
 
         try {
@@ -536,6 +542,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+        { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Select booking date', icon: 'calendar-check' },
         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
         { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map(opt => opt.value), placeholder: 'Select status', icon: 'tasks' },
         { name: 'file_number', label: 'File No.', type: 'text', placeholder: 'Enter file number', icon: 'file-alt' },
@@ -577,6 +584,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },
+        { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: 'Expected delivery / remaining date', icon: 'clock' },
     ];
 
     const renderField = (field) => (

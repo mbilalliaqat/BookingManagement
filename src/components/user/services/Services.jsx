@@ -38,6 +38,7 @@ const Services = () => {
             const formattedData = data.services.map((entry) => ({
                 ...entry,
                 booking_date: formatDate(entry.booking_date),
+                remaining_date: formatDate(entry.remaining_date),
             }));
             setEntries(formattedData.reverse());
         } catch (error) {
@@ -51,6 +52,8 @@ const Services = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+   
 
     const handleRemainingPay = (service) => {
         setSelectedService(service);
@@ -100,6 +103,7 @@ const Services = () => {
                 </div>
             )
         },
+         { header: 'REMAINING DATE', accessor: 'remaining_date' },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
