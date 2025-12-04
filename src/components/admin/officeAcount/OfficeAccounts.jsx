@@ -83,8 +83,15 @@ const OfficeAccounts = () => {
                     ...entry,
                     bank_name: banks[index],
                     date: formatDate(entry.date),
+                    originalDate: entry.date, // Keep original date for sorting
                 }))
             );
+            
+            // Sort by ID in descending order (latest first - assuming higher ID = newer entry)
+            combinedData.sort((a, b) => {
+                // Sort by ID in descending order
+                return b.id - a.id;
+            });
             
             setAllData(combinedData);
         } catch (error) {
@@ -120,6 +127,45 @@ const OfficeAccounts = () => {
             setFilteredData(allData.filter(item => item.bank_name === selectedBank));
         }
     }, [allData, selectedBank]);
+
+  const totals = useMemo(() => {
+    let totalCredit = 0;
+    let totalDebit = 0;
+    let totalBalance = 0;
+
+    if (selectedBank === 'all') {
+        // For "All Banks", calculate the last balance of each bank
+        const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
+        
+        banks.forEach(bank => {
+            const bankEntries = allData.filter(item => item.bank_name === bank);
+            if (bankEntries.length > 0) {
+                // Get the most recent entry's balance (since data is sorted by ID desc)
+                const latestBalance = parseFloat(bankEntries[0].balance) || 0;
+                totalBalance += latestBalance;
+            }
+        });
+        
+        // Calculate total credit and debit from all entries
+        allData.forEach(item => {
+            totalCredit += parseFloat(item.credit) || 0;
+            totalDebit += parseFloat(item.debit) || 0;
+        });
+    } else {
+        // For specific bank, sum all entries
+        filteredData.forEach(item => {
+            totalCredit += parseFloat(item.credit) || 0;
+            totalDebit += parseFloat(item.debit) || 0;
+        });
+        
+        // Get the latest balance (first entry since sorted by ID desc)
+        if (filteredData.length > 0) {
+            totalBalance = parseFloat(filteredData[0].balance) || 0;
+        }
+    }
+
+    return { credit: totalCredit, debit: totalDebit, balance: totalBalance };
+}, [allData, filteredData, selectedBank]);
 
     const handleCancel = useCallback(() => {
         setShowForm(false);
@@ -283,6 +329,45 @@ const OfficeAccounts = () => {
                                 </option>
                             ))}
                         </select>
+
+                        <div className="flex items-center gap-4">
+    <select
+        value={selectedBank}
+        onChange={(e) => setSelectedBank(e.target.value)}
+        className="p-2 border border-gray-300 rounded-md"
+    >
+        {bankOptions.map(option => (
+            <option key={option.value} value={option.value}>
+                {option.label}
+            </option>
+        ))}
+    </select>
+    
+   {/* Total Summary */}
+<div className="flex gap-4 items-center bg-purple-50 border border-purple-200 rounded-md px-4 py-2">
+    <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-gray-600">Total Credit:</span>
+        <span className="text-sm font-bold text-green-600">
+            {totals.credit.toFixed(0)}
+        </span>
+    </div>
+    <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-gray-600">Total Debit:</span>
+        <span className="text-sm font-bold text-red-600">
+            {totals.debit.toFixed(0)}
+        </span>
+    </div>
+    <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-gray-600">
+            {selectedBank === 'all' ? 'Total Balance (All Banks):' : 'Current Balance:'}
+        </span>
+        <span className="text-sm font-bold text-blue-600">
+            {totals.balance.toFixed(0)}
+        </span>
+    </div>
+</div>
+</div>
+
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
                             onClick={() => setShowForm(true)}

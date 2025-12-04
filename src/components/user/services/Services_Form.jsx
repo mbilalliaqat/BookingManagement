@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { Formik, Form, Field, ErrorMessage, useFormikContext } from 'formik';
 import * as Yup from 'yup';
@@ -19,6 +20,7 @@ const BANK_OPTIONS = [
     { value: "JAZ C", label: "JAZ C" },
     { value: "MCB FIT", label: "MCB FIT" },
 ];
+
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -187,6 +189,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [agentNames, setAgentNames] = useState([]);
     const [vendorNames, setVendorNames] = useState([]);
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+    const [isOpeningBalance, setIsOpeningBalance] = useState(false);
 
     // Memoize initial values
     const initialValues = useMemo(() => {
@@ -205,7 +208,8 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             agent_name: '',
             profit: '',
             remaining_date: '',
-            remaining_amount: '0'
+            remaining_amount: '0',
+            opening_balance_amount: ''
         };
 
         if (editEntry) {
@@ -233,7 +237,8 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 agent_name: editEntry.agent_name || '',
                 profit: editEntry.profit || '',
                 remaining_date: formatDate(editEntry.remaining_date) || '',
-                remaining_amount: editEntry.remaining_amount || '0'
+                remaining_amount: editEntry.remaining_amount || '0',
+                opening_balance_amount: ''
             };
         }
         return base;
@@ -241,23 +246,44 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const validationSchema = Yup.object().shape({
         user_name: Yup.string().required('User Name is required'),
-        customer_add: Yup.string().required('Customer Address is required'),
+        customer_add: Yup.string().when('$isOpeningBalance', {
+            is: false,
+            then: (schema) => schema.required('Customer Address is required'),
+            otherwise: (schema) => schema.notRequired()
+        }),
         booking_date: Yup.date().required('Booking Date is required').typeError('Invalid date'),
         specific_detail: Yup.string().required('Specific Detail is required'),
-        visa_type: Yup.string().required('Visa Type is required').oneOf(VISA_TYPES, 'Invalid Visa Type'),
-        receivable_amount: Yup.number().typeError('Receivable Amount must be a number').required('Receivable Amount is required').min(0, 'Amount cannot be negative'),
+        visa_type: Yup.string().when('$isOpeningBalance', {
+            is: false,
+            then: (schema) => schema.required('Visa Type is required').oneOf(VISA_TYPES, 'Invalid Visa Type'),
+            otherwise: (schema) => schema.notRequired()
+        }),
+        receivable_amount: Yup.number().when('$isOpeningBalance', {
+            is: false,
+            then: (schema) => schema.typeError('Receivable Amount must be a number').required('Receivable Amount is required').min(0, 'Amount cannot be negative'),
+            otherwise: (schema) => schema.notRequired()
+        }),
         paid_cash: Yup.number().typeError('Paid Cash must be a number').notRequired().min(0, 'Amount cannot be negative'),
         paid_from_bank: Yup.string().notRequired(),
         paid_in_bank: Yup.number().typeError('Paid In Bank must be a number').notRequired().min(0, 'Amount cannot be negative'),
-        vendors: Yup.array().of(
-            Yup.object().shape({
-                vendor_name: Yup.string().notRequired('Vendor name is required'),
-                payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
-            })
-        ).min(1, 'At least one vendor is required'),
+        vendors: Yup.array().when('$isOpeningBalance', {
+            is: false,
+            then: (schema) => schema.of(
+                Yup.object().shape({
+                    vendor_name: Yup.string().notRequired('Vendor name is required'),
+                    payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
+                })
+            ).min(1, 'At least one vendor is required'),
+            otherwise: (schema) => schema.notRequired()
+        }),
         agent_name: Yup.string().notRequired(),
         profit: Yup.number().typeError('Profit must be a number').notRequired(),
-        remaining_amount: Yup.number().typeError('Remaining Amount must be a number').min(0, 'Remaining amount cannot be negative')
+        remaining_amount: Yup.number().typeError('Remaining Amount must be a number').min(0, 'Remaining amount cannot be negative'),
+        opening_balance_amount: Yup.number().when('$isOpeningBalance', {
+            is: true,
+            then: (schema) => schema.typeError('Opening Balance must be a number').required('Opening Balance is required'),
+            otherwise: (schema) => schema.notRequired()
+        })
     });
 
     // Fetch agent and vendor names
@@ -288,30 +314,83 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
+    const handleOpeningBalanceChange = (e, setFieldValue, values) => {
+        const isChecked = e.target.checked;
+        setIsOpeningBalance(isChecked);
+        
+        if (isChecked) {
+            // Clear fields not needed for opening balance
+            setFieldValue('customer_add', '');
+            setFieldValue('visa_type', '');
+            setFieldValue('receivable_amount', '');
+            setFieldValue('paid_cash', '');
+            setFieldValue('paid_from_bank', '');
+            setFieldValue('paid_in_bank', '');
+            setFieldValue('vendors', [{ vendor_name: '', payable_amount: '' }]);
+            setFieldValue('agent_name', '');
+            setFieldValue('profit', '');
+            setFieldValue('remaining_date', '');
+            setFieldValue('remaining_amount', '0');
+            setFieldValue('specific_detail', 'OPENING BALANCE');
+        } else {
+            // Clear opening balance amount when unchecking
+            setFieldValue('opening_balance_amount', '');
+            setFieldValue('specific_detail', '');
+        }
+    };
+
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         const totalPayableToVendor = values.vendors.reduce((sum, vendor) => {
             return sum + (parseFloat(vendor.payable_amount) || 0);
         }, 0);
 
-        const requestData = {
-            user_name: values.user_name,
-            entry: values.entry,
-            customer_add: values.customer_add,
-            booking_date: values.booking_date,
-            specific_detail: values.specific_detail,
-            visa_type: values.visa_type,
-            receivable_amount: parseFloat(values.receivable_amount) || 0,
-            paid_cash: parseFloat(values.paid_cash) || 0,
-            paid_from_bank: values.paid_from_bank || null,
-            paid_in_bank: parseFloat(values.paid_in_bank) || 0,
-            payable_to_vendor: totalPayableToVendor,
-            vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
-            vendors_detail: JSON.stringify(values.vendors),
-            agent_name: values.agent_name || null,
-            profit: parseFloat(values.profit) || 0,
-            remaining_date: values.remaining_date || null,
-            remaining_amount: parseFloat(values.remaining_amount) || 0
-        };
+        let requestData;
+
+        if (isOpeningBalance) {
+            // Opening Balance mode
+            const openingBalanceValue = parseFloat(values.opening_balance_amount) || 0;
+            requestData = {
+                user_name: values.user_name,
+                entry: values.entry,
+                customer_add: 'OPENING BALANCE',
+                booking_date: values.booking_date,
+                specific_detail: values.specific_detail || 'OPENING BALANCE',
+                visa_type: 'OPENING BALANCE',
+                receivable_amount: openingBalanceValue < 0 ? Math.abs(openingBalanceValue) : 0,
+                paid_cash: 0,
+                paid_from_bank: null,
+                paid_in_bank: 0,
+                payable_to_vendor: 0,
+                vendor_name: null,
+                vendors_detail: JSON.stringify([]),
+                agent_name: null,
+                profit: 0,
+                remaining_date: null,
+                remaining_amount: openingBalanceValue,
+                opening_balance_amount: openingBalanceValue
+            };
+        } else {
+            // Normal mode
+            requestData = {
+                user_name: values.user_name,
+                entry: values.entry,
+                customer_add: values.customer_add,
+                booking_date: values.booking_date,
+                specific_detail: values.specific_detail,
+                visa_type: values.visa_type,
+                receivable_amount: parseFloat(values.receivable_amount) || 0,
+                paid_cash: parseFloat(values.paid_cash) || 0,
+                paid_from_bank: values.paid_from_bank || null,
+                paid_in_bank: parseFloat(values.paid_in_bank) || 0,
+                payable_to_vendor: totalPayableToVendor,
+                vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
+                vendors_detail: JSON.stringify(values.vendors),
+                agent_name: values.agent_name || null,
+                profit: parseFloat(values.profit) || 0,
+                remaining_date: values.remaining_date || null,
+                remaining_amount: parseFloat(values.remaining_amount) || 0
+            };
+        }
 
         try {
             const url = editEntry ? `${BASE_URL}/services/${editEntry.id}` : `${BASE_URL}/services`;
@@ -332,32 +411,58 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const submittedEntry = await response.json();
 
-            // Submit to accounts if bank payment exists
-            if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
-                const bankData = {
-                    bank_name: values.paid_from_bank,
-                    employee_name: values.user_name,
-                    detail: `Service Sale - ${values.customer_add} - ${values.specific_detail}`,
-                    credit: parseFloat(values.paid_in_bank),
-                    debit: 0,
-                    date: values.booking_date,
-                    entry: values.entry,
-                };
+            // Only submit related transactions if not in opening balance mode
+            if (!isOpeningBalance) {
+                // Submit to accounts if bank payment exists
+                if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
+                    const bankData = {
+                        bank_name: values.paid_from_bank,
+                        employee_name: values.user_name,
+                        detail: `Service Sale - ${values.customer_add} - ${values.specific_detail}`,
+                        credit: parseFloat(values.paid_in_bank),
+                        debit: 0,
+                        date: values.booking_date,
+                        entry: values.entry,
+                    };
 
-                try {
-                    await axios.post(`${BASE_URL}/accounts`, bankData);
-                } catch (error) {
-                    console.error('Error storing bank transaction:', error);
+                    try {
+                        await axios.post(`${BASE_URL}/accounts`, bankData);
+                    } catch (error) {
+                        console.error('Error storing bank transaction:', error);
+                    }
                 }
-            }
 
-            // Submit to vendor if vendor details exist
-            for (const vendor of values.vendors) {
-                if (vendor.vendor_name && parseFloat(vendor.payable_amount) > 0) {
-                    const vendorData = {
-                        vender_name: vendor.vendor_name,
+                // Submit to vendor if vendor details exist
+                for (const vendor of values.vendors) {
+                    if (vendor.vendor_name && parseFloat(vendor.payable_amount) > 0) {
+                        const vendorData = {
+                            vender_name: vendor.vendor_name,
+                            detail: `Service - ${values.specific_detail} - ${values.customer_add}`,
+                            credit: parseFloat(vendor.payable_amount) || 0,
+                            date: values.booking_date,
+                            entry: values.entry,
+                            bank_title: values.paid_from_bank || null,
+                            debit: null
+                        };
+
+                        try {
+                            await axios.post(`${BASE_URL}/vender`, vendorData);
+                        } catch (error) {
+                            console.error('Error storing vendor transaction:', error);
+                        }
+                    }
+                }
+
+                // Submit to agent if agent details exist
+                if (values.agent_name) {
+                    const agentData = {
+                        agent_name: values.agent_name,
+                        employee: values.user_name,
                         detail: `Service - ${values.specific_detail} - ${values.customer_add}`,
-                        credit: parseFloat(vendor.payable_amount) || 0,
+                        receivable_amount: parseFloat(values.receivable_amount) || 0,
+                        paid_cash: parseFloat(values.paid_cash) || 0,
+                        paid_bank: parseFloat(values.paid_in_bank) || 0,
+                        credit: parseFloat(values.remaining_amount) || 0,
                         date: values.booking_date,
                         entry: values.entry,
                         bank_title: values.paid_from_bank || null,
@@ -365,37 +470,15 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     };
 
                     try {
-                        await axios.post(`${BASE_URL}/vender`, vendorData);
+                        await axios.post(`${BASE_URL}/agent`, agentData);
                     } catch (error) {
-                        console.error('Error storing vendor transaction:', error);
+                        console.error('Error storing agent transaction:', error);
                     }
                 }
             }
 
-            // Submit to agent if agent details exist
-            if (values.agent_name) {
-                const agentData = {
-                    agent_name: values.agent_name,
-                    employee: values.user_name,
-                    detail: `Service - ${values.specific_detail} - ${values.customer_add}`,
-                    receivable_amount: parseFloat(values.receivable_amount) || 0,
-                    paid_cash: parseFloat(values.paid_cash) || 0,
-                    paid_bank: parseFloat(values.paid_in_bank) || 0,
-                    credit: parseFloat(values.remaining_amount) || 0,
-                    date: values.booking_date,
-                    entry: values.entry,
-                    bank_title: values.paid_from_bank || null,
-                    debit: null
-                };
-
-                try {
-                    await axios.post(`${BASE_URL}/agent`, agentData);
-                } catch (error) {
-                    console.error('Error storing agent transaction:', error);
-                }
-            }
-
             resetForm();
+            setIsOpeningBalance(false);
             onSubmitSuccess(submittedEntry);
         } catch (error) {
             console.error('Submission Error:', error);
@@ -474,7 +557,8 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university' },
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
-        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },        { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: '', icon: 'calendar-times' },
+        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },
+        { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: '', icon: 'calendar-times' },
     ];
 
     const renderField = (field, values, setFieldValue) => (

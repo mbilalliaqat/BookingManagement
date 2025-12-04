@@ -695,8 +695,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 if (!agentResponse.ok) console.error('Agent submission failed:', agentResponse.status);
 
                 if (values.bank_title && (parseFloat(values.paid_in_bank) || 0) > 0) {
-                    const officeAccountDetail = `Customer: ${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}, Ref: ${values.reference || 'N/A'}, Agent: ${values.agent_name || 'N/A'}`;
-                    const officeAccountData = {
+const officeAccountDetail = `Customer: ${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}, Ref: ${values.reference || 'N/A'}, Agent: ${values.agent_name || 'N/A'}, Sector: ${values.sector || 'N/A'}, Airline: ${values.airline || 'N/A'}, Depart: ${values.depart_date || 'N/A'}, Return: ${values.return_date || 'N/A'}`;                    const officeAccountData = {
                         bank_name: values.bank_title,
                         employee_name: values.employee_name,
                         entry: entryValueToSubmit,

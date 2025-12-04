@@ -201,7 +201,7 @@ const Tickets = () => {
                 </div>
             )
         },
-        { header: 'CUSTOMER ADD', accessor: 'customer_add' },
+        
         { header: 'REFERENCE', accessor: 'reference' },
         {
             header: 'DEPART & RETURN DATE',

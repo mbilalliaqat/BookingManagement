@@ -244,6 +244,12 @@ const handleDateRangeChange = useCallback((startDate, endDate) => {
         state: { searchEntry: entryNumber } 
       });
       break;
+
+      case 'Account':
+  navigate('/admin/officeAccount', { 
+    state: { searchEntry: entryNumber } 
+  });
+  break;
     
     default:
       console.log('Unknown booking type:', booking.type);
@@ -424,19 +430,23 @@ const calculateMonthlySummary = useCallback(() => {
           }),
         ]);
 
-        const accountNames = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
-        const accountsData = await Promise.all(
-          accountNames.map(async (name) => {
-            try {
-              const data = await fetchWithCache(`/accounts/${name}`);
-              const lastEntry = data.length > 0 ? data[data.length - 1] : null;
-              return { name, balance: lastEntry ? lastEntry.balance : 0 };
-            } catch (error) {
-              console.error(`Error fetching ${name}:`, error);
-              return { name, balance: 0 };
-            }
-          })
-        );
+       // NEW: Collect ALL account entries + balances
+let allAccountsEntries = []; // To store every bank transaction
+
+const accountNames = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
+const accountsData = await Promise.all(
+  accountNames.map(async (name) => {
+    try {
+      const data = await fetchWithCache(`/accounts/${name}`);
+      allAccountsEntries.push(...data.map(entry => ({ ...entry, bank_name: name })));
+      const lastEntry = data.length > 0 ? data[data.length - 1] : null;
+      return { name, balance: lastEntry ? lastEntry.balance : 0 };
+    } catch (error) {
+      console.error(`Error fetching ${name}:`, error);
+      return { name, balance: 0 };
+    }
+  })
+);
 
         const vendorsData = venderData.vendors?.map((entry, index) => ({
           id: entry.id || index, 
@@ -809,6 +819,8 @@ const calculateMonthlySummary = useCallback(() => {
           profit: 0,
         }));
 
+     
+
         const venderBookings = (venderData.vendors || []).map(vender => ({
           type: 'Vender', 
           employee_name: vender.user_name, 
@@ -824,11 +836,31 @@ const calculateMonthlySummary = useCallback(() => {
           profit: 0,
         }));
 
+      // Show Office Account entries in dashboard (clean view - no credit/debit shown)
+const accountEntries = allAccountsEntries.map(account => ({
+  type: account.bank_name,
+  employee_name: account.employee_name || 'Office',
+  receivable_amount: 0,
+  entry: account.entry || `A${account.id}`,
+  paid_cash: 0,
+  paid_in_bank: account.credit ? account.credit : 0,
+  remaining_amount: 0,
+  booking_date: safeLocaleDateString(account.date || account.created_at),
+ timestamp: account.created_at 
+    ? safeTimestamp(account.created_at) 
+    : safeTimestamp(account.date || account.createdAt || new Date()),
+  withdraw: 0,
+  passengerName: account.detail,
+  profit: 0,
+  
+  detail: account.detail || '',
+}));
+
         const combinedBookingsRaw = [
           ...umrahBookings, ...ticketBookings, ...ticketPaymentEntries, ...visaBookings, 
           ...gamcaTokenBookings, ...servicesBookings, ...umrahPaymentEntries, ...visaPaymentEntries,
           ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings,
-          ...gamcaTokenPaymentEntries,
+          ...gamcaTokenPaymentEntries,...accountEntries
         ];
 
         const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));

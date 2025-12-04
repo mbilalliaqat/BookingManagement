@@ -224,7 +224,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
 if (data.vendor_name) {
     const vendorData = {
         vender_name: data.vendor_name,  
-        detail: `Office Cash Entry by ${data.employee_name}`,
+        detail: data.detail,
         debit: parseFloat(data.debit) || 0,
         credit: 0,
         date: new Date().toISOString().split('T')[0],
@@ -349,7 +349,7 @@ if (data.vendor_name) {
                         {!hideFields ? (
                             <>
                                 <div className="w-full sm:w-[calc(50%-10px)]">
-                                    <label className="block font-medium mb-1">Credit</label>
+                                    <label className="block font-medium mb-1">Receive</label>
                                     <input
                                         type="number"
                                         name="credit"
@@ -360,7 +360,7 @@ if (data.vendor_name) {
                                     {prevError.credit && <span className="text-red-500">{prevError.credit}</span>}
                                 </div>
                                 <div className="w-full sm:w-[calc(50%-10px)]">
-                                    <label className="block font-medium mb-1">Debit</label>
+                                    <label className="block font-medium mb-1">Send</label>
                                     <input
                                         type="number"
                                         name="debit"
