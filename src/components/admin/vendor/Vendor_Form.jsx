@@ -30,7 +30,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const initialValues = {
         vender_name: editingEntry?.vender_name || '', 
         date: formatDate(editingEntry?.date),
-        entry: editingEntry?.entry || `VD ${entryNumber}/${totalEntries}`,
+        entry: editingEntry?.entry || `VE ${entryNumber}/${totalEntries}`,
         detail: editingEntry?.detail || '', 
         bank_title: editingEntry?.bank_title || '',
         credit: editingEntry?.credit ? editingEntry.credit.toString() : '',
@@ -155,7 +155,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             setIsSubmitting(true);
             setSubmitting(true); 
 
-            const entryValue = isEditing ? values.entry : `VD ${entryNumber}/${totalEntries}`;
+            const entryValue = isEditing ? values.entry : `VE ${entryNumber}/${totalEntries}`;
 
             const submitData = {
                 vender_name: values.vender_name,
@@ -297,7 +297,7 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
                                         className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-100"
                                         disabled
                                         readOnly
-                                        value={isEditing ? formik.values.entry : `VD ${entryNumber}/${totalEntries}`}
+                                        value={isEditing ? formik.values.entry : `VE ${entryNumber}/${totalEntries}`}
                                     />
                                     <ErrorMessage name="entry" component="div" className="text-red-500 text-sm mt-1" />
                                 </div>

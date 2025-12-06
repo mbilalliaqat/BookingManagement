@@ -182,74 +182,68 @@ const handleDateRangeChange = useCallback((startDate, endDate) => {
   // Navigate based on booking type
   switch(booking.type) {
     case 'Ticket':
-    case 'Ticket Payment':
+    case 'RE Ticket Payment':
       navigate('/admin/tickets', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Umrah':
-    case 'Umrah Payment':
+    case 'RE Umrah Payment':
       navigate('/admin/umrah', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Visa Processing':
-    case 'Visa Payment':
+    case 'RE Visa Payment':
       navigate('/admin/visa', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'GAMCA Token':
-    case 'GAMCA Token Payment':
+    case 'RE GAMCA Token Payment':
       navigate('/admin/gamcaToken', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Services':
       navigate('/admin/services', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Navtcc':
       navigate('/admin/navtcc', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Protector':
       navigate('/admin/protector', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Expenses':
       navigate('/admin/expense', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Refunded':
       navigate('/admin/refunded', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
     
     case 'Vender':
       navigate('/admin/vender', { 
-        state: { searchEntry: entryNumber } 
+        state: { highlightEntry: entryNumber } 
       });
       break;
-
-      case 'Account':
-  navigate('/admin/officeAccount', { 
-    state: { searchEntry: entryNumber } 
-  });
-  break;
     
     default:
       console.log('Unknown booking type:', booking.type);
@@ -430,23 +424,19 @@ const calculateMonthlySummary = useCallback(() => {
           }),
         ]);
 
-       // NEW: Collect ALL account entries + balances
-let allAccountsEntries = []; // To store every bank transaction
-
-const accountNames = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
-const accountsData = await Promise.all(
-  accountNames.map(async (name) => {
-    try {
-      const data = await fetchWithCache(`/accounts/${name}`);
-      allAccountsEntries.push(...data.map(entry => ({ ...entry, bank_name: name })));
-      const lastEntry = data.length > 0 ? data[data.length - 1] : null;
-      return { name, balance: lastEntry ? lastEntry.balance : 0 };
-    } catch (error) {
-      console.error(`Error fetching ${name}:`, error);
-      return { name, balance: 0 };
-    }
-  })
-);
+        const accountNames = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
+        const accountsData = await Promise.all(
+          accountNames.map(async (name) => {
+            try {
+              const data = await fetchWithCache(`/accounts/${name}`);
+              const lastEntry = data.length > 0 ? data[data.length - 1] : null;
+              return { name, balance: lastEntry ? lastEntry.balance : 0 };
+            } catch (error) {
+              console.error(`Error fetching ${name}:`, error);
+              return { name, balance: 0 };
+            }
+          })
+        );
 
         const vendorsData = venderData.vendors?.map((entry, index) => ({
           id: entry.id || index, 
@@ -504,20 +494,39 @@ const accountsData = await Promise.all(
           try { return JSON.parse(detail); } catch { return {}; }
         };
 
-        const umrahBookings = umrahData.umrahBookings.map(umrah => ({
-          type: 'Umrah', 
-          employee_name: umrah.userName, 
-          receivable_amount: umrah.receivableAmount, 
-          entry: umrah.entry, 
-          paid_cash: umrah.paidCash, 
-          paid_in_bank: umrah.paidInBank, 
-          remaining_amount: umrah.remainingAmount, 
-          booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt), 
-          timestamp: safeTimestamp(umrah.createdAt), 
-          withdraw: 0, 
-          passengerName: null,
-          profit: umrah.profit,
-        }));
+        const umrahBookings = umrahData.umrahBookings.map(umrah => {
+  let firstPassengerName = null;
+  try {
+    let parsedDetails = [];
+    if (typeof umrah.passportDetail === 'string') {
+      parsedDetails = JSON.parse(umrah.passportDetail);
+    } else if (Array.isArray(umrah.passportDetail)) {
+      parsedDetails = umrah.passportDetail;
+    }
+    
+    if (parsedDetails.length > 0) {
+      const firstPassenger = parsedDetails[0];
+      firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+    }
+  } catch (e) {
+    console.error("Error parsing Umrah passenger details:", e);
+  }
+
+  return {
+    type: 'Umrah', 
+    employee_name: umrah.userName, 
+    receivable_amount: umrah.receivableAmount, 
+    entry: umrah.entry, 
+    paid_cash: umrah.paidCash, 
+    paid_in_bank: umrah.paidInBank, 
+    remaining_amount: umrah.remainingAmount, 
+    booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt), 
+    timestamp: safeTimestamp(umrah.createdAt), 
+    withdraw: 0, 
+    passengerName: firstPassengerName || umrah.customerAdd || null,
+    profit: umrah.profit,
+  };
+});
 
         const allUmrahPayments = [];
         for (const umrah of umrahData.umrahBookings) {
@@ -538,20 +547,43 @@ const accountsData = await Promise.all(
           }
         }
 
-        const umrahPaymentEntries = allUmrahPayments.map(payment => ({
-          type: 'Umrah Payment',
-          employee_name: payment.employee_name,
-          receivable_amount: 0,
-          entry: payment.umrah_entry,
-          paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
-          paid_in_bank: parseFloat(payment.paid_bank || 0),
-          remaining_amount: payment.remaining_amount,
-          booking_date: safeLocaleDateString(payment.payment_date),
-          timestamp: safeTimestamp(payment.created_at),
-          withdraw: 0,
-          passengerName: payment.customer_name,
-          profit: 0,
-        }));
+       const umrahPaymentEntries = allUmrahPayments.map(payment => {
+  const originalUmrah = umrahData.umrahBookings.find(u => u.id === payment.umrah_id);
+  let passengerName = payment.customer_name;
+  
+  if (originalUmrah) {
+    try {
+      let parsedDetails = [];
+      if (typeof originalUmrah.passportDetail === 'string') {
+        parsedDetails = JSON.parse(originalUmrah.passportDetail);
+      } else if (Array.isArray(originalUmrah.passportDetail)) {
+        parsedDetails = originalUmrah.passportDetail;
+      }
+      
+      if (parsedDetails.length > 0) {
+        const firstPassenger = parsedDetails[0];
+        passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+      }
+    } catch (e) {
+      console.error("Error parsing umrah payment passenger details:", e);
+    }
+  }
+  
+  return {
+    type: 'RE Umrah Payment',
+    employee_name: payment.employee_name,
+    receivable_amount: 0,
+    entry: payment.umrah_entry,
+    paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+    paid_in_bank: parseFloat(payment.paid_bank || 0),
+    remaining_amount: payment.remaining_amount,
+    booking_date: safeLocaleDateString(payment.payment_date),
+    timestamp: safeTimestamp(payment.created_at),
+    withdraw: 0,
+    passengerName: passengerName || originalUmrah?.customerAdd || null,
+    profit: 0,
+  };
+});
 
         console.log('Umrah payment entries:', umrahPaymentEntries);
 
@@ -600,6 +632,8 @@ const accountsData = await Promise.all(
                 ticket_entry: ticket.entry,
                 customer_name: ticket.customer_add,
                 employee_name: payment.recorded_by || ticket.employee_name,
+
+                // employee_name: ticket.passengerName,
               }));
               allTicketPayments.push(...paymentsWithTicketInfo);
             }
@@ -608,20 +642,44 @@ const accountsData = await Promise.all(
           }
         }
 
-        const ticketPaymentEntries = allTicketPayments.map(payment => ({
-          type: 'Ticket Payment',
-          employee_name: payment.employee_name,
-          receivable_amount: 0,
-          entry: payment.ticket_entry,
-          paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
-          paid_in_bank: parseFloat(payment.paid_bank || 0),
-          remaining_amount: payment.remaining_amount,
-          booking_date: safeLocaleDateString(payment.payment_date),
-          timestamp: safeTimestamp(payment.created_at),
-          withdraw: 0,
-          passengerName: payment.customer_name,
-          profit: 0,
-        }));
+        const ticketPaymentEntries = allTicketPayments.map(payment => {
+  // Find the original ticket to get passenger details
+  const originalTicket = ticketsData.ticket.find(t => t.id === payment.ticket_id);
+  let passengerName = payment.customer_name;
+  
+  if (originalTicket) {
+    try {
+      let parsedDetails = [];
+      if (typeof originalTicket.passport_detail === 'string') {
+        parsedDetails = JSON.parse(originalTicket.passport_detail);
+      } else if (Array.isArray(originalTicket.passport_detail)) {
+        parsedDetails = originalTicket.passport_detail;
+      }
+      
+      if (parsedDetails.length > 0) {
+        const firstPassenger = parsedDetails[0];
+        passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+      }
+    } catch (e) {
+      console.error("Error parsing ticket payment passenger details:", e);
+    }
+  }
+  
+  return {
+    type: 'RE Ticket Payment',
+    employee_name: payment.employee_name,
+    receivable_amount: 0,
+    entry: payment.ticket_entry,
+    paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+    paid_in_bank: parseFloat(payment.paid_bank || 0),
+    remaining_amount: payment.remaining_amount,
+    booking_date: safeLocaleDateString(payment.payment_date),
+    timestamp: safeTimestamp(payment.created_at),
+    withdraw: 0,
+    passengerName: passengerName || originalTicket?.customer_add || null,
+    profit: 0,
+  };
+});
 
         console.log('Ticket payment entries:', ticketPaymentEntries);
 
@@ -662,20 +720,36 @@ const accountsData = await Promise.all(
           }
         }
 
-        const visaPaymentEntries = allVisaPayments.map(payment => ({
-          type: 'Visa Payment',
-          employee_name: payment.employee_name,
-          receivable_amount: 0,
-          entry: payment.visa_entry,
-          paid_cash: parseFloat(payment.payed_cash || 0),
-          paid_in_bank: parseFloat(payment.paid_bank || 0),
-          remaining_amount: 0,
-          booking_date: safeLocaleDateString(payment.payment_date),
-          timestamp: safeTimestamp(payment.created_at),
-          withdraw: 0,
-          passengerName: payment.customer_name,
-          profit: 0,
-        }));
+       const visaPaymentEntries = allVisaPayments.map(payment => {
+  const originalVisa = visaData.visa_processing.find(v => v.id === payment.visa_id);
+  let passengerName = payment.customer_name;
+  
+  if (originalVisa) {
+    try {
+      const details = parsePassportDetail(originalVisa.passport_detail);
+      if (details.firstName || details.lastName) {
+        passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+      }
+    } catch (e) {
+      console.error("Error parsing visa payment passenger details:", e);
+    }
+  }
+  
+  return {
+    type: 'RE Visa Payment',
+    employee_name: payment.employee_name,
+    receivable_amount: 0,
+    entry: payment.visa_entry,
+    paid_cash: parseFloat(payment.payed_cash || 0),
+    paid_in_bank: parseFloat(payment.paid_bank || 0),
+    remaining_amount: 0,
+    booking_date: safeLocaleDateString(payment.payment_date),
+    timestamp: safeTimestamp(payment.created_at),
+    withdraw: 0,
+    passengerName: passengerName || originalVisa?.customer_add || null,
+    profit: 0,
+  };
+});
 
         console.log('Visa payment entries:', visaPaymentEntries);
 
@@ -716,20 +790,36 @@ const accountsData = await Promise.all(
           }
         }
 
-        const gamcaTokenPaymentEntries = allGamcaTokenPayments.map(payment => ({
-          type: 'GAMCA Token Payment',
-          employee_name: payment.employee_name,
-          receivable_amount: 0,
-          entry: payment.gamca_entry,
-          paid_cash: parseFloat(payment.payed_cash || 0),
-          paid_in_bank: parseFloat(payment.paid_bank || 0),
-          remaining_amount: 0,
-          booking_date: safeLocaleDateString(payment.payment_date),
-          timestamp: safeTimestamp(payment.created_at),
-          withdraw: 0,
-          passengerName: payment.customer_name,
-          profit: 0,
-        }));
+       const gamcaTokenPaymentEntries = allGamcaTokenPayments.map(payment => {
+  const originalGamca = gamcaTokenData.gamcaTokens.find(g => g.id === payment.gamca_token_id);
+  let passengerName = payment.customer_name;
+  
+  if (originalGamca) {
+    try {
+      const details = parsePassportDetail(originalGamca.passport_detail);
+      if (details.firstName || details.lastName) {
+        passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+      }
+    } catch (e) {
+      console.error("Error parsing GAMCA payment passenger details:", e);
+    }
+  }
+  
+  return {
+    type: 'RE GAMCA Token Payment',
+    employee_name: payment.employee_name,
+    receivable_amount: 0,
+    entry: payment.gamca_entry,
+    paid_cash: parseFloat(payment.payed_cash || 0),
+    paid_in_bank: parseFloat(payment.paid_bank || 0),
+    remaining_amount: 0,
+    booking_date: safeLocaleDateString(payment.payment_date),
+    timestamp: safeTimestamp(payment.created_at),
+    withdraw: 0,
+    passengerName: passengerName || originalGamca?.customer_add || null,
+    profit: 0,
+  };
+});
 
         console.log('GAMCA Token payment entries:', gamcaTokenPaymentEntries);
 
@@ -819,8 +909,6 @@ const accountsData = await Promise.all(
           profit: 0,
         }));
 
-     
-
         const venderBookings = (venderData.vendors || []).map(vender => ({
           type: 'Vender', 
           employee_name: vender.user_name, 
@@ -836,31 +924,11 @@ const accountsData = await Promise.all(
           profit: 0,
         }));
 
-      // Show Office Account entries in dashboard (clean view - no credit/debit shown)
-const accountEntries = allAccountsEntries.map(account => ({
-  type: account.bank_name,
-  employee_name: account.employee_name || 'Office',
-  receivable_amount: 0,
-  entry: account.entry || `A${account.id}`,
-  paid_cash: 0,
-  paid_in_bank: account.credit ? account.credit : 0,
-  remaining_amount: 0,
-  booking_date: safeLocaleDateString(account.date || account.created_at),
- timestamp: account.created_at 
-    ? safeTimestamp(account.created_at) 
-    : safeTimestamp(account.date || account.createdAt || new Date()),
-  withdraw: 0,
-  passengerName: account.detail,
-  profit: 0,
-  
-  detail: account.detail || '',
-}));
-
         const combinedBookingsRaw = [
           ...umrahBookings, ...ticketBookings, ...ticketPaymentEntries, ...visaBookings, 
           ...gamcaTokenBookings, ...servicesBookings, ...umrahPaymentEntries, ...visaPaymentEntries,
           ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings,
-          ...gamcaTokenPaymentEntries,...accountEntries
+          ...gamcaTokenPaymentEntries,
         ];
 
         const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));
@@ -1470,8 +1538,7 @@ const accountEntries = allAccountsEntries.map(account => ({
         </div>
 
         {/* Actual Table */}
-        <div className="overflow-x-auto rounded-xl border border-gray-200 font-semibold
- shadow-md">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 font-semibold shadow-md">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-indigo-600 text-white">
               <tr>

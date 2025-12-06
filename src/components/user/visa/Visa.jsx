@@ -8,6 +8,8 @@ import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import VisaRemainingPay from './VisaRemainingPay';
+import { useLocation } from 'react-router-dom';
+
 
 const Visa = () => {
     const [search, setSearch] = useState('');
@@ -22,6 +24,8 @@ const Visa = () => {
     const [showPassportFields, setShowPassportFields] = useState(false);
     const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
     const [selectedVisaForPay, setSelectedVisaForPay] = useState(null);
+    const location = useLocation();
+    const [highlightEntry,setHighlightedEntry]=useState('');
     
     // Date filter states
     const [startDate, setStartDate] = useState('');
@@ -121,6 +125,19 @@ const Visa = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+     useEffect(()=>{
+            if(location.state?.highlightEntry){
+                setHighlightedEntry(location.state.highlightEntry);
+                setSearch(location.state.highlightEntry)
+    
+                const timer = setTimeout(()=>{
+                    setHighlightedEntry(null)
+                },5000);
+    
+                return clearTimeout(timer)
+            }
+        },[location.state])
 
     const handleRemainingPay = (visa) => {
         setSelectedVisaForPay(visa);

@@ -117,7 +117,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
       setMain((p) => ({
         ...p,
         employee: user?.username || '',
-        entry: `${entryNumber}/${totalEntries}`,
+        entry: `PR ${entryNumber}/${totalEntries}`,
       }));
     }
   }, [entryNumber, totalEntries, user, editEntry]);
@@ -156,7 +156,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ncb_fee_500_date: formatDateForInput(editEntry.ncb_fee_500_date),
         protector_date: formatDateForInput(editEntry.protector_date),
         additional_charges: editEntry.additional_charges || '',
-        entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+        entry: editEntry.entry || `PR ${entryNumber}/${totalEntries}`,
       });
 
       // ---- ADDITIONAL PEOPLE ----
@@ -320,7 +320,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ncb_fee_500_date: '',
         protector_date: '',
         additional_charges: '',
-        entry: `${entryNumber}/${totalEntries}`,
+        entry: `PR ${entryNumber}/${totalEntries}`,
       });
       setAdditionalPeople([]);
 

@@ -183,14 +183,14 @@ remaining_date: '',
     }, []); // Empty dependency array - run only once
 
     // Update form values when entry numbers or user changes
-    useEffect(() => {
-        if (countsLoaded || editEntry) {
-            setFormInitialValues(prev => ({
-                ...prev,
-                employee_name: user?.username || '',
-                entry: editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`
-            }));
-        }
+        useEffect(() => {
+    if (countsLoaded || editEntry) {
+        setFormInitialValues(prev => ({
+            ...prev,
+            employee_name: user?.username || '',
+            entry: editEntry ? editEntry.entry : `NV ${entryNumber}/${totalEntries}`
+        }));
+    }
     }, [entryNumber, totalEntries, user, countsLoaded, editEntry]);
 
     useEffect(() => {
@@ -230,7 +230,7 @@ remaining_date: '',
 
             const newValues = {
                 employee_name: editEntry.employee_name || user?.username || '',
-                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+                entry: editEntry.entry || `NV ${entryNumber}/${totalEntries}`,
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 profession_key: editEntry.profession_key || '',

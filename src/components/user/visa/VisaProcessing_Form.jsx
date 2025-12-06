@@ -277,12 +277,12 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, [editEntry]);
 
     useEffect(() => {
-        setFormInitialValues(prev => ({
-            ...prev,
-            employee_name: user?.username || '',
-            entry: editEntry ? (editEntry.entry || '0/0') : `${entryNumber}/${totalEntries}`
-        }));
-    }, [user, editEntry, entryNumber, totalEntries]);
+    setFormInitialValues(prev => ({
+        ...prev,
+        employee_name: user?.username || '',
+        entry: editEntry ? (editEntry.entry || '0/0') : `VS ${entryNumber}/${totalEntries}`
+    }));
+}, [user, editEntry, entryNumber, totalEntries]);
 
     useEffect(() => {
         if (editEntry) {

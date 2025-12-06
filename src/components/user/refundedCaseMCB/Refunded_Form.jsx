@@ -116,7 +116,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setData(prev => ({
             ...prev,
             employee: user?.username || '',
-            entry: `${entryNumber}/${totalEntries}`
+            entry: `MC ${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -124,7 +124,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         if (editEntry) {
             setData({
                 employee: editEntry.employee || user?.username || '',
-                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+                entry: editEntry.entry || `MC ${entryNumber}/${totalEntries}`,
                 date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
                 name: editEntry.name || '',
                 passport: editEntry.passport || '',
@@ -291,7 +291,7 @@ const Refunded_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
                 setData({
                     employee: user?.username || '',
-                    entry: `${entryNumber}/${totalEntries}`,
+                    entry: `MC ${entryNumber}/${totalEntries}`,
                     date: '',
                     name: '',
                     passport: '',

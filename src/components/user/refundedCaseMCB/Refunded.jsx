@@ -6,6 +6,7 @@ import TableSpinner from '../../ui/TableSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import { useLocation } from 'react-router-dom';
 
 const Refunded = () => {
         const [search, setSearch] = useState('');
@@ -18,6 +19,8 @@ const Refunded = () => {
         const [deleteId, setDeleteId] = useState(null);
         const [isDeleting, setIsDeleting] = useState(false);
         const { user } = useAppContext();
+        const location = useLocation();
+        const [highlightEntry,setHighlightedEntry]=useState('');
 
         const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
         
@@ -56,6 +59,19 @@ const Refunded = () => {
             fetchData();
 
         },[])
+
+         useEffect(()=>{
+        if(location.state?.highlightEntry){
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
+
+            const timer = setTimeout(()=>{
+                setHighlightedEntry(null)
+            },5000);
+
+            return clearTimeout(timer)
+        }
+    },[location.state])
 
 
 

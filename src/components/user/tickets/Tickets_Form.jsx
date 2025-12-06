@@ -582,7 +582,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     useEffect(() => {
         setFormInitialValues(prev => ({
             ...prev,
-            entry: `Ticket ${entryNumber}/${totalEntries}`
+            entry: `TK ${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries]);
 
@@ -595,8 +595,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         })));
 
         try {
-            const entryValueToSubmit = editEntry ? editEntry.entry : `Ticket ${entryNumber}/${totalEntries}`;
-            const parsedEntryNumber = parseInt(entryValueToSubmit.replace('Ticket ', '').split('/')[0]);
+            const entryValueToSubmit = editEntry ? editEntry.entry : `TK ${entryNumber}/${totalEntries}`;
+            const parsedEntryNumber = parseInt(entryValueToSubmit.replace('TK ', '').split('/')[0]);
 
             // Calculate total payable to vendors
             const totalPayableToVendor = values.vendors.reduce((sum, vendor) => {
@@ -695,7 +695,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 if (!agentResponse.ok) console.error('Agent submission failed:', agentResponse.status);
 
                 if (values.bank_title && (parseFloat(values.paid_in_bank) || 0) > 0) {
-const officeAccountDetail = `Customer: ${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}, Ref: ${values.reference || 'N/A'}, Agent: ${values.agent_name || 'N/A'}, Sector: ${values.sector || 'N/A'}, Airline: ${values.airline || 'N/A'}, Depart: ${values.depart_date || 'N/A'}, Return: ${values.return_date || 'N/A'}`;                    const officeAccountData = {
+                  const officeAccountDetail = `Customer: ${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}, Ref: ${values.reference || 'N/A'}, Agent: ${values.agent_name || 'N/A'}, Sector: ${values.sector || 'N/A'}, Airline: ${values.airline || 'N/A'}, Depart: ${values.depart_date || 'N/A'}, Return: ${values.return_date || 'N/A'}`;                    const officeAccountData = {
                         bank_name: values.bank_title,
                         employee_name: values.employee_name,
                         entry: entryValueToSubmit,

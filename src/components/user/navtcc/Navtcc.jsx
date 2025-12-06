@@ -5,6 +5,8 @@ import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import Navtcc_Form from './Navtcc_Form';
+import { useLocation } from 'react-router-dom';
+
 
 const Navtcc = () => {
     const [search, setSearch] = useState('');
@@ -16,6 +18,8 @@ const Navtcc = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const location = useLocation();
+    const [highlightEntry,setHighlightedEntry]=useState('');
     
     // Date filter states
     const [startDate, setStartDate] = useState('');
@@ -92,6 +96,19 @@ const Navtcc = () => {
     useEffect(() => {
         fetchTickets();
     }, []);
+
+    useEffect(()=>{
+        if(location.state?.highlightEntry){
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
+
+            const timer = setTimeout(()=>{
+                setHighlightedEntry(null)
+            },5000);
+
+            return clearTimeout(timer)
+        }
+    },[location.state])
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'booking_date' },

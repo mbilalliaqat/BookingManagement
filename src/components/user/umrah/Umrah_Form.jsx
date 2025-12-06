@@ -515,7 +515,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setFormInitialValues(prev => ({
             ...prev,
             userName: user?.username || '',
-            entry: `${entryNumber}/${totalEntries}`
+            entry: `UM ${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -534,7 +534,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         })));
 
         try {
-            const entryValueToSubmit = editEntry ? editEntry.entry : `${entryNumber}/${totalEntries}`;
+            const entryValueToSubmit = editEntry ? editEntry.entry : `UM ${entryNumber}/${totalEntries}`;
             const totalPayableToVendor = values.vendors.reduce((sum, vendor) => {
                 return sum + (parseFloat(vendor.payable_amount) || 0);
             }, 0);

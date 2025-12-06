@@ -63,7 +63,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         setData(prev => ({
             ...prev,
             employee_name: user?.username || '',
-            entry: `${entryNumber}/${totalEntries}`
+            entry: `AC ${entryNumber}/${totalEntries}`
         }));
     }, [entryNumber, totalEntries, user]);
 
@@ -73,7 +73,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
             setData({
                 id: editingEntry.id,
                 employee_name: editingEntry.employee_name || '',
-                entry: editingEntry.entry || `${entryNumber}/${totalEntries}`, // Update entry field
+                entry: editingEntry.entry || `AC ${entryNumber}/${totalEntries}`, // Update entry field
                 bank_name: editingEntry.bank_name || '',
                 date: editingEntry.date || '',
                 detail: editingEntry.detail || '',

@@ -6,6 +6,7 @@ import RemainingPay from '../paymentHistory/RemainingPay';
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import { useLocation } from 'react-router-dom';
 
 const Tickets = () => {
     const [search, setSearch] = useState('');
@@ -20,6 +21,8 @@ const Tickets = () => {
     const [showPassportFields, setShowPassportFields] = useState(false);
     const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
     const [selectedTicketForPay, setSelectedTicketForPay] = useState(null);
+    const location = useLocation();
+    const [highlightEntry,setHighlightedEntry]=useState('');
     
     // Date filter states
     const [startDate, setStartDate] = useState('');
@@ -160,6 +163,19 @@ const Tickets = () => {
     useEffect(() => {
         fetchTickets();
     }, []);
+
+    useEffect(()=>{
+        if(location.state?.highlightEntry){
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
+
+            const timer = setTimeout(()=>{
+                setHighlightedEntry(null)
+            },5000);
+
+            return clearTimeout(timer)
+        }
+    },[location.state])
 
     const handleRemainingPay = (ticket) => {
         setSelectedTicketForPay(ticket);

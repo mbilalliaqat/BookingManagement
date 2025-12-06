@@ -7,6 +7,8 @@ import ButtonSpinner from '../../ui/ButtonSpinner';
 import Modal from '../../ui/Modal';
 import { useAppContext } from '../../contexts/AppContext';
 import ServiceRemainingPay from './ServiceRemainingPay';
+import { useLocation } from 'react-router-dom';
+
 
 const Services = () => {
     const [search, setSearch] = useState('');
@@ -21,6 +23,8 @@ const Services = () => {
     const [showRemainingPay, setShowRemainingPay] = useState(false);
     const [selectedService, setSelectedService] = useState(null);
     const { user } = useAppContext();
+    const location = useLocation();
+        const [highlightEntry,setHighlightedEntry]=useState('');
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
@@ -53,6 +57,19 @@ const Services = () => {
         fetchData();
     }, []);
 
+
+        useEffect(()=>{
+        if(location.state?.highlightEntry){
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
+
+            const timer = setTimeout(()=>{
+                setHighlightedEntry(null)
+            },5000);
+
+            return clearTimeout(timer)
+        }
+    },[location.state])
    
 
     const handleRemainingPay = (service) => {

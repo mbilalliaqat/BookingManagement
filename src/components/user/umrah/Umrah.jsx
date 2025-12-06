@@ -7,6 +7,8 @@ import ButtonSpinner from '../../ui/ButtonSpinner';
 import axios from 'axios';
 import Modal from '../../ui/Modal';
 import UmrahRemainingPay from './UmrahRemainingPay';
+import { useLocation } from 'react-router-dom';
+
 
 const Umrah = () => {
     const [search, setSearch] = useState('');
@@ -21,6 +23,8 @@ const Umrah = () => {
     const [showPassportFields, setShowPassportFields] = useState(false);
     const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
     const [selectedUmrahForPay, setSelectedUmrahForPay] = useState(null);
+    const location = useLocation();
+    const [highlightEntry,setHighlightedEntry]=useState('');
     
     // Date filter states
     const [startDate, setStartDate] = useState('');
@@ -142,6 +146,20 @@ const Umrah = () => {
     useEffect(() => {
         fetchUmrah();
     }, []);
+
+useEffect(() => {
+    if (location.state?.highlightEntry) {
+        setHighlightedEntry(location.state.highlightEntry);
+        setSearch(location.state.highlightEntry); // This will filter to show that entry
+        
+        // Clear highlight after 5 seconds
+        const timer = setTimeout(() => {
+            setHighlightedEntry(null);
+        }, 5000);
+        
+        return () => clearTimeout(timer);
+    }
+}, [location.state]);
 
     const handleRemainingPay = (umrah) => {
         setSelectedUmrahForPay(umrah);

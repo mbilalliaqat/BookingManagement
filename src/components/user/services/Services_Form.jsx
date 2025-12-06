@@ -195,7 +195,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const initialValues = useMemo(() => {
         const base = {
             user_name: user?.username || '',
-            entry: `${entryNumber}/${totalEntries}`,
+            entry: `SE ${entryNumber}/${totalEntries}`,
             customer_add: '',
             booking_date: new Date().toISOString().split('T')[0],
             specific_detail: '',
@@ -222,7 +222,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             return {
                 ...base,
                 user_name: editEntry.user_name || user?.username || '',
-                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+                entry: editEntry.entry || `SE ${entryNumber}/${totalEntries}`,
                 customer_add: editEntry.customer_add || '',
                 booking_date: formatDate(editEntry.booking_date),
                 specific_detail: editEntry.specific_detail || '',
@@ -248,10 +248,10 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         user_name: Yup.string().required('User Name is required'),
         customer_add: Yup.string().when('$isOpeningBalance', {
             is: false,
-            then: (schema) => schema.required('Customer Address is required'),
+            then: (schema) => schema.notRequired('Customer Address is required'),
             otherwise: (schema) => schema.notRequired()
         }),
-        booking_date: Yup.date().required('Booking Date is required').typeError('Invalid date'),
+        booking_date: Yup.date().notRequired('Booking Date is required').typeError('Invalid date'),
         specific_detail: Yup.string().required('Specific Detail is required'),
         visa_type: Yup.string().when('$isOpeningBalance', {
             is: false,
@@ -260,7 +260,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }),
         receivable_amount: Yup.number().when('$isOpeningBalance', {
             is: false,
-            then: (schema) => schema.typeError('Receivable Amount must be a number').required('Receivable Amount is required').min(0, 'Amount cannot be negative'),
+            then: (schema) => schema.typeError('Receivable Amount must be a number').notRequired('Receivable Amount is required').min(0, 'Amount cannot be negative'),
             otherwise: (schema) => schema.notRequired()
         }),
         paid_cash: Yup.number().typeError('Paid Cash must be a number').notRequired().min(0, 'Amount cannot be negative'),

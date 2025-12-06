@@ -1,6 +1,6 @@
 // FILEPATH: d:/Projects/booking-management/src/components/ui/Table.jsx
 
-function Table({ data, columns, maxHeight = '430px' }) {
+function Table({ data, columns, maxHeight = '430px',highlightEntry }) {
   return (
     <div className="h-full flex flex-col" style={{ maxHeight: maxHeight }}>
       <div className="overflow-x-auto h-full rounded-2xl shadow-md">
@@ -34,7 +34,9 @@ function Table({ data, columns, maxHeight = '430px' }) {
                     <tr
                       key={rowIndex}
                       className={`transition-all duration-200 ease-in-out ${
-                        rowIndex % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-cyan-50/40 via-blue-50/30 to-teal-50/40'
+                        row.entry === highlightEntry 
+                         ? 'bg-yellow-200 animate-pulse' 
+                        :rowIndex % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-cyan-50/40 via-blue-50/30 to-teal-50/40'
                       } hover:bg-gradient-to-r hover:from-cyan-100/50 hover:via-blue-100/40 hover:to-teal-100/50 hover:shadow-sm`}
                     >
                       {columns?.map((col, colIndex) => {

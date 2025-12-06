@@ -8,6 +8,8 @@ import TableSpinner from '../../ui/TableSpinner';
 import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import GamcaTokenRemainingPay from './GamcaTokenRemainingPay';
+import { useLocation } from 'react-router-dom';
+
 
 const GamcaToken = () => {
     const [search, setSearch] = useState('');
@@ -21,6 +23,8 @@ const GamcaToken = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showRemainingPay, setShowRemainingPay] = useState(false);
     const [selectedGamcaToken, setSelectedGamcaToken] = useState(null);
+    const location = useLocation();
+    const [highlightEntry,setHighlightedEntry]=useState('');
     
     // Date filter states
     const [startDate, setStartDate] = useState('');
@@ -126,6 +130,19 @@ const GamcaToken = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+     useEffect(()=>{
+            if(location.state?.highlightEntry){
+                setHighlightedEntry(location.state.highlightEntry);
+                setSearch(location.state.highlightEntry)
+    
+                const timer = setTimeout(()=>{
+                    setHighlightedEntry(null)
+                },5000);
+    
+                return clearTimeout(timer)
+            }
+        },[location.state])
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },

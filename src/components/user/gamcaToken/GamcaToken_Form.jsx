@@ -178,7 +178,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const base = {
             employee_name: user?.username || '',
             customer_add: '',
-            entry: `${entryNumber}/${totalEntries}`,
+            entry: `GM ${entryNumber}/${totalEntries}`,
             reference: '',
             country: '',
             booking_date: new Date().toISOString().split('T')[0], // Today by default
@@ -217,7 +217,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             return {
                 ...base,
                 employee_name: editEntry.employee_name || user?.username || '',
-                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+                entry: editEntry.entry || `GM ${entryNumber}/${totalEntries}`,
                 customer_add: editEntry.customer_add || '',
                 reference: editEntry.reference || '',
                 country: editEntry.country || '',
