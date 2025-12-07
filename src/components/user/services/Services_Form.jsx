@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { Formik, Form, Field, ErrorMessage, useFormikContext } from 'formik';
 import * as Yup from 'yup';
@@ -10,7 +9,7 @@ import VenderNameModal from '../../ui/VenderNameModal';
 import axios from 'axios';
 
 // --- Constants ---
-const VISA_TYPES = ['NAVTTC', 'VISIT VISA', 'WORK VISA', 'E-PROTECTOR', 'OTHERS'];
+const VISA_TYPES = ['NAVTTC', 'VISIT VISA', 'WORK VISA', 'E-PROTECTOR', 'Cash Paid','OTHERS'];
 
 const BANK_OPTIONS = [
     { value: "UBL M.A.R", label: "UBL M.A.R" },
@@ -32,6 +31,13 @@ const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
     
     useEffect(() => {
+        // Skip calculation if visa type is "Cash Paid"
+        if (values.visa_type === 'Cash Paid') {
+            setFieldValue('remaining_amount', '0');
+            setFieldValue('profit', '');
+            return;
+        }
+
         const receivable = parseFloat(values.receivable_amount) || 0;
         const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
@@ -50,6 +56,7 @@ const AutoCalculate = () => {
         values.paid_cash,
         values.paid_in_bank,
         values.vendors,
+        values.visa_type,
         setFieldValue
     ]);
     
@@ -246,8 +253,8 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const validationSchema = Yup.object().shape({
         user_name: Yup.string().required('User Name is required'),
-        customer_add: Yup.string().when('$isOpeningBalance', {
-            is: false,
+        customer_add: Yup.string().when(['$isOpeningBalance', 'visa_type'], {
+            is: (isOpeningBalance, visa_type) => !isOpeningBalance && visa_type !== 'Cash Paid',
             then: (schema) => schema.notRequired('Customer Address is required'),
             otherwise: (schema) => schema.notRequired()
         }),
@@ -258,16 +265,20 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             then: (schema) => schema.required('Visa Type is required').oneOf(VISA_TYPES, 'Invalid Visa Type'),
             otherwise: (schema) => schema.notRequired()
         }),
-        receivable_amount: Yup.number().when('$isOpeningBalance', {
-            is: false,
+        receivable_amount: Yup.number().when(['$isOpeningBalance', 'visa_type'], {
+            is: (isOpeningBalance, visa_type) => !isOpeningBalance && visa_type !== 'Cash Paid',
             then: (schema) => schema.typeError('Receivable Amount must be a number').notRequired('Receivable Amount is required').min(0, 'Amount cannot be negative'),
             otherwise: (schema) => schema.notRequired()
         }),
-        paid_cash: Yup.number().typeError('Paid Cash must be a number').notRequired().min(0, 'Amount cannot be negative'),
+        paid_cash: Yup.number().when('visa_type', {
+            is: 'Cash Paid',
+            then: (schema) => schema.typeError('Paid Cash must be a number').required('Paid Cash is required for Cash Paid visa type').min(0, 'Amount cannot be negative'),
+            otherwise: (schema) => schema.typeError('Paid Cash must be a number').notRequired().min(0, 'Amount cannot be negative')
+        }),
         paid_from_bank: Yup.string().notRequired(),
         paid_in_bank: Yup.number().typeError('Paid In Bank must be a number').notRequired().min(0, 'Amount cannot be negative'),
-        vendors: Yup.array().when('$isOpeningBalance', {
-            is: false,
+        vendors: Yup.array().when(['$isOpeningBalance', 'visa_type'], {
+            is: (isOpeningBalance, visa_type) => !isOpeningBalance && visa_type !== 'Cash Paid',
             then: (schema) => schema.of(
                 Yup.object().shape({
                     vendor_name: Yup.string().notRequired('Vendor name is required'),
@@ -319,7 +330,6 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         setIsOpeningBalance(isChecked);
         
         if (isChecked) {
-            // Clear fields not needed for opening balance
             setFieldValue('customer_add', '');
             setFieldValue('visa_type', '');
             setFieldValue('receivable_amount', '');
@@ -333,21 +343,21 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             setFieldValue('remaining_amount', '0');
             setFieldValue('specific_detail', 'OPENING BALANCE');
         } else {
-            // Clear opening balance amount when unchecking
             setFieldValue('opening_balance_amount', '');
             setFieldValue('specific_detail', '');
         }
     };
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-        const totalPayableToVendor = values.vendors.reduce((sum, vendor) => {
+        const isCashPaid = values.visa_type === 'Cash Paid';
+        
+        const totalPayableToVendor = isCashPaid ? 0 : values.vendors.reduce((sum, vendor) => {
             return sum + (parseFloat(vendor.payable_amount) || 0);
         }, 0);
 
         let requestData;
 
         if (isOpeningBalance) {
-            // Opening Balance mode
             const openingBalanceValue = parseFloat(values.opening_balance_amount) || 0;
             requestData = {
                 user_name: values.user_name,
@@ -369,8 +379,27 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 remaining_amount: openingBalanceValue,
                 opening_balance_amount: openingBalanceValue
             };
+        } else if (isCashPaid) {
+            requestData = {
+                user_name: values.user_name,
+                entry: values.entry,
+                customer_add: values.customer_add || 'Cash Payment',
+                booking_date: values.booking_date,
+                specific_detail: values.specific_detail,
+                visa_type: values.visa_type,
+                receivable_amount: parseFloat(values.paid_cash) || 0,
+                paid_cash: parseFloat(values.paid_cash) || 0,
+                paid_from_bank: null,
+                paid_in_bank: 0,
+                payable_to_vendor: 0,
+                vendor_name: null,
+                vendors_detail: JSON.stringify([]),
+                agent_name: null,
+                profit: 0,
+                remaining_date: null,
+                remaining_amount: 0
+            };
         } else {
-            // Normal mode
             requestData = {
                 user_name: values.user_name,
                 entry: values.entry,
@@ -411,9 +440,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             const submittedEntry = await response.json();
 
-            // Only submit related transactions if not in opening balance mode
-            if (!isOpeningBalance) {
-                // Submit to accounts if bank payment exists
+            if (!isOpeningBalance && !isCashPaid) {
                 if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
                     const bankData = {
                         bank_name: values.paid_from_bank,
@@ -432,7 +459,6 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     }
                 }
 
-                // Submit to vendor if vendor details exist
                 for (const vendor of values.vendors) {
                     if (vendor.vendor_name && parseFloat(vendor.payable_amount) > 0) {
                         const vendorData = {
@@ -453,7 +479,6 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     }
                 }
 
-                // Submit to agent if agent details exist
                 if (values.agent_name) {
                     const agentData = {
                         agent_name: values.agent_name,
@@ -508,7 +533,6 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         getCounts();
     }, []);
 
-    // Animation variants
     const formVariants = {
         hidden: { opacity: 0 },
         visible: { 
@@ -530,7 +554,6 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-    // Form fields grouped by section
     const section1Fields = [
         { name: 'user_name', label: 'User Name', type: 'text', placeholder: 'Enter user name', icon: 'user', readOnly: true },
         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
@@ -613,194 +636,213 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     );
 
     return (
-        <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
-                <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                        <motion.h2 
-                            className="text-2xl font-bold text-black flex items-center"
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            <i className="fas fa-kaaba mr-3"></i>
-                            {editEntry ? 'Update Service' : 'New Service'}
-                        </motion.h2>
-                        <motion.p 
-                            className="text-indigo-600 mt-1"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.2, duration: 0.5 }}
-                        >
-                            Please fill in the details
-                        </motion.p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="text-black hover:text-gray-600 transition-colors ml-4"
+    <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
+            <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    <motion.h2 
+                        className="text-2xl font-bold text-black flex items-center"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
                     >
-                        <i className="fas fa-arrow-left text-xl"></i>
-                    </button>
+                        <i className="fas fa-kaaba mr-3"></i>
+                        {editEntry ? 'Update Service' : 'New Service'}
+                    </motion.h2>
+                    <motion.p 
+                        className="text-indigo-600 mt-1"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                    >
+                        Please fill in the details
+                    </motion.p>
                 </div>
-            </div>
-
-            {/* Progress tabs */}
-            <div className="px-8 pt-6">
-                <div className="flex justify-between mb-8">
-                    {[1, 2, 3].map((step) => (
-                        <button
-                            key={step}
-                            onClick={() => setActiveSection(step)}
-                            className={`flex-1 relative ${
-                                step < activeSection ? 'text-green-500' : 
-                                step === activeSection ? 'text-purple-600' : 'text-gray-400'
-                            }`}
-                        >
-                            <div className="flex flex-col items-center">
-                                <div className={`
-                                    w-10 h-10 flex items-center justify-center rounded-full mb-2
-                                    ${step < activeSection ? 'bg-green-100' : 
-                                      step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}
-                                `}>
-                                    {step < activeSection ? (
-                                        <i className="fas fa-check"></i>
-                                    ) : (
-                                        <span className="font-medium">{step}</span>
-                                    )}
-                                </div>
-                                <span className="text-sm font-medium">
-                                    {step === 1 ? 'Basic Info' : step === 2 ? 'Service Details' : 'Payment Details'}
-                                </span>
-                            </div>
-                            {step < 3 && (
-                                <div className={`absolute top-5 left-full w-full h-0.5 -ml-2 ${
-                                    step < activeSection ? 'bg-green-500' : 'bg-gray-200'
-                                }`} style={{ width: "calc(100% - 2rem)" }}></div>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Form content */}
-            <div className="px-8 pb-8">
-                <Formik
-                    initialValues={initialValues}
-                    validationSchema={validationSchema}
-                    onSubmit={handleSubmit}
-                    enableReinitialize={true}
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="text-black hover:text-gray-600 transition-colors ml-4"
                 >
-                    {({ isSubmitting, errors, values, setFieldValue }) => ( 
-                        <Form>
-                            <AutoCalculate />
-                            
-                            <motion.div
-                                key={`section-${activeSection}`}
-                                variants={formVariants}
-                                initial="hidden"
-                                animate="visible"
-                                className="grid grid-cols-1 md:grid-cols-2 gap-x-6"
-                            >
-                                {activeSection === 1 && section1Fields.map(field => renderField(field, values, setFieldValue))}
-                                {activeSection === 2 && section2Fields.map(field => renderField(field, values, setFieldValue))}
-                                {activeSection === 3 && (
-                                    <>
-                                        {section3Fields.map(field => renderField(field, values, setFieldValue))}
-                                        <VendorSelectionFields 
-                                            values={values} 
-                                            setFieldValue={setFieldValue} 
-                                            vendorNames={vendorNames}
-                                            setIsVendorModalOpen={setIsVendorModalOpen}
-                                            editEntry={editEntry}
-                                        />
-                                    </>
+                    <i className="fas fa-arrow-left text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        {/* Progress tabs */}
+        <div className="px-8 pt-6">
+            <div className="flex justify-between mb-8">
+                {[1, 2, 3].map((step) => (
+                    <button
+                        key={step}
+                        onClick={() => setActiveSection(step)}
+                        className={`flex-1 relative ${
+                            step < activeSection ? 'text-green-500' : 
+                            step === activeSection ? 'text-purple-600' : 'text-gray-400'
+                        }`}
+                    >
+                        <div className="flex flex-col items-center">
+                            <div className={`
+                                w-10 h-10 flex items-center justify-center rounded-full mb-2
+                                ${step < activeSection ? 'bg-green-100' : 
+                                  step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}
+                            `}>
+                                {step < activeSection ? (
+                                    <i className="fas fa-check"></i>
+                                ) : (
+                                    <span className="font-medium">{step}</span>
                                 )}
-                            </motion.div>
+                            </div>
+                            <span className="text-sm font-medium">
+                                {step === 1 ? 'Basic Info' : step === 2 ? 'Service Details' : 'Payment Details'}
+                            </span>
+                        </div>
+                        {step < 3 && (
+                            <div className={`absolute top-5 left-full w-full h-0.5 -ml-2 ${
+                                step < activeSection ? 'bg-green-500' : 'bg-gray-200'
+                            }`} style={{ width: "calc(100% - 2rem)" }}></div>
+                        )}
+                    </button>
+                ))}
+            </div>
+        </div>
 
-                            {errors.general && (
-                                <motion.div 
-                                    className="text-red-600 mt-4 p-3 bg-red-100 border border-red-200 rounded-md"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    <i className="fas fa-exclamation-triangle mr-2"></i> {errors.general}
-                                </motion.div>
+        {/* Form content */}
+        <div className="px-8 pb-8">
+            <Formik
+                initialValues={initialValues}
+                validationSchema={validationSchema}
+                onSubmit={handleSubmit}
+                enableReinitialize={true}
+                context={{ isOpeningBalance }}
+            >
+                {({ isSubmitting, errors, values, setFieldValue }) => ( 
+                    <Form>
+                        <AutoCalculate />
+                        
+                        <motion.div
+                            key={`section-${activeSection}`}
+                            variants={formVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="grid grid-cols-1 md:grid-cols-2 gap-x-6"
+                        >
+                            {activeSection === 1 && section1Fields.map(field => renderField(field, values, setFieldValue))}
+                            {activeSection === 2 && section2Fields.map(field => renderField(field, values, setFieldValue))}
+                            {activeSection === 3 && (
+                                <>
+                                    {values.visa_type === 'Cash Paid' ? (
+                                        <>
+                                            {renderField(
+                                                { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
+                                                values, 
+                                                setFieldValue
+                                            )}
+                                            <motion.div className="col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-lg" variants={itemVariants}>
+                                                <p className="text-sm text-blue-700 flex items-center">
+                                                    <i className="fas fa-info-circle mr-2"></i>
+                                                    Cash Paid mode: Only cash amount is required. Other fields are not needed.
+                                                </p>
+                                            </motion.div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {section3Fields.map(field => renderField(field, values, setFieldValue))}
+                                            <VendorSelectionFields 
+                                                values={values} 
+                                                setFieldValue={setFieldValue} 
+                                                vendorNames={vendorNames}
+                                                setIsVendorModalOpen={setIsVendorModalOpen}
+                                                editEntry={editEntry}
+                                            />
+                                        </>
+                                    )}
+                                </>
                             )}
+                        </motion.div>
 
-                            {/* Navigation buttons */}
+                        {errors.general && (
                             <motion.div 
-                                className="flex justify-between mt-8 pt-4 border-t border-gray-100"
+                                className="text-red-600 mt-4 p-3 bg-red-100 border border-red-200 rounded-md"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: 0.5 }}
+                                transition={{ duration: 0.3 }}
                             >
-                                <div>
-                                    {activeSection > 1 && (
-                                        <motion.button
-                                            type="button"
-                                            onClick={() => setActiveSection(activeSection - 1)}
-                                            className="px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors flex items-center"
-                                            whileHover={{ scale: 1.03 }}
-                                            whileTap={{ scale: 0.97 }}
-                                        >
-                                            <i className="fas fa-arrow-left mr-2"></i> Back
-                                        </motion.button>
-                                    )}
-                                </div>
+                                <i className="fas fa-exclamation-triangle mr-2"></i> {errors.general}
+                            </motion.div>
+                        )}
+
+                        {/* Navigation buttons */}
+                        <motion.div 
+                            className="flex justify-between mt-8 pt-4 border-t border-gray-100"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.5 }}
+                        >
+                            <div>
+                                {activeSection > 1 && (
+                                    <motion.button
+                                        type="button"
+                                        onClick={() => setActiveSection(activeSection - 1)}
+                                        className="px-4 py-2 text-indigo-600 hover:text-indigo-800 transition-colors flex items-center"
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                    >
+                                        <i className="fas fa-arrow-left mr-2"></i> Back
+                                    </motion.button>
+                                )}
+                            </div>
+                            
+                            <div className="flex space-x-3">
+                                <motion.button
+                                    type="button" 
+                                    onClick={onCancel}
+                                    className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.97 }}
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </motion.button>
                                 
-                                <div className="flex space-x-3">
+                                {activeSection < 3 && ( 
                                     <motion.button
                                         type="button" 
-                                        onClick={onCancel}
-                                        className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                                        onClick={() => setActiveSection(activeSection + 1)}
+                                        className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center shadow-md hover:shadow-lg transition-all"
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                    >
+                                        Next <i className="fas fa-arrow-right ml-2"></i>
+                                    </motion.button>
+                                )}
+
+                                {activeSection === 3 && ( 
+                                    <motion.button
+                                        type="submit" 
+                                        className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition-all"
                                         whileHover={{ scale: 1.03 }}
                                         whileTap={{ scale: 0.97 }}
                                         disabled={isSubmitting}
                                     >
-                                        Cancel
+                                        {isSubmitting && <ButtonSpinner />}
+                                        {editEntry ? 'Update' : 'Submit'} <i className="fas fa-check ml-2"></i>
                                     </motion.button>
-                                    
-                                    {activeSection < 3 && ( 
-                                        <motion.button
-                                            type="button" 
-                                            onClick={() => setActiveSection(activeSection + 1)}
-                                            className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center shadow-md hover:shadow-lg transition-all"
-                                            whileHover={{ scale: 1.03 }}
-                                            whileTap={{ scale: 0.97 }}
-                                        >
-                                            Next <i className="fas fa-arrow-right ml-2"></i>
-                                        </motion.button>
-                                    )}
-
-                                    {activeSection === 3 && ( 
-                                        <motion.button
-                                            type="submit" 
-                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition-all"
-                                            whileHover={{ scale: 1.03 }}
-                                            whileTap={{ scale: 0.97 }}
-                                            disabled={isSubmitting}
-                                        >
-                                            {isSubmitting && <ButtonSpinner />}
-                                            {editEntry ? 'Update' : 'Submit'} <i className="fas fa-check ml-2"></i>
-                                        </motion.button>
-                                    )}
-                                </div>
-                            </motion.div>
-                        </Form>
-                    )}
-                </Formik>
-            </div>
-
-            <VenderNameModal
-                isOpen={isVendorModalOpen}
-                onClose={() => setIsVendorModalOpen(false)}
-                onVenderAdded={handleVendorAdded}
-            />
+                                )}
+                            </div>
+                        </motion.div>
+                    </Form>
+                )}
+            </Formik>
         </div>
-    );
+
+        <VenderNameModal
+            isOpen={isVendorModalOpen}
+            onClose={() => setIsVendorModalOpen(false)}
+            onVenderAdded={handleVendorAdded}
+        />
+    </div>
+);
 };
 
 export default Services_Form;
