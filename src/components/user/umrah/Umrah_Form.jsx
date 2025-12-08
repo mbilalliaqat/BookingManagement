@@ -4,7 +4,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
-import { fetchEntryCounts } from '../../ui/api';
+import { fetchEntryCounts,incrementFormEntry  } from '../../ui/api';
 import axios from 'axios';
 import VenderNameModal from '../../ui/VenderNameModal';
 
@@ -579,6 +579,8 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const umrahData = await umrahResponse.json();
 
             if (!editEntry) {
+                const parsedEntryNumber = parseInt(entryValueToSubmit.replace('UM ', '').split('/')[0]);
+    await incrementFormEntry('umrah', parsedEntryNumber)
                 const commonDetail = [
                     values.packageDetail || '',
                     values.sector || '',

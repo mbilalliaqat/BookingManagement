@@ -314,6 +314,7 @@ const OfficeAccounts = () => {
                     onCancel={handleCancel}
                     onSubmitSuccess={handleFormSubmit}
                     editingEntry={editingEntry}
+                    bankBalances={allData}
                 />
             ) : (
                 <div className="flex flex-col h-full">

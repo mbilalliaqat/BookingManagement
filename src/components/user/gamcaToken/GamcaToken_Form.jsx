@@ -269,8 +269,8 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_in_bank: Yup.number().notRequired().typeError('Must be a number'),
         vendors: Yup.array().of(
             Yup.object().shape({
-                vendor_name: Yup.string().required('Vendor name is required'),
-                payable_amount: Yup.number().required('Payable amount is required').min(0, 'Amount must be positive'),
+                vendor_name: Yup.string().notRequired('Vendor name is required'),
+                payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
             })
         ).min(1, 'At least one vendor is required'),
         agent_name: Yup.string().notRequired(),
@@ -288,21 +288,30 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     ];
 
     // Fetch agent & vendor names
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [agentRes, vendorRes] = await Promise.all([
-                    axios.get(`${BASE_URL}/agent-names/existing`),
-                    axios.get(`${BASE_URL}/vender-names/existing`)
-                ]);
-                if (agentRes.data.status === 'success') setAgentNames(agentRes.data.agentNames || []);
-                if (vendorRes.data.status === 'success') setVendorNames(vendorRes.data.vendorNames || []);
-            } catch (error) {
-                console.error('Error fetching names:', error);
+   useEffect(() => {
+    const loadInitialData = async () => {
+        try {
+            const [countsRes, agentRes, vendorRes] = await Promise.all([
+                fetchEntryCounts(),
+                axios.get(`${BASE_URL}/agent-names/existing`),
+                axios.get(`${BASE_URL}/vender-names/existing`)
+            ]);
+
+            const gamcaCounts = countsRes.find(c => c.form_type === 'gamca');
+            if (gamcaCounts) {
+                setEntryNumber(gamcaCounts.current_count + 1);
+                setTotalEntries(gamcaCounts.global_count + 1);  // +1 for the next entry
             }
-        };
-        fetchData();
-    }, [BASE_URL]);
+
+            if (agentRes.data.status === 'success') setAgentNames(agentRes.data.agentNames || []);
+            if (vendorRes.data.status === 'success') setVendorNames(vendorRes.data.vendorNames || []);
+        } catch (error) {
+            console.error('Error loading initial data:', error);
+        }
+    };
+
+    loadInitialData();
+}, [BASE_URL]);
 
     const handleVendorAdded = (newVendorName) => {
         if (newVendorName && !vendorNames.includes(newVendorName)) {
@@ -331,118 +340,121 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, []);
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-        const passportDetail = JSON.stringify({
-            title: values.passengerTitle,
-            firstName: values.passengerFirstName,
-            lastName: values.passengerLastName,
-            dob: values.passengerDob,
-            nationality: values.passengerNationality,
-            documentType: values.documentType,
-            documentNo: values.documentNo,
-            documentExpiry: values.documentExpiry,
-            issueCountry: values.documentIssueCountry,
+    const passportDetail = JSON.stringify({
+        title: values.passengerTitle,
+        firstName: values.passengerFirstName,
+        lastName: values.passengerLastName,
+        dob: values.passengerDob,
+        nationality: values.passengerNationality,
+        documentType: values.documentType,
+        documentNo: values.documentNo,
+        documentExpiry: values.documentExpiry,
+        issueCountry: values.documentIssueCountry,
+    });
+
+    const totalPayableToVendor = values.vendors.reduce((sum, v) => sum + (parseFloat(v.payable_amount) || 0), 0);
+
+    const requestData = {
+        employee_name: values.employee_name,
+        customer_add: values.customer_add,
+        entry: values.entry,
+        reference: values.reference,
+        country: values.country,
+        booking_date: values.booking_date,
+        remaining_date: values.remaining_date || null,
+        passport_detail: passportDetail,
+        receivable_amount: parseFloat(values.receivable_amount) || 0,
+        paid_cash: parseFloat(values.paid_cash) || 0,
+        paid_from_bank: values.paid_from_bank || null,
+        paid_in_bank: parseFloat(values.paid_in_bank) || 0,
+        payable_to_vendor: totalPayableToVendor,
+        vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
+        vendors_detail: JSON.stringify(values.vendors),
+        agent_name: values.agent_name || null,
+        profit: parseFloat(values.profit) || 0,
+        remaining_amount: parseFloat(values.remaining_amount) || 0
+    };
+
+    try {
+        const url = editEntry ? `${BASE_URL}/gamca-token/${editEntry.id}` : `${BASE_URL}/gamca-token`;
+        const method = editEntry ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData),
         });
 
-        const totalPayableToVendor = values.vendors.reduce((sum, v) => sum + (parseFloat(v.payable_amount) || 0), 0);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
 
-        const requestData = {
-            employee_name: values.employee_name,
-            customer_add: values.customer_add,
-            entry: values.entry,
-            reference: values.reference,
-            country: values.country,
-            booking_date: values.booking_date,
-            remaining_date: values.remaining_date || null,
-            passport_detail: passportDetail,
-            receivable_amount: parseFloat(values.receivable_amount) || 0,
-            paid_cash: parseFloat(values.paid_cash) || 0,
-            paid_from_bank: values.paid_from_bank || null,
-            paid_in_bank: parseFloat(values.paid_in_bank) || 0,
-            payable_to_vendor: totalPayableToVendor,
-            vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
-            vendors_detail: JSON.stringify(values.vendors),
-            agent_name: values.agent_name || null,
-            profit: parseFloat(values.profit) || 0,
-            remaining_amount: parseFloat(values.remaining_amount) || 0
-        };
+        // ✅ UPDATED: Removed manual increment call - backend handles it automatically
+        if (!editEntry) {
+            // Just refresh the entry counts to get the updated numbers
+            const counts = await fetchEntryCounts();
+            const gamcaCounts = counts.find(c => c.form_type === 'gamca');
+            if (gamcaCounts) {
+                setEntryNumber(gamcaCounts.current_count + 1);
+                setTotalEntries(gamcaCounts.global_count);
+            }
+        }
 
-        try {
-            const url = editEntry ? `${BASE_URL}/gamca-token/${editEntry.id}` : `${BASE_URL}/gamca-token`;
-            const method = editEntry ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestData),
+        // Bank transaction
+        if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
+            await axios.post(`${BASE_URL}/accounts`, {
+                bank_name: values.paid_from_bank,
+                employee_name: values.employee_name,
+                detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
+                credit: parseFloat(values.paid_in_bank),
+                debit: 0,
+                date: new Date().toISOString().split('T')[0],
+                entry: values.entry,
             });
+        }
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-
-            if (!editEntry) {
-                await axios.post(`${BASE_URL}/entry/increment`, { formType: 'gamca', actualEntryNumber: entryNumber });
-                const counts = await fetchEntryCounts();
-                const gamcaCounts = counts.find(c => c.form_type === 'gamca');
-                if (gamcaCounts) {
-                    setEntryNumber(gamcaCounts.current_count + 1);
-                    setTotalEntries(gamcaCounts.global_count);
-                }
-            }
-
-            // Bank, Vendor, Agent transactions (unchanged)
-            if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
-                await axios.post(`${BASE_URL}/accounts`, {
-                    bank_name: values.paid_from_bank,
-                    employee_name: values.employee_name,
-                    detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
-                    credit: parseFloat(values.paid_in_bank),
-                    debit: 0,
-                    date: new Date().toISOString().split('T')[0],
-                    entry: values.entry,
-                });
-            }
-
-            for (const vendor of values.vendors) {
-                if (vendor.vendor_name && parseFloat(vendor.payable_amount) > 0) {
-                    await axios.post(`${BASE_URL}/vender`, {
-                        vender_name: vendor.vendor_name,
-                        detail: `GAMCA - ${values.reference} - ${values.customer_add}`,
-                        credit: parseFloat(vendor.payable_amount),
-                        date: new Date().toISOString().split('T')[0],
-                        entry: values.entry,
-                        bank_title: values.paid_from_bank || null,
-                        debit: null
-                    });
-                }
-            }
-
-            if (values.agent_name) {
-                await axios.post(`${BASE_URL}/agent`, {
-                    agent_name: values.agent_name,
-                    employee: values.employee_name,
+        // Vendor transactions
+        for (const vendor of values.vendors) {
+            if (vendor.vendor_name && parseFloat(vendor.payable_amount) > 0) {
+                await axios.post(`${BASE_URL}/vender`, {
+                    vender_name: vendor.vendor_name,
                     detail: `GAMCA - ${values.reference} - ${values.customer_add}`,
-                    receivable_amount: parseFloat(values.receivable_amount),
-                    paid_cash: parseFloat(values.paid_cash),
-                    paid_bank: parseFloat(values.paid_in_bank),
-                    credit: parseFloat(values.remaining_amount),
+                    credit: parseFloat(vendor.payable_amount),
                     date: new Date().toISOString().split('T')[0],
                     entry: values.entry,
                     bank_title: values.paid_from_bank || null,
                     debit: null
                 });
             }
-
-            resetForm();
-            onSubmitSuccess();
-        } catch (error) {
-            console.error('Submission error:', error);
-            setErrors({ general: error.message || 'Failed to submit form.' });
-        } finally {
-            setSubmitting(false);
         }
-    };
+
+        // Agent transaction
+        if (values.agent_name) {
+            await axios.post(`${BASE_URL}/agent`, {
+                agent_name: values.agent_name,
+                employee: values.employee_name,
+                detail: `GAMCA - ${values.reference} - ${values.customer_add}`,
+                receivable_amount: parseFloat(values.receivable_amount),
+                paid_cash: parseFloat(values.paid_cash),
+                paid_bank: parseFloat(values.paid_in_bank),
+                credit: parseFloat(values.remaining_amount),
+                date: new Date().toISOString().split('T')[0],
+                entry: values.entry,
+                bank_title: values.paid_from_bank || null,
+                debit: null
+            });
+        }
+
+        resetForm();
+        onSubmitSuccess();
+    } catch (error) {
+        console.error('Submission error:', error);
+        setErrors({ general: error.message || 'Failed to submit form.' });
+    } finally {
+        setSubmitting(false);
+    }
+};
 
     const formVariants = {
         hidden: { opacity: 0 },

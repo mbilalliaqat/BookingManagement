@@ -4,7 +4,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api'; // Import the fetchEntryCounts function
 import axios from 'axios';
 
-const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
+const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalances =[] }) => {
     const { user } = useAppContext();
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     
@@ -105,6 +105,25 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
 
         fetchVendorNames();
     }, []);
+
+    // Calculate balance for each bank
+    
+    const getBankBalance = (bankName)=>{
+        const bankEntries = bankBalances.filter(item=>item.bank_name===bankName)
+        if(bankEntries.length > 0){
+            return parseFloat(bankEntries[0].balance) || 0;
+        }
+        return 0;
+    }
+
+    const banks = [
+        { value: "UBL M.A.R", label: "UBL M.A.R" },
+        { value: "UBL F.Z", label: "UBL F.Z" },
+        { value: "HBL M.A.R", label: "HBL M.A.R" },
+        { value: "HBL F.Z", label: "HBL F.Z" },
+        { value: "JAZ C", label: "JAZ C" },
+        { value: "MCB FIT", label: "MCB FIT" }
+    ];
 
     const handleCheckboxChange = (e) => {
         // Don't allow changing to "Opening Balance" mode when editing
@@ -277,23 +296,25 @@ if (data.vendor_name) {
                         </div>
 
                         <div className="w-full sm:w-[calc(50%-10px)]">
-                            <label className="block font-medium mb-1">Bank Name</label>
-                            <select
-                                name="bank_name"
-                                value={data.bank_name}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            >
-                             <option value="">Select a Bank</option>
-                             <option value="UBL M.A.R">UBL M.A.R</option>
-                             <option value="UBL F.Z">UBL F.Z</option>
-                             <option value="HBL M.A.R">HBL M.A.R</option>
-                             <option value="HBL F.Z">HBL F.Z</option>
-                             <option value="JAZ C">JAZ C</option>
-                             <option value="MCB FIT">MCB FIT</option>
-                            </select>
-                            {prevError.bank_name && <span className="text-red-500">{prevError.bank_name}</span>}
-                        </div>
+    <label className="block font-medium mb-1">Bank Name</label>
+    <select
+        name="bank_name"
+        value={data.bank_name}
+        onChange={handleChange}
+        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+    >
+        <option value="">Select a Bank</option>
+        {banks.map(bank => {
+            const balance = getBankBalance(bank.value);
+            return (
+                <option key={bank.value} value={bank.value}>
+                    {bank.label} ({balance.toFixed(0)})
+                </option>
+            );
+        })}
+    </select>
+    {prevError.bank_name && <span className="text-red-500">{prevError.bank_name}</span>}
+</div>
 
     <div className="w-full sm:w-[calc(50%-10px)]">
         <label className="block font-medium mb-1">Vendor Name</label>

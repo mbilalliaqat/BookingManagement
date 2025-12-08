@@ -5,7 +5,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
-import { fetchEntryCounts } from '../../ui/api';
+import { fetchEntryCounts, incrementFormEntry  } from '../../ui/api';
 import axios from 'axios';
 import VenderNameModal from '../../ui/VenderNameModal';
 
@@ -444,6 +444,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             if (!editEntry) {
                 // Submit vendor data for each vendor
+                 const parsedEntryNumber = parseInt(values.entry.replace('VS ', '').split('/')[0]);
+    await incrementFormEntry('visa', parsedEntryNumber);
+    
                 for (const vendor of values.vendors) {
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {

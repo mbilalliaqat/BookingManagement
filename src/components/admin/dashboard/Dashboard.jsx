@@ -832,7 +832,7 @@ const calculateMonthlySummary = useCallback(() => {
           
           return {
             type: 'Services', 
-            employee_name: services.user_name, 
+            employee_name: services.specific_detail, 
             receivable_amount: services.receivable_amount, 
             entry: services.entry, 
             paid_cash: services.paid_cash, 
@@ -1588,8 +1588,44 @@ const calculateMonthlySummary = useCallback(() => {
                         {booking.paid_in_bank.toLocaleString()}
                       </td>
                       <td className="px-1 py-2 text-[0.70rem] text-amber-600 font-bold font-large truncate">
-                        {booking.remaining_amount.toLocaleString()}
-                      </td>
+  {(() => {
+    // Get the entry number without the (Payment) suffix
+    const baseEntry = booking.entry.replace(' (Payment)', '');
+    
+    // Find all entries (original + payments) with the same entry number
+    const allRelatedEntries = currentTableData.filter(
+      b => b.entry === baseEntry || b.entry === `${baseEntry} (Payment)`
+    );
+    
+    // Sort by timestamp to get chronological order
+    const sortedEntries = allRelatedEntries.sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Find if there are any entries after this one
+    const hasLaterPayments = sortedEntries.some(
+      entry => entry.timestamp > booking.timestamp
+    );
+    
+    // If this is a payment entry, show it differently
+    if (booking.type.includes('RE ') && booking.type.includes('Payment')) {
+      return hasLaterPayments ? (
+        <span className="line-through text-red-500">
+          {booking.remaining_amount.toLocaleString()}
+        </span>
+      ) : (
+        <span className="text-green-600">{booking.remaining_amount.toLocaleString()}</span>
+      );
+    } else {
+      // For original entry
+      return hasLaterPayments ? (
+        <span className="line-through text-red-500">
+          {booking.remaining_amount.toLocaleString()}
+        </span>
+      ) : (
+        <span>{booking.remaining_amount.toLocaleString()}</span>
+      );
+    }
+  })()}
+</td>
                       <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate">
                         {booking.withdraw.toLocaleString()}
                       </td>
