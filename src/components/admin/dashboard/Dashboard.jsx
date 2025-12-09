@@ -251,22 +251,21 @@ const handleDateRangeChange = useCallback((startDate, endDate) => {
 }, [navigate]);
 
 
-  // Filter bookings based on date range
   const filterBookingsByDateRange = useCallback((bookings, startDate, endDate) => {
-    if (!startDate || !endDate) return bookings;
-    
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // Set time to start and end of day for accurate comparison
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-    
-    return bookings.filter(booking => {
-      const bookingDate = new Date(booking.timestamp);
-      return bookingDate >= start && bookingDate <= end;
-    });
-  }, []);
+  if (!startDate || !endDate) return bookings;
+  
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const startTimestamp = start.getTime();
+  
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+  const endTimestamp = end.getTime();
+  
+  return bookings.filter(booking => {
+    return booking.timestamp >= startTimestamp && booking.timestamp <= endTimestamp;
+  });
+}, []);
 
   // Update filtered bookings when date range or dashboard data changes
   useEffect(() => {

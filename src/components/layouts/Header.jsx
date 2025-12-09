@@ -1,8 +1,9 @@
-// Header.jsx - Fixed with correct passenger name extraction from Dashboard
+// Header.jsx - Updated with Notification System
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import { NotificationBell } from '../ui/NotificationBell'; // Import the notification component
 
 const Header = ({ isAdmin }) => {
   const { user, logout, toggleSidebar, isSidebarOpen } = useAppContext();
@@ -41,7 +42,6 @@ const Header = ({ isAdmin }) => {
     }
   };
 
-  // Fetch all data once when search opens - MATCHING DASHBOARD LOGIC
   const fetchAllData = async () => {
     setLoading(true);
     try {
@@ -61,18 +61,16 @@ const Header = ({ isAdmin }) => {
         axios.get(`${BASE_URL}/vender`),
       ]);
 
-      // Format Umrah bookings - passengerName is NULL in dashboard
       const umrahBookings = umrahData.data.umrahBookings.map(umrah => ({
         type: 'Umrah',
         employee_name: umrah.userName || '',
         entry: umrah.entry || '',
-        passengerName: umrah.customerAdd || null, // Using customerAdd instead of null
+        passengerName: umrah.customerAdd || null,
         customerAdd: umrah.customerAdd || '',
         date: umrah.created_at ? new Date(umrah.created_at).toLocaleDateString('en-GB') : '',
         original: umrah
       }));
 
-      // Format Ticket bookings - Extract first passenger from passport_detail array
       const ticketBookings = ticketsData.data.ticket.map(ticket => {
         let firstPassengerName = null;
         try {
@@ -104,7 +102,6 @@ const Header = ({ isAdmin }) => {
         };
       });
 
-      // Format Visa bookings - Parse passport_detail JSON
       const visaBookings = visaData.data.visa_processing.map(visa => {
         const details = parsePassportDetail(visa.passport_detail);
         const fullName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
@@ -120,7 +117,6 @@ const Header = ({ isAdmin }) => {
         };
       });
 
-      // Format GAMCA Token bookings - Parse passport_detail JSON
       const gamcaTokenBookings = gamcaTokenData.data.gamcaTokens.map(token => {
         const details = parsePassportDetail(token.passport_detail);
         const fullName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
@@ -137,7 +133,6 @@ const Header = ({ isAdmin }) => {
         };
       });
 
-      // Format Services bookings - passengerName is NULL in dashboard
       const servicesBookings = servicesData.data.services.map(services => ({
         type: 'Services',
         employee_name: services.user_name || '',
@@ -149,7 +144,6 @@ const Header = ({ isAdmin }) => {
         original: services
       }));
 
-      // Format Navtcc bookings - Parse passport_detail JSON
       const navtccBookings = navtccData.data.navtcc.map(navtcc => {
         const details = parsePassportDetail(navtcc.passport_detail);
         const fullName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
@@ -165,7 +159,6 @@ const Header = ({ isAdmin }) => {
         };
       });
 
-      // Format Protector bookings
       const protectorBookings = protectorData.data.protectors.map(protector => ({
         type: 'Protector',
         employee_name: protector.employee || '',
@@ -175,7 +168,6 @@ const Header = ({ isAdmin }) => {
         original: protector
       }));
 
-      // Format Expenses bookings
       const expensesBookings = expensesData.data.expenses.map(expenses => ({
         type: 'Expenses',
         employee_name: expenses.user_name || '',
@@ -186,7 +178,6 @@ const Header = ({ isAdmin }) => {
         original: expenses
       }));
 
-      // Format Refunded bookings
       const refundedBookings = (refundedData.data.refunded || []).map(refund => ({
         type: 'Refunded',
         employee_name: refund.employee || '',
@@ -196,7 +187,6 @@ const Header = ({ isAdmin }) => {
         original: refund
       }));
 
-      // Format Vendor bookings
       const vendorBookings = (vendorData.data.vendors || []).map(vender => ({
         type: 'Vendor',
         employee_name: vender.user_name || '',
@@ -223,14 +213,12 @@ const Header = ({ isAdmin }) => {
     }
   };
 
-  // Load data when search opens
   useEffect(() => {
     if (showSearch && allBookings.length === 0) {
       fetchAllData();
     }
   }, [showSearch]);
 
-  // Filter data using the same approach as GamcaToken - only when search term exists
   const filteredResults = searchTerm.trim() 
     ? allBookings.filter((booking) =>
         Object.values(booking).some((value) =>
@@ -310,7 +298,6 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
       <div className="flex items-center space-x-3 md:space-x-6 ">
         <span className="font-bold text-sm md:hidden bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Booking System</span>
 
-        {/* Click outside to close search - BACKDROP MOVED HERE */}
         {showSearch && (
           <div
             className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm"
@@ -321,7 +308,6 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
           />
         )}
 
-        {/* Search Button & Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowSearch(!showSearch)}
@@ -381,7 +367,6 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
                             )}
                           </div>
                           
-                          {/* Passenger Name - Primary Display */}
                           {item.passengerName ? (
                             <div className="font-semibold text-slate-800">
                               {item.passengerName}
@@ -396,14 +381,12 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
                             </div>
                           )}
                           
-                          {/* Employee Name */}
                           {item.employee_name && (
                             <div className="text-sm text-indigo-600 mt-0.5">
                               Employee: {item.employee_name}
                             </div>
                           )}
                           
-                          {/* Additional Info */}
                           {item.reference && (
                             <div className="text-xs text-slate-500 mt-0.5">
                               Ref: {item.reference}
@@ -455,13 +438,8 @@ ${item.pnr ? `PNR: ${item.pnr}` : ''}
           )}
         </div>
 
-        <button
-          className="flex items-center text-black font-semibold "
-          onClick={() => setAddCustomer()}
-        >
-          <i className="fa-solid fa-bell"></i>
-          
-        </button>
+        {/* REPLACE THE OLD BELL BUTTON WITH NOTIFICATION BELL */}
+        <NotificationBell />
 
         <AnimatePresence>
           {AddCustomer && (

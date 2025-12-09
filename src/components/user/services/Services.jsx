@@ -24,7 +24,7 @@ const Services = () => {
     const [selectedService, setSelectedService] = useState(null);
     const { user } = useAppContext();
     const location = useLocation();
-        const [highlightEntry,setHighlightedEntry]=useState('');
+    const [highlightEntry,setHighlightedEntry]=useState('');
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
