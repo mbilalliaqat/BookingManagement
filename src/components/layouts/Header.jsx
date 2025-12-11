@@ -4,6 +4,7 @@ import { useAppContext } from '../contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { NotificationBell } from '../ui/NotificationBell'; // Import the notification component
+import { useNavigate } from 'react-router-dom';
 
 const Header = ({ isAdmin }) => {
   const { user, logout, toggleSidebar, isSidebarOpen } = useAppContext();
@@ -14,6 +15,7 @@ const Header = ({ isAdmin }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const isExpanded = isSidebarOpen || false;
 
@@ -60,6 +62,36 @@ const Header = ({ isAdmin }) => {
         axios.get(`${BASE_URL}/refunded`),
         axios.get(`${BASE_URL}/vender`),
       ]);
+       
+      const selectItem = (item) => {
+  setShowSearch(false);
+  setSearchTerm('');
+  
+  // Map search result types to dashboard navigation routes
+  const typeToRouteMap = {
+    'Umrah': '/admin/umrah',
+    'Ticket': '/admin/tickets',
+    'Visa Processing': '/admin/visa',
+    'GAMCA Token': '/admin/gamcaToken',
+    'Services': '/admin/services',
+    'Navtcc': '/admin/navtcc',
+    'Protector': '/admin/protector',
+    'Expenses': '/admin/expense',
+    'Refunded': '/admin/refunded',
+    'Vendor': '/admin/vender',
+  };
+  
+  const route = typeToRouteMap[item.type];
+  
+  if (route) {
+    // Navigate with highlightEntry state, just like the dashboard does
+    navigate(route, { 
+      state: { highlightEntry: item.entry } 
+    });
+  } else {
+    console.log('Unknown booking type:', item.type);
+  }
+};
 
       const umrahBookings = umrahData.data.umrahBookings.map(umrah => ({
         type: 'Umrah',

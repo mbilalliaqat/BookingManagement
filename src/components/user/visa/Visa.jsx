@@ -210,7 +210,9 @@ const Visa = () => {
                 </div>
             )
         },
+        
         { header: 'PTN/PERMISSION', accessor: 'ptn_permission' },
+        { header: 'MOBILE NUMBER', accessor: 'mobile_no' },
         {
             header: 'STATUS',
             accessor: 'status',

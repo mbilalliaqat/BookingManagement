@@ -205,10 +205,11 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_in_bank: '',
         profit: '',
         remaining_amount: '',
+        mobile_no: '',
         detail: '', // New Detail field
         status: 'Processing', // Default status for new entries
         agent_name: '',
-        booking_date: '',
+        booking_date: new Date().toISOString().split('T')[0],
         remaining_date: '',
         vendors: [{ vendor_name: '', payable_amount: '' }]
     });
@@ -230,6 +231,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_in_bank: Yup.number().notRequired().min(0, 'Paid In Bank cannot be negative').typeError('Paid In Bank must be a number'),
         bank_title: Yup.string().notRequired(),
         profit: Yup.number(),
+        mobile_no: Yup.string().notRequired('Mobile Number is required'),
         remaining_amount: Yup.number(),
         detail: Yup.string(), // Validation for new Detail field (optional)
     });
@@ -324,6 +326,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 sponsor_name: editEntry.sponsor_name || '',
                 visa_number: editEntry.visa_number || '',
                 id_number: editEntry.id_number || '',
+                mobile_no: editEntry.mobile_no || '',
                 embassy: editEntry.embassy || '',
                 e_number: editEntry.e_number || '',
                 customer_add: editEntry.customer_add || '',
@@ -398,6 +401,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             embassy: values.embassy,
             passport_detail: passportDetail,
             e_number: values.e_number,
+            mobile_no: values.mobile_no || null,
             customer_add: values.customer_add,
             ptn_permission: values.ptn_permission,
             embassy_send_date: values.embassy_send_date ? new Date(values.embassy_send_date) : null,
@@ -557,6 +561,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'e_number', label: 'E-Number', type: 'text', placeholder: 'Enter E-number', icon: 'hashtag' },
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'ptn_permission', label: 'PTN/Permission', type: 'text', placeholder: 'Enter PTN/Permission', icon: 'certificate' },
+    { name: 'mobile_no', label: 'Mobile No. (Use comma for multiple)', type: 'text', placeholder: 'Enter mobile number(s)', icon: 'phone' },
+    
     ];
 
     const section2Fields = [

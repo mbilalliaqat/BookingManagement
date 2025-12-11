@@ -38,51 +38,52 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
         balance: '',
     };
 
-    const validationSchema = Yup.object({
-        vender_name: Yup.string().required('Vendor name is required'),
-        date: Yup.date().required('Date is required'),
-        entry: Yup.string().required('Entry is required'),
-        detail: Yup.string().required('Detail is required'),
-        bank_title: Yup.string().when('$hideFields', {
-            is: false,
-            then: (schema) => schema.required('Bank Title is required'),
-            otherwise: (schema) => schema.notRequired()
-        }),
-        credit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Credit must be positive').nullable(),
-        debit: Yup.number().transform((value, originalValue) => originalValue === '' ? undefined : value).min(0, 'Debit must be positive').nullable(),
-        balance: Yup.number().when('$hideFields', {
-            is: true,
-            then: (schema) => schema.required('Opening Balance is required'),
-            otherwise: (schema) => schema
-        }),
-    }).test('credit-debit-balance-test', null, function(values) {
-        if (hideFields && !isEditing) {
-            // When opening balance is checked, only balance is required
-            if (!values.balance && values.balance !== 0) {
-                return this.createError({
-                    path: 'balance',
-                    message: 'Enter Opening Balance'
-                });
-            }
-        } else {
-            // Normal mode - either credit or debit is required (but not both)
-            const hasCredit = parseFloat(values.credit) > 0;
-            const hasDebit = parseFloat(values.debit) > 0;
-            if (!hasCredit && !hasDebit) {
-                return this.createError({
-                    path: 'credit',
-                    message: 'Either Credit or Debit is required'
-                });
-            }
-            if (hasCredit && hasDebit) {
-                return this.createError({
-                    path: 'credit',
-                    message: 'Cannot have both Credit and Debit'
-                });
-            }
-        }
+   const validationSchema = Yup.object({
+    vender_name: Yup.string().required('Vendor name is required'),
+    date: Yup.date().required('Date is required'),
+    entry: Yup.string().required('Entry is required'),
+    detail: Yup.string().required('Detail is required'),
+    bank_title: Yup.string().when('$hideFields', {
+        is: false,
+        then: (schema) => schema.required('Bank Title is required'),
+        otherwise: (schema) => schema.notRequired()
+    }),
+    credit: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? undefined : value))
+        .min(0, 'Credit must be positive')
+        .nullable(),
+    debit: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? undefined : value))
+        .min(0, 'Debit must be positive')
+        .nullable(),
+    balance: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? undefined : value))
+        .nullable(), // allow empty or 0 in opening balance mode
+}).test('credit-debit-balance-test', null, function (values) {
+    if (hideFields && !isEditing) {
+        // Opening balance mode - no credit/debit required, balance can be empty or 0
         return true;
-    });
+    }
+
+    // Normal mode (not opening balance)
+    const hasCredit = parseFloat(values.credit) > 0;
+    const hasDebit = parseFloat(values.debit) > 0;
+
+    if (!hasCredit && !hasDebit) {
+        return this.createError({
+            path: 'credit',
+            message: 'Either Credit or Debit is required'
+        });
+    }
+    if (hasCredit && hasDebit) {
+        return this.createError({
+            path: 'credit',
+            message: 'Cannot have both Credit and Debit'
+        });
+    }
+
+    return true;
+});
 
     const fetchVendorNames = async () => {
         try {
