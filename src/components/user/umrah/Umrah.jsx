@@ -216,7 +216,15 @@ useEffect(() => {
             )
         },
         { header: 'SECTOR', accessor: 'sector' },
-        { header: 'AIRLINE', accessor: 'airline' },
+        { 
+    header: 'AIRLINE', 
+    accessor: 'airline',
+    render: (cellValue, row) => (
+        <div>
+            <div>{row?.airline_select || row?.airline || ''}</div>
+        </div>
+    )
+},
         {
             header: 'PASSENGERS',
             accessor: 'passengerCount',

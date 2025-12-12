@@ -207,18 +207,27 @@ const Tickets = () => {
     };
 
     const baseColumns = [
-        { header: 'BOOKING DATE', accessor: 'booking_date' },
-        {
-            header: 'EMPLOYEE',
-            accessor: 'employee_entry',
-            render: (cellValue, row) => (
-                <div>
-                    <div>{row?.employee_name || ''}</div>
-                </div>
-            )
-        },
+           {
+        header: 'BOOKING DATE',
+        accessor: 'booking_employee',
+        render: (cellValue, row) => (
+            <div>
+                <div>{row?.booking_date || ''}</div>
+                <div>{row?.employee_name || ''}</div>
+            </div>
+        )
+    },
+        // {
+        //     header: 'EMPLOYEE',
+        //     accessor: 'employee_entry',
+        //     render: (cellValue, row) => (
+        //         <div>
+        //             <div>{row?.employee_name || ''}</div>
+        //         </div>
+        //     )
+        // },
         
-        { header: 'REFERENCE', accessor: 'reference' },
+        // { header: 'REFERENCE', accessor: 'reference' },
         {
             header: 'DEPART & RETURN DATE',
             accessor: 'depart_return_date',
@@ -230,7 +239,15 @@ const Tickets = () => {
             )
         },
         { header: 'SECTOR', accessor: 'sector' },
-        { header: 'AIRLINE', accessor: 'airline' },
+        { 
+    header: 'AIRLINE', 
+    accessor: 'airline',
+    render: (cellValue, row) => (
+        <div>
+            <div>{row?.airline_select || row?.airline || ''}</div>
+        </div>
+    )
+},
         {
             header: 'PASSENGERS',
             accessor: 'passengerCount',
@@ -664,7 +681,7 @@ const Tickets = () => {
                                 )}
                             </div>
 
-                            <button
+                            {/* <button
                                 className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
                                     showPassportFields
                                         ? 'bg-purple-600 text-white hover:bg-purple-700'
@@ -674,7 +691,7 @@ const Tickets = () => {
                             >
                                 <i className={`fas ${showPassportFields ? 'fa-eye-slash' : 'fa-eye'} mr-1`}></i>
                                 {showPassportFields ? 'Hide' : 'Show'} Passport Details
-                            </button>
+                            </button> */}
                         </div>
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"

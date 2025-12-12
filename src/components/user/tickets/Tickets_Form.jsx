@@ -22,6 +22,28 @@ const BANK_OPTIONS = [
     { value: "MCB FIT", label: "MCB FIT" },
 ];
 
+const AIRLINE_OPTIONS = [
+    { value: "PIA - PK", label: "PIA - PK" },
+    { value: "Airblue - PA", label: "Airblue - PA" },
+    { value: "AirSial - PF", label: "AirSial - PF" },
+    { value: "Fly Jinnah - 9P", label: "Fly Jinnah - 9P" },
+    { value: "Serene Air - ER", label: "Serene Air - ER" },
+    { value: "Emirates Airlines - EK", label: "Emirates Airlines - EK" },
+    { value: "Etihad Airways - EY", label: "Etihad Airways - EY" },
+    { value: "Qatar Airways - QR", label: "Qatar Airways - QR" },
+    { value: "Saudia - SV", label: "Saudia - SV" },
+    { value: "Turkish Airlines - TK", label: "Turkish Airlines - TK" },
+    { value: "Gulf Air - GF", label: "Gulf Air - GF" },
+    { value: "Oman Air - WY", label: "Oman Air - WY" },
+    { value: "Air China - CA", label: "Air China - CA" },
+    { value: "flydubai - FZ", label: "flydubai - FZ" },
+    { value: "Pegasus Airlines - PC", label: "Pegasus Airlines - PC" },
+    { value: "Thai Airways - TG", label: "Thai Airways - TG" },
+    { value: "SriLankan Airlines - UL", label: "SriLankan Airlines - UL" },
+];
+
+
+
 const DEFAULT_PASSENGER_DETAIL = {
     title: 'Mr',
     firstName: '',
@@ -32,7 +54,8 @@ const DEFAULT_PASSENGER_DETAIL = {
     documentNo: '',
     documentExpiry: '',
     issueCountry: '',
-    mobileNo: ''
+    mobileNo: '',
+     mobileNo2: ''
 };
 
 const formatDateForInput = (dateStr) => {
@@ -96,6 +119,9 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => {
         { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
         { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
         { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
+        { label: 'Mobile No 2', name: 'mobileNo2', type: 'text', placeholder: 'Enter mobile number 2' },
+        { name: 'airline', label: 'Airline', type: 'select', options: AIRLINE_OPTIONS, placeholder: 'Select airline', icon: 'plane' },
+
     ];
 
     const optionalFields = [
@@ -363,6 +389,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [customerNames, setCustomerNames] = useState([]);
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
     const [originalPayments, setOriginalPayments] = useState({ paid_cash: 0, paid_in_bank: 0 });
+    
 
     const formFields = {
         section1: [
@@ -374,6 +401,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter return date', icon: 'calendar-alt' },
             { name: 'sector', label: 'Sector', type: 'text', placeholder: 'Enter sector', icon: 'map-marker-alt' },
             { name: 'airline', label: 'Airline', type: 'text', placeholder: 'Enter airline', icon: 'plane' },
+            { name: 'airline_select', label: 'Airline Selection', type: 'select', options: AIRLINE_OPTIONS, placeholder: 'Select airline', icon: 'plane-departure' },
+
         ],
         section2: [
             { name: 'passengerCount', label: 'Passenger', type: 'custom_passenger', icon: 'users' },
@@ -412,6 +441,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         remaining_date: '',
         vendors: [{ vendor_name: '', payable_amount: '' }],
         profit: '',
+        airline_select:'',
         remaining_amount: '0'
         
     };
@@ -544,6 +574,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 return_date: formatDateForInput(editEntry.return_date),
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
+                airline_select: editEntry.airline_select || '',
                 adults: editEntry.adults || 0,
                 children: editEntry.children || 0,
                 infants: editEntry.infants || 0,
@@ -591,7 +622,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const passportDetail = JSON.stringify(values.passengers.map(p => ({
             title: p.title, firstName: p.firstName, lastName: p.lastName, dob: p.dob,
             nationality: p.nationality, documentType: p.documentType, documentNo: p.documentNo,
-            documentExpiry: p.documentExpiry, issueCountry: p.issueCountry, mobileNo: p.mobileNo
+            documentExpiry: p.documentExpiry, issueCountry: p.issueCountry, mobileNo: p.mobileNo,mobileNo2: p.mobileNo2 
         })));
 
         try {
@@ -613,6 +644,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 return_date: values.return_date || null,
                 sector: values.sector,
                 airline: values.airline,
+                airline_select: values.airline_select,
                 adults: values.adults,
                 children: values.children,
                 infants: values.infants,

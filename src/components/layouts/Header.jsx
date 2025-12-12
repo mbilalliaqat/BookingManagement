@@ -63,35 +63,8 @@ const Header = ({ isAdmin }) => {
         axios.get(`${BASE_URL}/vender`),
       ]);
        
-      const selectItem = (item) => {
-  setShowSearch(false);
-  setSearchTerm('');
-  
-  // Map search result types to dashboard navigation routes
-  const typeToRouteMap = {
-    'Umrah': '/admin/umrah',
-    'Ticket': '/admin/tickets',
-    'Visa Processing': '/admin/visa',
-    'GAMCA Token': '/admin/gamcaToken',
-    'Services': '/admin/services',
-    'Navtcc': '/admin/navtcc',
-    'Protector': '/admin/protector',
-    'Expenses': '/admin/expense',
-    'Refunded': '/admin/refunded',
-    'Vendor': '/admin/vender',
-  };
-  
-  const route = typeToRouteMap[item.type];
-  
-  if (route) {
-    // Navigate with highlightEntry state, just like the dashboard does
-    navigate(route, { 
-      state: { highlightEntry: item.entry } 
-    });
-  } else {
-    console.log('Unknown booking type:', item.type);
-  }
-};
+       
+
 
       const umrahBookings = umrahData.data.umrahBookings.map(umrah => ({
         type: 'Umrah',
@@ -262,22 +235,38 @@ const Header = ({ isAdmin }) => {
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
-
-  const selectItem = (item) => {
-    console.log('Selected:', item);
-    const displayInfo = `
-Type: ${item.type}
-Entry: ${item.entry || 'N/A'}
-Passenger: ${item.passengerName || 'N/A'}
-Employee: ${item.employee_name || 'N/A'}
-${item.customerAdd ? `Customer: ${item.customerAdd}` : ''}
-${item.reference ? `Reference: ${item.reference}` : ''}
-${item.pnr ? `PNR: ${item.pnr}` : ''}
-    `.trim();
-    alert(displayInfo);
-    setShowSearch(false);
-    setSearchTerm('');
+     
+    
+   const selectItem = (item) => {
+  setShowSearch(false);
+  setSearchTerm('');
+  
+  // Map search result types to dashboard navigation routes
+  const typeToRouteMap = {
+    'Umrah': '/admin/umrah',
+    'Ticket': '/admin/tickets',
+    'Visa Processing': '/admin/visa',
+    'GAMCA Token': '/admin/gamcaToken',
+    'Services': '/admin/services',
+    'Navtcc': '/admin/navtcc',
+    'Protector': '/admin/protector',
+    'Expenses': '/admin/expense',
+    'Refunded': '/admin/refunded',
+    'Vendor': '/admin/vender',
   };
+  
+  const route = typeToRouteMap[item.type];
+  
+  if (route) {
+    // Navigate with highlightEntry state, just like the dashboard does
+    navigate(route, { 
+      state: { highlightEntry: item.entry } 
+    });
+  } else {
+    console.log('Unknown booking type:', item.type);
+  }
+};
+ 
 
   const handleSubmit = async (e) => {
     e.preventDefault();

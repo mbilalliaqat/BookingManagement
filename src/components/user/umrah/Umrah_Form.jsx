@@ -26,6 +26,26 @@ const DEFAULT_PASSENGER_DETAIL = {
     mobileNo: ''
 };
 
+   const AIRLINE_OPTIONS = [
+    { value: "PIA - PK", label: "PIA - PK" },
+    { value: "Airblue - PA", label: "Airblue - PA" },
+    { value: "AirSial - PF", label: "AirSial - PF" },
+    { value: "Fly Jinnah - 9P", label: "Fly Jinnah - 9P" },
+    { value: "Serene Air - ER", label: "Serene Air - ER" },
+    { value: "Emirates Airlines - EK", label: "Emirates Airlines - EK" },
+    { value: "Etihad Airways - EY", label: "Etihad Airways - EY" },
+    { value: "Qatar Airways - QR", label: "Qatar Airways - QR" },
+    { value: "Saudia - SV", label: "Saudia - SV" },
+    { value: "Turkish Airlines - TK", label: "Turkish Airlines - TK" },
+    { value: "Gulf Air - GF", label: "Gulf Air - GF" },
+    { value: "Oman Air - WY", label: "Oman Air - WY" },
+    { value: "Air China - CA", label: "Air China - CA" },
+    { value: "flydubai - FZ", label: "flydubai - FZ" },
+    { value: "Pegasus Airlines - PC", label: "Pegasus Airlines - PC" },
+    { value: "Thai Airways - TG", label: "Thai Airways - TG" },
+    { value: "SriLankan Airlines - UL", label: "SriLankan Airlines - UL" },
+];
+
 const formatDateForInput = (dateStr) => {
     if (!dateStr || String(dateStr).trim() === '' || dateStr === '0000-00-00' || String(dateStr).startsWith('1970-01-01')) {
         return '';
@@ -374,6 +394,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         return_date: '',
         sector: '',
         airline: '',
+        airline_select: '',
         adults: 1,
         children: 0,
         infants: 0,
@@ -494,6 +515,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 return_date: formatDateForInput(editEntry.return_date),
                 sector: editEntry.sector || '',
                 airline: editEntry.airline || '',
+                airline_select: editEntry.airline_select || '',
                 adults: editEntry.adults || 1,
                 children: editEntry.children || 0,
                 infants: editEntry.infants || 0,
@@ -550,6 +572,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 return_date: values.return_date || null,
                 sector: values.sector,
                 airline: values.airline,
+                airline_select: values.airline_select,
                 adults: values.adults,
                 children: values.children,
                 infants: values.infants,
@@ -732,17 +755,18 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     // Form fields grouped by section
     const section1Fields = [
-        { name: 'userName', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
-        { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Enter booking date', icon: 'calendar-alt' },
-        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
-        { name: 'customerAdd', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
-        { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
-        { name: 'packageDetail', label: 'Package Detail', type: 'text', placeholder: 'Enter package detail', icon: 'suitcase' },
-        { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
-        { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter Return date', icon: 'calendar-alt' },
-        { name: 'sector', label: 'Sector', type: 'text', placeholder: 'Enter sector', icon: 'map-marker-alt' },
-        { name: 'airline', label: 'Airline', type: 'text', placeholder: 'Enter airline', icon: 'plane' },
-    ];
+    { name: 'userName', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
+    { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Enter booking date', icon: 'calendar-alt' },
+    { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
+    { name: 'customerAdd', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
+    { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
+    { name: 'packageDetail', label: 'Package Detail', type: 'text', placeholder: 'Enter package detail', icon: 'suitcase' },
+    { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
+    { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter Return date', icon: 'calendar-alt' },
+    { name: 'sector', label: 'Sector', type: 'text', placeholder: 'Enter sector', icon: 'map-marker-alt' },
+    { name: 'airline', label: 'Airline', type: 'text', placeholder: 'Enter airline', icon: 'plane' },
+    { name: 'airline_select', label: 'Airline Selection', type: 'select', options: AIRLINE_OPTIONS, placeholder: 'Select airline', icon: 'plane-departure' },
+];
 
     const section2Fields = [
         {
@@ -774,18 +798,20 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             </label>
             <div className="relative">
                 {field.type === 'select' ? (
-                    <Field
-                        as="select"
-                        id={field.name}
-                        name={field.name}
-                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        disabled={field.readOnly}
-                    >
-                        <option value="">Select {field.label}</option>
-                        {field.options && field.options.map(option => (
-                            <option key={option} value={option}>{option}</option>
-                        ))}
-                    </Field>
+                     <Field
+        as="select"
+        id={field.name}
+        name={field.name}
+        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+        disabled={field.readOnly}
+    >
+        <option value="">{field.placeholder || `Select ${field.label}`}</option>
+        {field.options && field.options.map(option => (
+            <option key={option.value || option} value={option.value || option}>
+                {option.label || option}
+            </option>
+        ))}
+    </Field>
                 ) : field.type === 'checkbox' ? (
                     <div className="flex items-center">
                         <Field

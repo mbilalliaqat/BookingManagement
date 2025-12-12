@@ -51,6 +51,64 @@ const MonthlyBookingsChart = ({
 }) => {
   const showPartialData = !isLoading && monthlySummaryData.length > 0;
 
+  // Create a complete dataset with all days 1-31
+  const completeMonthData = useMemo(() => {
+    // Create array with all 31 days initialized with 0 values for each category
+    const allDays = Array.from({ length: 31 }, (_, i) => {
+      const day = i + 1;
+      return { 
+        date: day.toString(),
+        Ticket: 0,
+        Umrah: 0,
+        Visa: 0,
+        Gamca: 0,
+        NAVTCC: 0,
+        Services: 0,
+        Vendor: 0,
+        Banks: 0
+      };
+    });
+
+    // Merge with actual data
+    monthlySummaryData.forEach(item => {
+      // Handle different date formats - extract day number
+      let dayNum;
+      
+      if (typeof item.date === 'number') {
+        dayNum = item.date;
+      } else if (typeof item.date === 'string') {
+        // Try to parse the date string
+        // Could be "12", "12/12/2025", "2025-12-12", etc.
+        const parsed = parseInt(item.date);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 31) {
+          dayNum = parsed;
+        } else {
+          // Try to extract day from date string
+          const dateMatch = item.date.match(/\b(\d{1,2})\b/);
+          if (dateMatch) {
+            dayNum = parseInt(dateMatch[1]);
+          }
+        }
+      }
+      
+      if (dayNum >= 1 && dayNum <= 31) {
+        allDays[dayNum - 1] = { 
+          date: dayNum.toString(),
+          Ticket: item.Ticket || 0,
+          Umrah: item.Umrah || 0,
+          Visa: item.Visa || 0,
+          Gamca: item.Gamca || 0,
+          NAVTCC: item.NAVTCC || 0,
+          Services: item.Services || 0,
+          Vendor: item.Vendor || 0,
+          Banks: item.Banks || 0
+        };
+      }
+    });
+
+    return allDays;
+  }, [monthlySummaryData]);
+
   // Calculate the total number of bookings for the entire month
   const totalMonthlyBookings = useMemo(() => {
     return monthlySummaryData.reduce((monthlySum, dailyData) => {
@@ -116,27 +174,28 @@ const MonthlyBookingsChart = ({
         <div style={{ width: '100%', height: 240 }}> {/* Optimal height */}
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
-              data={monthlySummaryData} 
-              margin={{ top: 10, right: 10, left: 0, bottom: 5 }} 
-              barGap={2} 
-              barCategoryGap="10%" 
+              data={completeMonthData} 
+              margin={{ top: 10, right: 10, left: 10, bottom: 5 }} 
+              barGap={0} 
+              barCategoryGap="30%" 
             >
               {/* Extreme Minimalist Grid: Only faint horizontal lines */}
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} /> 
               
               <XAxis 
                 dataKey="date" 
-                tick={{ fill: '#6b7280', fontSize: 8.5, angle: -45, textAnchor: 'end' }} // Rotated and smaller for better density
+                tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 'bold' }} // Show day numbers clearly
                 axisLine={false} 
                 tickLine={false} 
-                height={40} // Provide space for rotated labels
+                height={30} // Provide space for labels
               />
               
               <YAxis 
-                tick={false} // Removed Y-axis ticks for cleaner look
+                tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 'bold' }} // Show Y-axis numbers
                 axisLine={false} // Removed Y-axis line
                 tickLine={false} // Removed Y-axis tick marks
-                domain={[0, domainMax]} 
+                domain={[0, domainMax]}
+                width={40} // Give space for numbers
               />
               
               <Tooltip content={<CustomBarTooltip />} />
