@@ -211,7 +211,7 @@ const Tickets = () => {
         header: 'BOOKING DATE',
         accessor: 'booking_employee',
         render: (cellValue, row) => (
-            <div>
+            <div className="uppercase">
                 <div>{row?.booking_date || ''}</div>
                 <div>{row?.employee_name || ''}</div>
             </div>
@@ -232,18 +232,27 @@ const Tickets = () => {
             header: 'DEPART & RETURN DATE',
             accessor: 'depart_return_date',
             render: (cellValue, row) => (
-                <div>
+                <div className="uppercase">
                     <div>{row?.depart_date || ''}</div>
                     <div>{row?.return_date || ''}</div>
                 </div>
             )
         },
-        { header: 'SECTOR', accessor: 'sector' },
+     
+     { 
+    header: 'SECTOR', 
+    accessor: 'sector',
+    render: (cellValue, row) => (
+        <div className="uppercase">
+            <div>{ row?.sector || ''}</div>
+        </div>
+    )
+},
         { 
     header: 'AIRLINE', 
     accessor: 'airline',
     render: (cellValue, row) => (
-        <div>
+        <div className="uppercase">
             <div>{row?.airline_select || row?.airline || ''}</div>
         </div>
     )
@@ -286,7 +295,7 @@ const Tickets = () => {
             render: (cellValue, row) => (
                 <div className="flex flex-col space-y-1">
                     {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
-                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1 uppercase">
                             {p.dob ? new Date(p.dob).toLocaleDateString('en-GB') : ''}
                         </div>
                     ))}
@@ -299,7 +308,7 @@ const Tickets = () => {
             render: (cellValue, row) => (
                 <div className="flex flex-col space-y-1">
                     {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
-                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                        <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1 uppercase">
                             {p.nationality || ''}
                         </div>
                     ))}
@@ -310,7 +319,7 @@ const Tickets = () => {
             header: 'DOCUMENT TYPE',
             accessor: 'documentType',
             render: (cellValue, row) => (
-                <div className="flex flex-col space-y-1">
+                <div className="flex flex-col space-y-1 uppercase">
                     {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
                         <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
                             {p.documentType || ''}
@@ -323,7 +332,7 @@ const Tickets = () => {
             header: 'DOCUMENT NO',
             accessor: 'documentNo',
             render: (cellValue, row) => (
-                <div className="flex flex-col space-y-1">
+                <div className="flex flex-col space-y-1 uppercase">
                     {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
                         <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
                             {p.documentNo || ''}
@@ -336,7 +345,7 @@ const Tickets = () => {
             header: 'EXPIRY DATE',
             accessor: 'documentExpiry',
             render: (cellValue, row) => (
-                <div className="flex flex-col space-y-1">
+                <div className="flex flex-col space-y-1 uppercase">
                     {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
                         <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
                             {p.documentExpiry ? new Date(p.documentExpiry).toLocaleDateString('en-GB') : ''}
@@ -613,6 +622,12 @@ const Tickets = () => {
                             <div>
                                 <strong>Remaining Amount:</strong> {selectedTicketForPay.remaining_amount || '0'}
                             </div>
+                            <div>
+                   <strong>Initial Remaining:</strong> 
+                 <span className="font-semibold text-purple-700">
+                 {selectedTicketForPay.initial_remaining_amount || '0'}
+                     </span>
+                   </div>
                         </div>
                     </div>
 

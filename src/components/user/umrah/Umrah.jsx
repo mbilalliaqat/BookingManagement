@@ -196,7 +196,7 @@ useEffect(() => {
             header: 'EMPLOYEE & ENTRY',
             accessor: 'employee_entry',
             render: (cellValue, row) => (
-                <div>
+                <div className="uppercase">
                     <div>{row?.userName || ''}</div>
                     <div>{row?.entry || ''}</div>
                 </div>
@@ -209,18 +209,26 @@ useEffect(() => {
             header: 'DEPART & RETURN DATE',
             accessor: 'depart_return_date',
             render: (cellValue, row) => (
-                <div>
+                <div >
                     <div>{row?.depart_date || ''}</div>
                     <div>{row?.return_date || ''}</div>
                 </div>
             )
         },
-        { header: 'SECTOR', accessor: 'sector' },
+       { 
+    header: 'SECTOR', 
+    accessor: 'sector',
+    render: (cellValue, row) => (
+        <div className="uppercase">
+            <div>{ row?.sector || ''}</div>
+        </div>
+    )
+},
         { 
     header: 'AIRLINE', 
     accessor: 'airline',
     render: (cellValue, row) => (
-        <div>
+        <div className='uppercase'>
             <div>{row?.airline_select || row?.airline || ''}</div>
         </div>
     )

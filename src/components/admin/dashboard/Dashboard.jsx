@@ -31,10 +31,32 @@ const api = axios.create({
 });
 
 // Add caching for responses
-const cache = {
-  data: new Map(),
-  timestamp: new Map(),
-  ttl: 15 * 1000,
+const CACHE_KEY = 'dashboard_cache';
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const getFromCache = () => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const isExpired = Date.now() - timestamp > CACHE_TTL;
+    
+    return isExpired ? null : data;
+  } catch {
+    return null;
+  }
+};
+
+const saveToCache = (data) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.error('Cache save failed:', error);
+  }
 };
 
 // --- Main Dashboard Component ---
@@ -65,6 +87,8 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [cachedData, setCachedData] = useState(null);
+  const [isFreshDataLoading, setIsFreshDataLoading] = useState(false);
   
   const [selectedMonthEnd, setSelectedMonthEnd] = useState(new Date());
   const navigate = useNavigate();
@@ -100,16 +124,10 @@ export default function Dashboard() {
     navigate('/admin/refunded');
   }, [navigate]);
 
-  const fetchWithCache = useCallback(async (endpoint) => {
-    const now = Date.now();
-    const cacheKey = endpoint;
-    
-    const response = await api.get(endpoint);
-    cache.data.set(cacheKey, response.data);
-    cache.timestamp.set(cacheKey, now);
-    
-    return response.data;
-  }, []);
+      const fetchWithCache = useCallback(async (endpoint) => {
+  const response = await api.get(endpoint);
+  return response.data;
+}, []);
 
   const safeTimestamp = (dateValue) => {
     if (!dateValue) return 0;
@@ -367,6 +385,17 @@ const calculateMonthlySummary = useCallback(() => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
+
+        const cached = getFromCache();
+    
+    if (cached) {
+      // Show cached data immediately
+      setDashboardData(cached);
+      setIsLoading(false);
+      setIsFreshDataLoading(true); // Start loading fresh data in background
+    } else {
+      setIsLoading(true); // Only show full loading if no cache
+    }
       
       try {
         const [
@@ -516,9 +545,9 @@ const calculateMonthlySummary = useCallback(() => {
     employee_name: umrah.userName, 
     receivable_amount: umrah.receivableAmount, 
     entry: umrah.entry, 
-    paid_cash: umrah.paidCash, 
-    paid_in_bank: umrah.paidInBank, 
-    remaining_amount: umrah.remainingAmount, 
+    paid_cash: umrah.initial_paid_cash, 
+    paid_in_bank: umrah.initial_paid_in_bank, 
+    remaining_amount: umrah.initial_remaining_amount, 
     booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt), 
     timestamp: safeTimestamp(umrah.createdAt), 
     withdraw: 0, 
@@ -609,9 +638,9 @@ const calculateMonthlySummary = useCallback(() => {
             employee_name: ticket.employee_name, 
             receivable_amount: ticket.receivable_amount, 
             entry: ticket.entry, 
-            paid_cash: ticket.paid_cash, 
-            paid_in_bank: ticket.paid_in_bank, 
-            remaining_amount: ticket.remaining_amount, 
+            paid_cash: ticket.initial_paid_cash, 
+            paid_in_bank: ticket.initial_paid_in_bank, 
+            remaining_amount: ticket.initial_remaining_amount, 
             booking_date: safeLocaleDateString(ticket.booking_date || ticket.created_at), 
             timestamp: safeTimestamp(ticket.created_at), 
             withdraw: 0, 
@@ -689,9 +718,9 @@ const calculateMonthlySummary = useCallback(() => {
             employee_name: visa.employee_name, 
             receivable_amount: visa.receivable_amount, 
             entry: visa.entry, 
-            paid_cash: visa.paid_cash, 
-            paid_in_bank: visa.paid_in_bank, 
-            remaining_amount: visa.remaining_amount, 
+            paid_cash: visa.initial_paid_cash, 
+            paid_in_bank: visa.initial_paid_in_bank, 
+            remaining_amount: visa.initial_remaining_amount, 
             booking_date: safeLocaleDateString(visa.created_at), 
             timestamp: safeTimestamp(visa.created_at), 
             withdraw: 0,
@@ -759,9 +788,9 @@ const calculateMonthlySummary = useCallback(() => {
             employee_name: token.employee_name, 
             receivable_amount: token.receivable_amount, 
             entry: token.entry, 
-            paid_cash: token.paid_cash, 
-            paid_in_bank: token.paid_in_bank, 
-            remaining_amount: token.remaining_amount, 
+            paid_cash: token.initial_paid_cash, 
+            paid_in_bank: token.initial_paid_in_bank, 
+            remaining_amount: token.initial_remaining_amount, 
             booking_date: safeLocaleDateString(token.created_at), 
             timestamp: safeTimestamp(token.created_at), 
             withdraw: 0, 
@@ -957,31 +986,35 @@ const calculateMonthlySummary = useCallback(() => {
         const totalVendorWithdraw = venderBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
         const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw;
 
-        setDashboardData({
-          combinedBookings: finalCombinedBookings,
-          totalBookings: dashboardStats.data.totalBookings,
-          bookingsByType: dashboardStats.data.bookingsByType,
-          totalRevenue: dashboardStats.data.totalRevenue,
-          totalProtectorWithdraw: totalProtectorWithdraw,
-          totalExpenseWithdraw: totalExpensesWithdraw,
-          totalRefundedWithdraw: totalRefundedWithdraw,
-          totalVendorWithdraw: totalVendorWithdraw,
-          TotalWithdraw: TotalWithdraw,
-          cashInOffice: runningCashInOffice,
-          accounts: accountsData,
-          vendors: aggregatedVendors,
-          agents: aggregatedAgents,
-          totalVendorPayable: totalVendorPayable,
-          totalVendorPaid: totalVendorPaid,
-          totalAgentPayable: totalAgentPayable,
-          totalAgentPaid: totalAgentPaid,
-        });
+       const newData = {
+  combinedBookings: finalCombinedBookings,
+  totalBookings: dashboardStats.data.totalBookings,
+  bookingsByType: dashboardStats.data.bookingsByType,
+  totalRevenue: dashboardStats.data.totalRevenue,
+  totalProtectorWithdraw: totalProtectorWithdraw,
+  totalExpenseWithdraw: totalExpensesWithdraw,
+  totalRefundedWithdraw: totalRefundedWithdraw,
+  totalVendorWithdraw: totalVendorWithdraw,
+  TotalWithdraw: TotalWithdraw,
+  cashInOffice: runningCashInOffice,
+  accounts: accountsData,
+  vendors: aggregatedVendors,
+  agents: aggregatedAgents,
+  totalVendorPayable: totalVendorPayable,
+  totalVendorPaid: totalVendorPaid,
+  totalAgentPayable: totalAgentPayable,
+  totalAgentPaid: totalAgentPaid,
+};
 
-      } catch (error) {
-        console.error('Final fetch error:', error);
-      } finally {
-        setIsLoading(false);
-      }
+setDashboardData(newData);
+saveToCache(newData); // Save to cache
+
+} catch (error) {
+  console.error('Final fetch error:', error);
+} finally {
+  setIsLoading(false);
+  setIsFreshDataLoading(false);
+}
     };
     
     fetchDashboardData();
@@ -1074,6 +1107,12 @@ const calculateMonthlySummary = useCallback(() => {
 
   return (
     <div className=""> {/* Stats Cards Section - Adjusted for 8 columns */}
+    {isFreshDataLoading && (
+  <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2 animate-pulse">
+    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+    <span className="text-sm font-medium">Refreshing data...</span>
+  </div>
+)}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
         {/* Total Bookings Card */}
         <div className="relative w-full" onMouseEnter={() => handleMouseEnter('bookings')} onMouseLeave={handleMouseLeave} >

@@ -69,18 +69,18 @@ const Vendor_Form = ({ onCancel, onSubmitSuccess, editingEntry }) => {
     const hasCredit = parseFloat(values.credit) > 0;
     const hasDebit = parseFloat(values.debit) > 0;
 
-    if (!hasCredit && !hasDebit) {
-        return this.createError({
-            path: 'credit',
-            message: 'Either Credit or Debit is required'
-        });
-    }
-    if (hasCredit && hasDebit) {
-        return this.createError({
-            path: 'credit',
-            message: 'Cannot have both Credit and Debit'
-        });
-    }
+    // if (!hasCredit && !hasDebit) {
+    //     return this.createError({
+    //         path: 'credit',
+    //         message: 'Either Credit or Debit '
+    //     });
+    // }
+    // if (hasCredit && hasDebit) {
+    //     return this.createError({
+    //         path: 'credit',
+    //         message: 'Cannot have both Credit and Debit'
+    //     });
+    // }
 
     return true;
 });

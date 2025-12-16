@@ -23,23 +23,23 @@ const BANK_OPTIONS = [
 ];
 
 const AIRLINE_OPTIONS = [
-    { value: "PIA - PK", label: "PIA - PK" },
-    { value: "Airblue - PA", label: "Airblue - PA" },
-    { value: "AirSial - PF", label: "AirSial - PF" },
-    { value: "Fly Jinnah - 9P", label: "Fly Jinnah - 9P" },
-    { value: "Serene Air - ER", label: "Serene Air - ER" },
-    { value: "Emirates Airlines - EK", label: "Emirates Airlines - EK" },
-    { value: "Etihad Airways - EY", label: "Etihad Airways - EY" },
-    { value: "Qatar Airways - QR", label: "Qatar Airways - QR" },
-    { value: "Saudia - SV", label: "Saudia - SV" },
-    { value: "Turkish Airlines - TK", label: "Turkish Airlines - TK" },
-    { value: "Gulf Air - GF", label: "Gulf Air - GF" },
-    { value: "Oman Air - WY", label: "Oman Air - WY" },
-    { value: "Air China - CA", label: "Air China - CA" },
-    { value: "flydubai - FZ", label: "flydubai - FZ" },
-    { value: "Pegasus Airlines - PC", label: "Pegasus Airlines - PC" },
-    { value: "Thai Airways - TG", label: "Thai Airways - TG" },
-    { value: "SriLankan Airlines - UL", label: "SriLankan Airlines - UL" },
+    { value: "PK", label: "PIA - PK" },
+    { value: "PA", label: "Airblue - PA" },
+    { value: "PF", label: "AirSial - PF" },
+    { value: "9P", label: "Fly Jinnah - 9P" },
+    { value: "ER", label: "Serene Air - ER" },
+    { value: "EK", label: "Emirates Airlines - EK" },
+    { value: "EY", label: "Etihad Airways - EY" },
+    { value: "QR", label: "Qatar Airways - QR" },
+    { value: "SV", label: "Saudia - SV" },
+    { value: "TK", label: "Turkish Airlines - TK" },
+    { value: "GF", label: "Gulf Air - GF" },
+    { value: "WY", label: "Oman Air - WY" },
+    { value: "CA", label: "Air China - CA" },
+    { value: "FZ", label: "flydubai - FZ" },
+    { value: "PC", label: "Pegasus Airlines - PC" },
+    { value: "TG", label: "Thai Airways - TG" },
+    { value: "UL", label: "SriLankan Airlines - UL" },
 ];
 
 
@@ -120,7 +120,6 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => {
         { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
         { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
         { label: 'Mobile No 2', name: 'mobileNo2', type: 'text', placeholder: 'Enter mobile number 2' },
-        { name: 'airline', label: 'Airline', type: 'select', options: AIRLINE_OPTIONS, placeholder: 'Select airline', icon: 'plane' },
 
     ];
 
@@ -400,8 +399,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'depart_date', label: 'Depart Date', type: 'date', placeholder: 'Enter Depart date', icon: 'calendar-alt' },
             { name: 'return_date', label: 'Return Date', type: 'date', placeholder: 'Enter return date', icon: 'calendar-alt' },
             { name: 'sector', label: 'Sector', type: 'text', placeholder: 'Enter sector', icon: 'map-marker-alt' },
-            { name: 'airline', label: 'Airline', type: 'text', placeholder: 'Enter airline', icon: 'plane' },
-            { name: 'airline_select', label: 'Airline Selection', type: 'select', options: AIRLINE_OPTIONS, placeholder: 'Select airline', icon: 'plane-departure' },
+            { name: 'airline', label: ' Airline',type: 'select', options: AIRLINE_OPTIONS, placeholder: 'Enter airline', icon: 'plane' },
+            { name: 'airline_select', label: 'Other Airline ', type: 'text' , placeholder: 'Select airline', icon: 'plane-departure' },
 
         ],
         section2: [
@@ -454,7 +453,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         customer_add: Yup.string().notRequired('Customer Address is required'),
         depart_date: Yup.date().required('Travel Date is required').typeError('Invalid date'),
         sector: Yup.string().required('Sector is required'),
-        airline: Yup.string().required('Airline is required'),
+        airline: Yup.string().notRequired('Airline is required'),
         adults: Yup.number().required('Adults is required').min(0, 'Adults cannot be negative'),
         children: Yup.number().required('Children is required').min(0, 'Children cannot be negative'),
         infants: Yup.number().required('Infants is required').min(0, 'Infants cannot be negative'),
@@ -661,6 +660,8 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 remaining_amount: parseFloat(values.remaining_amount) || 0,
                 booking_date: values.booking_date || null,
             };
+    console.log('Request Data:', requestData);
+console.log('airline_select value:', values.airline_select);
 
             const url = editEntry ? `${BASE_URL}/ticket/${editEntry.id}` : `${BASE_URL}/ticket`;
             const method = editEntry ? 'PUT' : 'POST';
@@ -677,11 +678,20 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             if (!editEntry) {
                 await incrementFormEntry('ticket', parsedEntryNumber);
 
+                 const formatDate = (dateStr) => {
+                     if (!dateStr) return '';
+                         const date = new Date(dateStr);
+                          const day = String(date.getDate()).padStart(2, '0');
+                             const month = String(date.getMonth() + 1).padStart(2, '0');
+                                 const year = String(date.getFullYear()).slice(-2);
+                               return `${day}-${month}-${year}`;
+                             };
                 const commonDetail = [
+                     values.agent_name ? `(AG,${values.agent_name})` : '',
                     values.sector || '',
-                    values.depart_date || '',
-                    values.return_date || '',
-                    values.airline || '',
+                     values.airline || '',
+                    formatDate(values.depart_date),
+                    formatDate(values.return_date || ''),
                     `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`.trim()
                 ].join(',');
 
