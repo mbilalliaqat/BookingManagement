@@ -75,6 +75,79 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
         setNewPayment(prev => ({ ...prev, [name]: value }));
     };
 
+    const addAgentEntry = async () => {
+        try {
+            console.log('Adding agent entry for visa remaining payment');
+            console.log('VisaDetails:', visaDetails);
+
+            if (!visaDetails) {
+                console.error('No visa details available for agent entry');
+                return;
+            }
+
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            };
+
+            let passengerName = '';
+            try {
+                let passportDetails = {};
+                if (typeof visaDetails.passport_detail === 'string') {
+                    passportDetails = JSON.parse(visaDetails.passport_detail);
+                } else if (typeof visaDetails.passport_detail === 'object') {
+                    passportDetails = visaDetails.passport_detail;
+                }
+                passengerName = `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim();
+            } catch (e) {
+                console.error('Error parsing passport details:', e);
+            }
+
+            const commonDetail = [
+                visaDetails.embassy || '',
+                visaDetails.visa_number || '',
+                formatDate(visaDetails.embassy_send_date),
+                formatDate(visaDetails.embassy_return_date || ''),
+                passengerName,
+                '(Remaining Payment)'
+            ].filter(Boolean).join(',');
+
+            const agentData = {
+                agent_name: visaDetails.agent_name,
+                employee: newPayment.recorded_by,
+                detail: commonDetail,
+                receivable_amount: 0,
+                paid_cash: cashAmount,
+                paid_bank: bankAmount,
+                credit: 0,
+                debit: cashAmount + bankAmount,
+                date: newPayment.payment_date,
+                entry: `${visaDetails.entry || ''} (RP)`,
+                bank_title: newPayment.bank_title || null
+            };
+
+            console.log('Submitting agent data:', agentData);
+
+            const agentResponse = await axios.post(`${BASE_URL}/agent`, agentData);
+
+            if (agentResponse.status === 200 || agentResponse.status === 201) {
+                console.log('Agent entry added successfully');
+            } else {
+                console.error('Agent submission failed:', agentResponse.status);
+            }
+        } catch (agentError) {
+            console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
+            console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
+        }
+    };
+
     // Add bank account entry function (similar to RemainingPay.jsx)
     const addBankAccountEntry = async () => {
         try {
@@ -143,6 +216,11 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                 // Add bank account entry if bank payment is made
                 if (newPayment.bank_title && bankAmount > 0) {
                     await addBankAccountEntry();
+                }
+
+                // Add agent entry for the remaining payment
+                if (visaDetails && visaDetails.agent_name) {
+                    await addAgentEntry();
                 }
 
                 // Dispatch the paymentUpdated event to trigger dashboard refresh

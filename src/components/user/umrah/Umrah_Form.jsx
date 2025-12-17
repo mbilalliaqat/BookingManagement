@@ -23,7 +23,8 @@ const DEFAULT_PASSENGER_DETAIL = {
     documentNo: '',
     documentExpiry: '',
     issueCountry: '',
-    mobileNo: ''
+    mobileNo: '',
+    mobileNo2: ''
 };
 
    const AIRLINE_OPTIONS = [
@@ -105,7 +106,7 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => {
         { label: 'Father Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
         { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
         { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
-        { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
+      
     ];
 
     const optionalFields = [
@@ -113,6 +114,8 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => {
         { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'Enter nationality' },
         { label: 'Expiry Date', name: 'documentExpiry', type: 'date', placeholder: 'Select expiry date' },
         { label: 'Issue Country', name: 'issueCountry', type: 'text', placeholder: 'Enter issue country' },
+          { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
+        { label: 'Mobile No2', name: 'mobileNo2', type: 'text', placeholder: 'Enter Second number' },
     ];
 
     return (
@@ -432,6 +435,9 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 nationality: Yup.string().notRequired(),
                 documentExpiry: Yup.date().nullable().notRequired().typeError('Invalid date'),
                 issueCountry: Yup.string().notRequired(),
+                mobileNo: Yup.string().notRequired(),
+        mobileNo2: Yup.string().notRequired(),
+         
             })
         ).test(
             'has-passenger-details',
@@ -552,7 +558,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const passportDetail = JSON.stringify(values.passengers.map(p => ({
             title: p.title, firstName: p.firstName, lastName: p.lastName, dob: p.dob,
             nationality: p.nationality, documentType: p.documentType, documentNo: p.documentNo,
-            documentExpiry: p.documentExpiry, issueCountry: p.issueCountry, mobileNo: p.mobileNo
+            documentExpiry: p.documentExpiry, issueCountry: p.issueCountry, mobileNo: p.mobileNo,mobileNo2: p.mobileNo2
         })));
 
         try {

@@ -183,6 +183,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         e_number: '',
         customer_add: '',
         ptn_permission: '',
+        professional: '',
         embassy_send_date: '',
         embassy_return_date: '',
         protector_date: '',
@@ -234,6 +235,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         mobile_no: Yup.string().notRequired('Mobile Number is required'),
         remaining_amount: Yup.number(),
         detail: Yup.string(), // Validation for new Detail field (optional)
+        professional: Yup.string(), // Validation for Professional (optional)
     });
 
     useEffect(() => {
@@ -331,6 +333,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 e_number: editEntry.e_number || '',
                 customer_add: editEntry.customer_add || '',
                 ptn_permission: editEntry.ptn_permission || '',
+                professional: editEntry.professional || '',
                 embassy_send_date: formatDate(editEntry.embassy_send_date),
                 embassy_return_date: formatDate(editEntry.embassy_return_date),
                 protector_date: formatDate(editEntry.protector_date),
@@ -417,6 +420,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             profit: parseFloat(values.profit) || 0,
             remaining_amount: parseFloat(values.remaining_amount) || 0,
             detail: values.detail || '', // Include Detail field in submission
+            professional: values.professional || '',
             status: values.status,
             agent_name: values.agent_name,
             payable_to_vendor: totalPayableToVendor,
@@ -455,7 +459,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
                             vender_name: vendor.vendor_name,
-                            detail: values.detail || `Visa Processing - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
+                            detail: values.detail || `Visa Processing - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}- ${values.professional}`,
                             credit: parseFloat(vendor.payable_amount) || 0,
                             date: new Date().toISOString().split('T')[0],
                             entry: values.entry,
@@ -561,6 +565,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'e_number', label: 'E-Number', type: 'text', placeholder: 'Enter E-number', icon: 'hashtag' },
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'ptn_permission', label: 'PTN/Permission', type: 'text', placeholder: 'Enter PTN/Permission', icon: 'certificate' },
+        { name: 'professional', label: 'Professional', type: 'text', placeholder: 'Enter professional', icon: 'briefcase' },
     { name: 'mobile_no', label: 'Mobile No. (Use comma for multiple)', type: 'text', placeholder: 'Enter mobile number(s)', icon: 'phone' },
     
     ];

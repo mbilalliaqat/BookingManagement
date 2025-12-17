@@ -71,73 +71,162 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    const addPayment = async () => {
-        if (isSubmitting) return;
-        if (!newPayment.payment_date || !newPayment.recorded_by) return;
+     // Replace the entire addPayment function in RemainingPay.jsx with this updated version:
+
+const addPayment = async () => {
+    if (isSubmitting) return;
+    if (!newPayment.payment_date || !newPayment.recorded_by) return;
+
+    const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+    const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+
+    if (cashAmount === 0 && bankAmount === 0) {
+        alert('Please Enter either cash paid & Paid Bank');
+        return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+        // First, add the payment record
+        const response = await axios.post(`${BASE_URL}/ticket_payments`, {
+            ticket_id: ticketId,
+            payment_date: newPayment.payment_date,
+            payment_amount: cashAmount,
+            paid_bank: bankAmount,
+            bank_title: newPayment.bank_title || null,
+            recorded_by: newPayment.recorded_by
+        });
+
+        if (response.status === 201) {
+            // Add bank account entry if bank payment is made
+            if (newPayment.bank_title && bankAmount > 0) {
+                await addBankAccountEntry();
+            }
+
+            // Add agent entry for the remaining payment
+            if (ticketDetails && ticketDetails.agent_name) {
+                await addAgentEntry();
+            }
+
+            setPayments([...payments, response.data.payment]);
+
+            // Create payment data to pass to parent for dashboard update
+            const paymentData = {
+                ticketId: ticketId,
+                cashAmount: cashAmount,
+                bankAmount: bankAmount,
+                paymentDate: newPayment.payment_date,
+                recordedBy: newPayment.recorded_by
+            };
+
+            // Dispatch the paymentUpdated event to trigger dashboard refresh
+            window.dispatchEvent(new CustomEvent('paymentUpdated', {
+                detail: paymentData
+            }));
+
+            setNewPayment({
+                payment_date: new Date().toISOString().split('T')[0],
+                remaining_amount: '',
+                payed_cash: '',
+                paid_bank: '',
+                bank_title: '',
+                recorded_by: ''
+            });
+            setShowModal(false);
+
+            // Pass payment data to parent component
+            onPaymentSuccess?.(paymentData);
+        }
+    } catch (error) {
+        console.error('Error adding payment:', error);
+        alert('Failed to add payment. Please try again.');
+    } finally {
+        setIsSubmitting(false);
+    }
+};
+
+// Add this new function after the addPayment function:
+
+const addAgentEntry = async () => {
+    try {
+        console.log('Adding agent entry for remaining payment');
+        console.log('TicketDetails:', ticketDetails);
+
+        if (!ticketDetails) {
+            console.error('No ticket details available for agent entry');
+            return;
+        }
 
         const cashAmount = parseFloat(newPayment.payed_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
-        if (cashAmount === 0 && bankAmount === 0) {
-            alert('Please Enter either cash paid & Paid Bank');
-            return;
-        }
+        // Format the detail string similar to ticket form
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            return `${day}-${month}-${year}`;
+        };
 
-        setIsSubmitting(true);
-
+        // Parse passenger details to get first passenger name
+        let passengerName = '';
         try {
-            // First, add the payment record
-            const response = await axios.post(`${BASE_URL}/ticket_payments`, {
-                ticket_id: ticketId,
-                payment_date: newPayment.payment_date,
-                payment_amount: cashAmount,
-                paid_bank: bankAmount,
-                bank_title: newPayment.bank_title || null,
-                recorded_by: newPayment.recorded_by
-            });
-
-            if (response.status === 201) {
-                // Add bank account entry if bank payment is made
-                if (newPayment.bank_title && bankAmount > 0) {
-                    await addBankAccountEntry();
-                }
-
-                setPayments([...payments, response.data.payment]);
-
-                // Create payment data to pass to parent for dashboard update
-                const paymentData = {
-                    ticketId: ticketId,
-                    cashAmount: cashAmount,
-                    bankAmount: bankAmount,
-                    paymentDate: newPayment.payment_date,
-                    recordedBy: newPayment.recorded_by
-                };
-
-                // Dispatch the paymentUpdated event to trigger dashboard refresh
-                window.dispatchEvent(new CustomEvent('paymentUpdated', {
-                    detail: paymentData
-                }));
-
-                setNewPayment({
-                    payment_date: new Date().toISOString().split('T')[0],
-                    remaining_amount: '',
-                    payed_cash: '',
-                    paid_bank: '',
-                    bank_title: '',
-                    recorded_by: ''
-                });
-                setShowModal(false);
-
-                // Pass payment data to parent component
-                onPaymentSuccess?.(paymentData);
+            let passengerDetails = [];
+            if (typeof ticketDetails.passport_detail === 'string') {
+                passengerDetails = JSON.parse(ticketDetails.passport_detail);
+            } else if (Array.isArray(ticketDetails.passport_detail)) {
+                passengerDetails = ticketDetails.passport_detail;
             }
-        } catch (error) {
-            console.error('Error adding payment:', error);
-            alert('Failed to add payment. Please try again.');
-        } finally {
-            setIsSubmitting(false);
+            
+            if (passengerDetails.length > 0) {
+                const firstPassenger = passengerDetails[0];
+                passengerName = `${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+            }
+        } catch (e) {
+            console.error('Error parsing passenger details:', e);
         }
-    };
+
+        const commonDetail = [
+            ticketDetails.sector || '',
+            ticketDetails.airline || '',
+            formatDate(ticketDetails.depart_date),
+            formatDate(ticketDetails.return_date || ''),
+            passengerName,
+            '(Remaining Payment)'
+        ].filter(Boolean).join(',');
+
+        const agentData = {
+            agent_name: ticketDetails.agent_name,
+            employee: newPayment.recorded_by,
+            detail: commonDetail,
+            receivable_amount: 0, // No new receivable amount for remaining payment
+            paid_cash: cashAmount,
+            paid_bank: bankAmount,
+            credit: 0, // No new credit
+            debit: cashAmount + bankAmount, // This reduces the agent's balance
+            date: newPayment.payment_date,
+            entry: `${ticketDetails.entry || ''} (RP)`, // RP = Remaining Payment
+            bank_title: newPayment.bank_title || null
+        };
+
+        console.log('Submitting agent data:', agentData);
+
+        const agentResponse = await axios.post(`${BASE_URL}/agent`, agentData);
+        
+        if (agentResponse.status === 200 || agentResponse.status === 201) {
+            console.log('Agent entry added successfully');
+        } else {
+            console.error('Agent submission failed:', agentResponse.status);
+        }
+    } catch (agentError) {
+        console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
+        // Don't alert here as payment was successful, just log the error
+        console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
+    }
+};
 
     // Updated addBankAccountEntry function
     const addBankAccountEntry = async () => {
@@ -281,20 +370,21 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
 
                 <table className="w-full border-collapse border border-gray-300">
                     <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-2 text-left">Payment Date</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Remaining Amount</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Cash Paid</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Paid Bank</th>
+                        <tr className="bg-indigo-600 text-white">
+                            <th className="border border-gray-300 px-4 py-2 text-left">Date</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left">Entry</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left">Receivable Amount</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left">Paid Cash</th>
                             <th className="border border-gray-300 px-4 py-2 text-left">Bank Title</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Recorded By</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left">Paid in Bank</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left">Remaining Amount</th>
                             <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {payments.length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                <td colSpan="9" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
                                     No payments recorded yet
                                 </td>
                             </tr>
@@ -304,11 +394,13 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                                     <td className="border border-gray-300 px-4 py-2">
                                         {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{ticketDetails?.entry || payment.entry || ''}</td>
+                                    
+                                    <td className="border border-gray-300 px-4 py-2">{ticketDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.recorded_by || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
                                     <td className="border border-gray-300 px-4 py-2">
                                         <div className="flex gap-2">
                                             <button

@@ -254,6 +254,7 @@ useEffect(() => {
                                 <p className="font-semibold text-gray-800">
                                     {passenger.title || ''} {passenger.firstName || ''} {passenger.lastName || ''}
                                 </p>
+                               
                             </div>
                         ))
                     ) : (
@@ -266,14 +267,19 @@ useEffect(() => {
 
     const passportColumns = [
         {
-            header: 'DATE OF BIRTH',
+            header: 'DATE OF BIRTH $ Mobiles NO',
             accessor: 'passengerDob',
             render: (cellValue, row) => (
                 <div className="flex flex-col space-y-1">
                     {row.allPassengerDetails && row.allPassengerDetails.map((p, idx) => (
                         <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
                             {p.dob ? new Date(p.dob).toLocaleDateString('en-GB') : ''}
+                        <p className="text-sm text-gray-600">
+                            Mobile: {p.mobileNo || 'N/A'} / {p.mobileNo2 || 'N/A'}
+                        </p>
                         </div>
+
+                        
                     ))}
                 </div>
             )
@@ -287,6 +293,7 @@ useEffect(() => {
                         <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
                             {p.nationality || ''}
                         </div>
+
                     ))}
                 </div>
             )

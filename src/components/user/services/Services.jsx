@@ -107,9 +107,9 @@ const Services = () => {
         {
             header: 'REMAINING AMOUNT',
             accessor: 'remaining_amount',
-            render: (row) => (
+            render: (value, row) => (
                 <div className="flex flex-col items-center">
-                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <span className="mb-1">{value || '0'}</span>
                     <button
                         onClick={() => handleRemainingPay(row)}
                         className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
@@ -120,6 +120,7 @@ const Services = () => {
                 </div>
             )
         },
+
          { header: 'REMAINING DATE', accessor: 'remaining_date' },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
@@ -271,41 +272,54 @@ const Services = () => {
                 </div>
             )}
             
-            {showRemainingPay && (
-                <ServiceRemainingPay
-                    service={selectedService}
-                    onClose={() => setShowRemainingPay(false)}
-                    onPaymentSuccess={handlePaymentSuccess}
-                />
+            {/* Delete confirmation modal (controlled by showDeleteModal) */}
+            {showDeleteModal && (
+                <Modal
+                    isOpen={showDeleteModal}
+                    onClose={closeDeleteModal}
+                    title="Delete Confirmation"
+                >
+                    <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
+                        <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                    </div>
+                    <p className="text-sm text-center text-white mb-6">
+                        Are you sure you want to delete this service entry?
+                    </p>
+                    <div className="flex items-center justify-center space-x-4">
+                        <button
+                            onClick={closeDeleteModal}
+                            className="px-4 py-2 text-sm font-medium text-black bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                            disabled={isDeleting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => handleDelete(deleteId)}
+                            className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? <><ButtonSpinner /> Deleting...</> : 'Delete'}
+                        </button>
+                    </div>
+                </Modal>
             )}
-            <Modal
-                isOpen={showDeleteModal}
-                onClose={closeDeleteModal}
-                title="Delete Confirmation"
-            >
-                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
-                    <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
-                </div>
-                <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this service entry?
-                </p>
-                <div className="flex items-center justify-center space-x-4">
-                    <button
-                        onClick={closeDeleteModal}
-                        className="px-4 py-2 text-sm font-medium text-black bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                        disabled={isDeleting}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={() => handleDelete(deleteId)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
-                        disabled={isDeleting}
-                    >
-                        {isDeleting ? <><ButtonSpinner /> Deleting...</> : 'Delete'}
-                    </button>
-                </div>
-            </Modal>
+
+            {/* Service payment modal (controlled by showRemainingPay) */}
+            {showRemainingPay && (
+                <Modal
+                    isOpen={showRemainingPay}
+                    onClose={() => setShowRemainingPay(false)}
+                    title="Service Payments"
+                    width="4xl"
+                >
+                    <ServiceRemainingPay
+                        serviceId={selectedService?.id}
+                        onClose={() => setShowRemainingPay(false)}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                </Modal>
+            )}
+            
         </div>
     );
 };

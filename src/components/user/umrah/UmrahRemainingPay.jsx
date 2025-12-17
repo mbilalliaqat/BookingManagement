@@ -5,12 +5,12 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [isSubmitting,setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [newPayment, setNewPayment] = useState({
         payment_date: new Date().toISOString().split('T')[0],
         remaining_amount: '',
         payed_cash: '',
-        paid_bank:'',
+        paid_bank: '',
         bank_title: '',
         recorded_by: ''
     });
@@ -35,7 +35,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
     const fetchPayments = async () => {
         try {
             setLoading(true);
-            // Assuming an endpoint for umrah payments
             const response = await axios.get(`${BASE_URL}/umrah_payments/${umrahId}`);
             setPayments(response.data.payments || []);
         } catch (error) {
@@ -61,13 +60,13 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
     };
 
     const addPayment = async () => {
-        if(isSubmitting) return;
+        if (isSubmitting) return;
         if (!newPayment.payment_date || !newPayment.recorded_by) return;
 
         const cashAmount = parseFloat(newPayment.payed_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
-        if(cashAmount === 0 && bankAmount === 0){
+        if (cashAmount === 0 && bankAmount === 0) {
             alert('Please Enter either cash paid or Paid Bank');
             return;
         }
@@ -75,7 +74,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
         setIsSubmitting(true);
 
         try {
-            // Assuming an endpoint to add umrah payments
             const response = await axios.post(`${BASE_URL}/umrah_payments`, {
                 umrah_id: umrahId,
                 payment_date: newPayment.payment_date,
@@ -86,8 +84,14 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             });
 
             if (response.status === 201) {
+                // Add bank account entry if bank payment exists
                 if (newPayment.bank_title && bankAmount > 0) {
                     await addBankAccountEntry();
+                }
+
+                // Add agent entry if agent is assigned
+                if (umrahDetails && umrahDetails.agent_name) {
+                    await addAgentEntry();
                 }
 
                 setPayments([...payments, response.data.payment]);
@@ -106,7 +110,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                     payment_date: new Date().toISOString().split('T')[0],
                     remaining_amount: '',
                     payed_cash: '',
-                    paid_bank:'',
+                    paid_bank: '',
                     bank_title: '',
                     recorded_by: ''
                 });
@@ -117,8 +121,85 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
         } catch (error) {
             console.error('Error adding payment:', error);
             alert('Failed to add payment. Please try again.');
-        } finally{
+        } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const addAgentEntry = async () => {
+        try {
+            console.log('Adding agent entry for umrah remaining payment');
+            console.log('UmrahDetails:', umrahDetails);
+
+            if (!umrahDetails) {
+                console.error('No umrah details available for agent entry');
+                return;
+            }
+
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            };
+
+            let passengerName = '';
+            try {
+                let passengerDetails = [];
+                if (typeof umrahDetails.passportDetail === 'string') {
+                    passengerDetails = JSON.parse(umrahDetails.passportDetail);
+                } else if (Array.isArray(umrahDetails.passportDetail)) {
+                    passengerDetails = umrahDetails.passportDetail;
+                }
+
+                if (passengerDetails.length > 0) {
+                    const firstPassenger = passengerDetails[0];
+                    passengerName = `${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+                }
+            } catch (e) {
+                console.error('Error parsing passenger details:', e);
+            }
+
+            const commonDetail = [
+                umrahDetails.sector || '',
+                umrahDetails.airline || umrahDetails.airline_select || '',
+                formatDate(umrahDetails.depart_date),
+                formatDate(umrahDetails.return_date || ''),
+                passengerName,
+                '(Remaining Payment)'
+            ].filter(Boolean).join(',');
+
+            const agentData = {
+                agent_name: umrahDetails.agent_name,
+                employee: newPayment.recorded_by,
+                detail: commonDetail,
+                receivable_amount: 0,
+                paid_cash: cashAmount,
+                paid_bank: bankAmount,
+                credit: 0,
+                debit: cashAmount + bankAmount,
+                date: newPayment.payment_date,
+                entry: `${umrahDetails.entry || ''} (RP)`,
+                bank_title: newPayment.bank_title || null
+            };
+
+            console.log('Submitting agent data:', agentData);
+
+            const agentResponse = await axios.post(`${BASE_URL}/agent`, agentData);
+
+            if (agentResponse.status === 200 || agentResponse.status === 201) {
+                console.log('Agent entry added successfully');
+            } else {
+                console.error('Agent submission failed:', agentResponse.status);
+            }
+        } catch (agentError) {
+            console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
+            console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
     };
 
@@ -128,7 +209,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             let referenceInfo = 'N/A';
 
             if (!umrahDetails) {
-                 try {
+                try {
                     const response = await axios.get(`${BASE_URL}/umrah`);
                     if (response.data && response.data.umrahBookings) {
                         const specificUmrah = response.data.umrahBookings.find(umrah => umrah.id === umrahId);
@@ -214,7 +295,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                     <td className="border border-gray-300 px-4 py-2 text-white">{payment.payed_cash || '0'}</td>
                                     <td className="border border-gray-300 px-4 py-2 text-white">{payment.paid_bank || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2 text-white">{payment.bank_title || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.recorded_by || ''}</td> 
+                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.recorded_by || ''}</td>
                                 </tr>
                             ))
                         )}
@@ -242,7 +323,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                 <input
                                     type="date"
                                     value={newPayment.payment_date}
-                                    onChange={(e) => setNewPayment(prev => ({...prev, payment_date: e.target.value}))}
+                                    onChange={(e) => setNewPayment(prev => ({ ...prev, payment_date: e.target.value }))}
                                     className="w-full border rounded px-3 py-2"
                                 />
                             </div>
@@ -252,7 +333,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                 <input
                                     type="text"
                                     value={newPayment.payed_cash}
-                                    onChange={(e) => setNewPayment(prev => ({...prev, payed_cash: e.target.value}))}
+                                    onChange={(e) => setNewPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
                                     placeholder="Enter cash amount paid"
                                     className="w-full border rounded px-3 py-2"
                                 />
@@ -263,7 +344,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                 <input
                                     type="text"
                                     value={newPayment.paid_bank}
-                                    onChange={(e) => setNewPayment(prev => ({...prev, paid_bank: e.target.value}))}
+                                    onChange={(e) => setNewPayment(prev => ({ ...prev, paid_bank: e.target.value }))}
                                     placeholder="Enter paid bank amount"
                                     className="w-full border rounded px-3 py-2"
                                 />
@@ -273,13 +354,13 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                 <label className="block text-sm font-medium mb-1">Select Bank Method</label>
                                 <select
                                     value={newPayment.bank_title}
-                                    onChange={(e)=>setNewPayment(prev=>({...prev,bank_title:e.target.value}))}
+                                    onChange={(e) => setNewPayment(prev => ({ ...prev, bank_title: e.target.value }))}
                                     className='w-full border rounded px-3 py-2'
                                 >
                                     <option value="">
                                         Select Bank (optional)
                                     </option>
-                                    {BANK_OPTIONS.map(option =>(
+                                    {BANK_OPTIONS.map(option => (
                                         <option key={option.value} value={option.value}>
                                             {option.value}
                                         </option>
@@ -292,7 +373,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                 <input
                                     type="text"
                                     value={newPayment.recorded_by}
-                                    onChange={(e) => setNewPayment(prev => ({...prev, recorded_by: e.target.value}))}
+                                    onChange={(e) => setNewPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
                                     placeholder="Enter your name"
                                     className="w-full border rounded px-3 py-2"
                                 />
@@ -309,7 +390,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                             <button
                                 onClick={addPayment}
                                 disabled={!newPayment.payment_date || !newPayment.recorded_by}
-                                 className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}>
+                                className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}>
                                 {isSubmitting ? (
                                     <>
                                         <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

@@ -64,13 +64,12 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         const cashAmount = parseFloat(newPayment.payed_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
-         console.log('Cash Amount:', cashAmount);
-    console.log('Bank Amount:', bankAmount);
-    console.log('Payment Data:', {
-        payed_cash: cashAmount,
-        paid_bank: bankAmount,
-    });
-
+        console.log('Cash Amount:', cashAmount);
+        console.log('Bank Amount:', bankAmount);
+        console.log('Payment Data:', {
+            payed_cash: cashAmount,
+            paid_bank: bankAmount,
+        });
 
         if (cashAmount === 0 && bankAmount === 0) {
             alert('Please Enter either cash paid or Paid Bank');
@@ -80,10 +79,9 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         setIsSubmitting(true);
 
         try {
-
             const currentRemaining = parseFloat(gamcaTokenDetails?.remaining_amount) || 0;
-        const totalPayment = cashAmount + bankAmount;
-        const newRemaining = currentRemaining - totalPayment;
+            const totalPayment = cashAmount + bankAmount;
+            const newRemaining = currentRemaining - totalPayment;
 
             const response = await axios.post(`${BASE_URL}/gamca-token/${gamcaTokenId}/payments`, {
                 gamca_token_id: gamcaTokenId,
@@ -98,6 +96,11 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
             if (response.status === 201) {
                 if (newPayment.bank_title && bankAmount > 0) {
                     await addBankAccountEntry();
+                }
+
+                // Add agent entry for the remaining payment
+                if (gamcaTokenDetails && gamcaTokenDetails.agent_name) {
+                    await addAgentEntry();
                 }
 
                 setPayments([...payments, response.data.payment]);
@@ -123,6 +126,79 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
             alert('Failed to add payment. Please try again.');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const addAgentEntry = async () => {
+        try {
+            console.log('Adding agent entry for gamca token remaining payment');
+            console.log('GamcaTokenDetails:', gamcaTokenDetails);
+
+            if (!gamcaTokenDetails) {
+                console.error('No gamca token details available for agent entry');
+                return;
+            }
+
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            };
+
+            let passengerName = '';
+            try {
+                let passportDetails = {};
+                if (typeof gamcaTokenDetails.passport_detail === 'string') {
+                    passportDetails = JSON.parse(gamcaTokenDetails.passport_detail);
+                } else if (typeof gamcaTokenDetails.passport_detail === 'object') {
+                    passportDetails = gamcaTokenDetails.passport_detail;
+                }
+                passengerName = `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim();
+            } catch (e) {
+                console.error('Error parsing passport details:', e);
+            }
+
+            const commonDetail = [
+                gamcaTokenDetails.country || '',
+                gamcaTokenDetails.visa_type || '',
+                gamcaTokenDetails.token_number || '',
+                formatDate(gamcaTokenDetails.booking_date),
+                passengerName,
+                '(Remaining Payment)'
+            ].filter(Boolean).join(',');
+
+            const agentData = {
+                agent_name: gamcaTokenDetails.agent_name,
+                employee: newPayment.recorded_by,
+                detail: commonDetail,
+                receivable_amount: 0,
+                paid_cash: cashAmount,
+                paid_bank: bankAmount,
+                credit: 0,
+                debit: cashAmount + bankAmount,
+                date: newPayment.payment_date,
+                entry: `${gamcaTokenDetails.entry || ''} (RP)`,
+                bank_title: newPayment.bank_title || null
+            };
+
+            console.log('Submitting agent data:', agentData);
+
+            const agentResponse = await axios.post(`${BASE_URL}/agent`, agentData);
+
+            if (agentResponse.status === 200 || agentResponse.status === 201) {
+                console.log('Agent entry added successfully');
+            } else {
+                console.error('Agent submission failed:', agentResponse.status);
+            }
+        } catch (agentError) {
+            console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
+            console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
     };
 
@@ -169,7 +245,7 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                         Total Cash Paid: <span className="font-bold text-green-600">{totalPaid.toFixed(2)}</span>
                     </div>
                 </div>
-                
+
                 <table className="w-full border-collapse border border-gray-300">
                     <thead>
                         <tr className="bg-gray-100">
@@ -178,25 +254,27 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                             <th className="border border-gray-300 px-4 py-2 text-left">Paid Bank</th>
                             <th className="border border-gray-300 px-4 py-2 text-left">Bank Title</th>
                             <th className="border border-gray-300 px-4 py-2 text-left">Recorded By</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left">Remaining Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         {payments.length === 0 ? (
                             <tr>
-                                <td colSpan="5" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                <td colSpan="6" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
                                     No payments recorded yet
                                 </td>
                             </tr>
                         ) : (
                             payments.map((payment, index) => (
                                 <tr key={payment.id || index}>
-                                    <td className="border border-gray-300 px-4 py-2 text-white">
+                                    <td className="border border-gray-300 px-4 py-2">
                                         {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
                                     </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.payed_cash || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.paid_bank || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.bank_title || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2 text-white">{payment.recorded_by || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.recorded_by || ''}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
                                 </tr>
                             ))
                         )}

@@ -32,7 +32,7 @@ const api = axios.create({
 
 // Add caching for responses
 const CACHE_KEY = 'dashboard_cache';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 10 * 60 * 1000; // 5 minutes
 
 const getFromCache = () => {
   try {

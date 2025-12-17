@@ -378,7 +378,7 @@ const Tickets = () => {
             render: (cellValue, row) => (
                 <div>
                     <div>{row.initial_paid_cash || '0'}</div>
-                    <div>{row.paid_cash || '0'}</div>
+                    <div>{row.paid_cash - row.initial_paid_cash || '0'}</div>
                 </div>
             )
         },
@@ -596,7 +596,7 @@ const Tickets = () => {
         if (!showRemainingPayModal || !selectedTicketForPay) return null;
 
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="fixed inset-0 z-500 flex items-center justify-center bg-black bg-opacity-50">
                 <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold">Payment Details</h2>
@@ -614,10 +614,20 @@ const Tickets = () => {
                                 <strong>Ticket ID:</strong> {selectedTicketForPay.id}
                             </div>
                             <div>
-                                <strong>Customer:</strong> {selectedTicketForPay.customer_add}
+                                <strong>Entry :</strong> {selectedTicketForPay.initial_paid_cash}
                             </div>
                             <div>
-                                <strong>Reference:</strong> {selectedTicketForPay.reference}
+                                <strong>Date :</strong> {selectedTicketForPay.booking_date}
+                            </div>
+                            <div>
+                                <strong>Receivable Amount</strong> {selectedTicketForPay.receivable_amount}
+                            </div>
+                             
+                            <div>
+                                <strong>Paid Cash</strong> {selectedTicketForPay.initial_paid_cash}
+                            </div>
+                            <div>
+                                <strong>Paid in Bank</strong> {selectedTicketForPay.initial_paid_in_bank}
                             </div>
                             <div>
                                 <strong>Remaining Amount:</strong> {selectedTicketForPay.remaining_amount || '0'}
