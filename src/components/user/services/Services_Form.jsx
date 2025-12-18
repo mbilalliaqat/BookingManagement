@@ -198,6 +198,13 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
     const [isOpeningBalance, setIsOpeningBalance] = useState(false);
 
+    // Status options (same as other forms)
+    const STATUS_OPTIONS = [
+        { value: "Processing", label: "Processing" },
+        { value: "Complete", label: "Complete" },
+        { value: "Deliver", label: "Deliver" },
+    ];
+
     // Memoize initial values
     const initialValues = useMemo(() => {
         const base = {
@@ -205,6 +212,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             entry: `SE ${entryNumber}/${totalEntries}`,
             customer_add: '',
             booking_date: new Date().toISOString().split('T')[0],
+            status: 'Processing',
             specific_detail: '',
             visa_type: '',
             receivable_amount: '',
@@ -232,6 +240,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 entry: editEntry.entry || `SE ${entryNumber}/${totalEntries}`,
                 customer_add: editEntry.customer_add || '',
                 booking_date: formatDate(editEntry.booking_date),
+                status: editEntry.status || 'Processing',
                 specific_detail: editEntry.specific_detail || '',
                 visa_type: editEntry.visa_type || '',
                 receivable_amount: editEntry.receivable_amount || '',
@@ -259,6 +268,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             otherwise: (schema) => schema.notRequired()
         }),
         booking_date: Yup.date().notRequired('Booking Date is required').typeError('Invalid date'),
+        status: Yup.string().required('Status is required').oneOf(STATUS_OPTIONS.map(opt => opt.value), 'Invalid status'),
         specific_detail: Yup.string().required('Specific Detail is required'),
         visa_type: Yup.string().when('$isOpeningBalance', {
             is: false,
@@ -362,6 +372,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             requestData = {
                 user_name: values.user_name,
                 entry: values.entry,
+                status: values.status || null,
                 customer_add: 'OPENING BALANCE',
                 booking_date: values.booking_date,
                 specific_detail: values.specific_detail || 'OPENING BALANCE',
@@ -383,6 +394,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             requestData = {
                 user_name: values.user_name,
                 entry: values.entry,
+                status: values.status || null,
                 customer_add: values.customer_add || 'Cash Payment',
                 booking_date: values.booking_date,
                 specific_detail: values.specific_detail,
@@ -403,6 +415,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             requestData = {
                 user_name: values.user_name,
                 entry: values.entry,
+                status: values.status || null,
                 customer_add: values.customer_add,
                 booking_date: values.booking_date,
                 specific_detail: values.specific_detail,
@@ -556,9 +569,10 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const section1Fields = [
         { name: 'user_name', label: 'User Name', type: 'text', placeholder: 'Enter user name', icon: 'user', readOnly: true },
+        { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Select booking date', icon: 'calendar' },
+        { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map(opt => opt.value), placeholder: 'Select status', icon: 'tasks' },
         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
-        { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Select booking date', icon: 'calendar' },
     ];
 
     const section2Fields = [

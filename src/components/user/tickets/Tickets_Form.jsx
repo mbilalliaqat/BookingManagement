@@ -364,6 +364,20 @@ const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendor
                                 </div>
                                 <ErrorText name={`vendors[${index}].payable_amount`} />
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Vendor Detail
+                                </label>
+                                <Field
+                                    as="textarea"
+                                    name={`vendors[${index}].vendor_detail`}
+                                    placeholder="Enter vendor detail"
+                                    className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    disabled={editEntry}
+                                />
+                                <ErrorText name={`vendors[${index}].vendor_detail`} />
+                            </div>
                         </motion.div>
                     ))}
                 </div>
@@ -438,7 +452,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         bank_title: '',
         paid_in_bank: '',
         remaining_date: '',
-        vendors: [{ vendor_name: '', payable_amount: '' }],
+        vendors: [{ vendor_name: '', payable_amount: '', vendor_detail: '' }],
         profit: '',
         airline_select:'',
         remaining_amount: '0'
@@ -464,12 +478,15 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 lastName: Yup.string().required('Last Name is required'),
                 documentType: Yup.string().required('Document Type is required'),
                 documentNo: Yup.string().required('Document Number is required'),
+                mobileNo: Yup.number().required('Mobile Number is required'),
+                mobileNo2: Yup.number().notRequired('Mobile Number 2 is required'),
             })
         ),
         vendors: Yup.array().of(
             Yup.object().shape({
                 vendor_name: Yup.string().notRequired('Vendor name is required'),
                 payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
+                vendor_detail: Yup.string().notRequired('Vendor detail is required'),
             })
         ).min(1, 'At least one vendor is required'),
         receivable_amount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
@@ -553,11 +570,25 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             });
 
             // Parse vendor data
-            let vendorsData = [{ vendor_name: '', payable_amount: '' }];
-            if (editEntry.vendor_name && editEntry.payable_to_vendor) {
-                vendorsData = [{ 
-                    vendor_name: editEntry.vendor_name, 
-                    payable_amount: editEntry.payable_to_vendor 
+            let vendorsData = [{ vendor_name: '', payable_amount: '', vendor_detail: '' }];
+            if (editEntry.vendors_detail) {
+                try {
+                    const parsed = typeof editEntry.vendors_detail === 'string' ? JSON.parse(editEntry.vendors_detail) : editEntry.vendors_detail;
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        vendorsData = parsed.map(v => ({
+                            vendor_name: v.vendor_name || v.vender_name || '',
+                            payable_amount: v.payable_amount || v.payable_to_vendor || v.credit || '',
+                            vendor_detail: v.vendor_detail || v.detail || ''
+                        }));
+                    }
+                } catch (e) {
+                    console.error('Error parsing vendors_detail:', e);
+                }
+            } else if (editEntry.vendor_name && editEntry.payable_to_vendor) {
+                vendorsData = [{
+                    vendor_name: editEntry.vendor_name,
+                    payable_amount: editEntry.payable_to_vendor,
+                    vendor_detail: ''
                 }];
             }
 
@@ -700,7 +731,8 @@ console.log('airline_select value:', values.airline_select);
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
                             vender_name: vendor.vendor_name,
-                            detail: commonDetail,
+                            detail: vendor.vendor_detail || commonDetail,
+                            vendor_detail: vendor.vendor_detail || '',
                             credit: parseFloat(vendor.payable_amount) || 0,
                             date: new Date().toISOString().split('T')[0],
                             entry: entryValueToSubmit,

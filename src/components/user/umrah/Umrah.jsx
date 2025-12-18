@@ -234,6 +234,25 @@ useEffect(() => {
     )
 },
         {
+            header: 'STATUS',
+            accessor: 'status',
+            render: (cellValue, row) => (
+                <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        row.status === 'Processing'
+                            ? 'bg-red-100 text-red-500'
+                            : row.status === 'Complete'
+                            ? 'bg-green-100 text-green-500'
+                            : row.status === 'Deliver'
+                            ? 'bg-blue-100 text-blue-500'
+                            : 'bg-gray-100 text-gray-500'
+                    }`}
+                >
+                    {row.status || 'N/A'}
+                </span>
+            )
+        },
+        {
             header: 'PASSENGERS',
             accessor: 'passengerCount',
             render: (cellValue, row) => {
@@ -532,93 +551,9 @@ useEffect(() => {
         setEndDate('');
     };
 
-    const DeleteConfirmationModal = () => {
-        if (!showDeleteModal) return null;
+    
 
-        return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto bg-black bg-opacity-50">
-                <div className="relative w-full max-w-md mx-auto bg-[#161925] rounded-lg shadow-lg">
-                    <div className="p-6">
-                        <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
-                            <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
-                        </div>
-                        <h3 className="mb-5 text-lg font-medium text-center text-white">
-                            Delete Confirmation
-                        </h3>
-                        <p className="text-sm text-center text-white mb-6">
-                            Are you sure you want to delete this ticket?
-                        </p>
-                        <div className="flex items-center justify-center space-x-4">
-                            <button
-                                onClick={closeDeleteModal}
-                                className="px-4 py-2 text-sm font-medium text-white bg-[#161925] border rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                                disabled={isDeleting}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => handleDelete(deleteId)}
-                                className="px-4 py-2 text-sm font-medium text-white bg-[#161925] border rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
-                                disabled={isDeleting}
-                            >
-                                {isDeleting ? (
-                                    <>
-                                        <ButtonSpinner />
-                                        <span>Deleting...</span>
-                                    </>
-                                ) : (
-                                    'Delete'
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const RemainingPayModal = () => {
-        if (!showRemainingPayModal || !selectedTicketForPay) return null;
-
-        return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold">Payment Details</h2>
-                        <button
-                            onClick={closeRemainingPayModal}
-                            className="text-gray-500 hover:text-gray-700"
-                        >
-                            <i className="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                    
-                    <div className="bg-gray-100 p-4 rounded mb-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <strong>Ticket ID:</strong> {selectedTicketForPay.id}
-                            </div>
-                            <div>
-                                <strong>Customer:</strong> {selectedTicketForPay.customer_add}
-                            </div>
-                            <div>
-                                <strong>Reference:</strong> {selectedTicketForPay.reference}
-                            </div>
-                            <div>
-                                <strong>Remaining Amount:</strong> {selectedTicketForPay.remaining_amount || '0'}
-                            </div>
-                        </div>
-                    </div>
-
-                    <RemainingPay
-                        ticketId={selectedTicketForPay.id}
-                        onClose={closeRemainingPayModal}
-                        onPaymentSuccess={handlePaymentSuccess}
-                    />
-                </div>
-            </div>
-        );
-    };
+   
 
     return (
         <div className="h-full flex flex-col">
@@ -757,19 +692,36 @@ useEffect(() => {
                     width="4xl"
                 >
                     <div className="bg-gray-800 p-4 rounded mb-4 text-white">
-                        <div className="grid grid-cols-2 gap-4">
+
+                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <strong>Umrah ID:</strong> {selectedUmrahForPay.id}
+                                <strong>Ticket ID:</strong> {selectedUmrahForPay.id}
                             </div>
                             <div>
-                                <strong>Customer:</strong> {selectedUmrahForPay.customerAdd}
+                                <strong>Entry :</strong> {selectedUmrahForPay.entry}
                             </div>
                             <div>
-                                <strong>Reference:</strong> {selectedUmrahForPay.reference}
+                                <strong>Date :</strong> {selectedUmrahForPay.booking_date}
+                            </div>
+                            <div>
+                                <strong>Receivable Amount</strong> {selectedUmrahForPay.receivableAmount}
+                            </div>
+                             
+                            <div>
+                                <strong>Paid Cash</strong> {selectedUmrahForPay.initial_paid_cash}
+                            </div>
+                            <div>
+                                <strong>Paid in Bank</strong> {selectedUmrahForPay.initial_paid_in_bank}
                             </div>
                             <div>
                                 <strong>Remaining Amount:</strong> {selectedUmrahForPay.remainingAmount || '0'}
                             </div>
+                            {/* <div>
+                   <strong>Initial Remaining:</strong> 
+                 <span className="font-semibold text-purple-700">
+                 {selectedUmrahForPay.initial_remaining_amount || '0'}
+                     </span>
+                   </div> */}
                         </div>
                     </div>
                     <UmrahRemainingPay

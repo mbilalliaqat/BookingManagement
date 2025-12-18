@@ -47,6 +47,13 @@ const DEFAULT_PASSENGER_DETAIL = {
     { value: "UL", label: "SriLankan Airlines - UL" },
 ];
 
+// Status options for the Umrah form (same as VisaProcessing)
+const STATUS_OPTIONS = [
+    { value: "Processing", label: "Processing" },
+    { value: "Complete", label: "Complete" },
+    { value: "Deliver", label: "Deliver" },
+];
+
 const formatDateForInput = (dateStr) => {
     if (!dateStr || String(dateStr).trim() === '' || dateStr === '0000-00-00' || String(dateStr).startsWith('1970-01-01')) {
         return '';
@@ -106,7 +113,8 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => {
         { label: 'Father Name', name: 'lastName', type: 'text', placeholder: 'Enter last name' },
         { label: 'Document Type', name: 'documentType', as: 'select', options: DOCUMENT_TYPE_OPTIONS, placeholder: 'Select document type' },
         { label: 'Document No', name: 'documentNo', type: 'text', placeholder: 'Enter document number' },
-      
+             { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
+        { label: 'Mobile No2', name: 'mobileNo2', type: 'text', placeholder: 'Enter Second number' },      
     ];
 
     const optionalFields = [
@@ -114,8 +122,7 @@ const PassengerDetailsFields = ({ index, fieldPrefix }) => {
         { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'Enter nationality' },
         { label: 'Expiry Date', name: 'documentExpiry', type: 'date', placeholder: 'Select expiry date' },
         { label: 'Issue Country', name: 'issueCountry', type: 'text', placeholder: 'Enter issue country' },
-          { label: 'Mobile No', name: 'mobileNo', type: 'text', placeholder: 'Enter mobile number' },
-        { label: 'Mobile No2', name: 'mobileNo2', type: 'text', placeholder: 'Enter Second number' },
+        
     ];
 
     return (
@@ -352,6 +359,20 @@ const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendor
                                 </div>
                                 <ErrorText name={`vendors[${index}].payable_amount`} />
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Vendor Detail
+                                </label>
+                                <Field
+                                    as="textarea"
+                                    name={`vendors[${index}].vendor_detail`}
+                                    placeholder="Enter vendor detail"
+                                    className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    disabled={editEntry}
+                                />
+                                <ErrorText name={`vendors[${index}].vendor_detail`} />
+                            </div>
                         </motion.div>
                     ))}
                 </div>
@@ -391,6 +412,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         customerAdd: '',
         reference: '',
         booking_date: new Date().toISOString().split('T')[0],
+        status: 'Processing',
         entry: '0/0',
         packageDetail: '',
         depart_date: '',
@@ -406,7 +428,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paidCash: '',
         bank_title: '',
         paidInBank: '',
-        vendors: [{ vendor_name: '', payable_amount: '' }],
+        vendors: [{ vendor_name: '', payable_amount: '', vendor_detail: '' }],
         profit: '',
         remainingAmount: '0'
     });
@@ -414,6 +436,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const validationSchema = Yup.object({
         userName: Yup.string().required('Employee Name is required'),
         booking_date: Yup.date().required('Booking Date is required').typeError('Invalid date'),
+        status: Yup.string().required('Status is required').oneOf(STATUS_OPTIONS.map(opt => opt.value), 'Invalid status'),
         customerAdd: Yup.string().required('Customer Address is required'),
         reference: Yup.string().required('Reference is required'),
         packageDetail: Yup.string().required('Package Detail is required'),
@@ -435,8 +458,9 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 nationality: Yup.string().notRequired(),
                 documentExpiry: Yup.date().nullable().notRequired().typeError('Invalid date'),
                 issueCountry: Yup.string().notRequired(),
-                mobileNo: Yup.string().notRequired(),
-        mobileNo2: Yup.string().notRequired(),
+                mobileNo: Yup.string().required('Mobile Number is required'),
+                mobileNo2: Yup.string().notRequired(),
+        
          
             })
         ).test(
@@ -455,6 +479,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             Yup.object().shape({
                 vendor_name: Yup.string().notRequired('Vendor name is required'),
                 payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
+                vendor_detail: Yup.string().notRequired('Vendor detail is required'),
             })
         ).min(1, 'At least one vendor is required'),
         receivableAmount: Yup.number().required('Receivable Amount is required').typeError('Receivable Amount must be a number'),
@@ -509,12 +534,33 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paidCash: parseFloat(editEntry.paidCash) || 0,
                 paidInBank: parseFloat(editEntry.paidInBank) || 0
             });
+
+            // Parse vendor data
+            let vendorsData = [{ vendor_name: '', payable_amount: '', vendor_detail: '' }];
+            if (editEntry.vendors_detail) {
+                try {
+                    const parsedVendors = typeof editEntry.vendors_detail === 'string' ? JSON.parse(editEntry.vendors_detail) : editEntry.vendors_detail;
+                    if (Array.isArray(parsedVendors) && parsedVendors.length > 0) {
+                        vendorsData = parsedVendors.map(v => ({
+                            vendor_name: v.vendor_name || v.vender_name || '',
+                            payable_amount: v.payable_amount || v.payable_to_vendor || v.credit || '',
+                            vendor_detail: v.vendor_detail || v.detail || ''
+                        }));
+                    }
+                } catch (e) {
+                    console.error('Error parsing vendors_detail:', e);
+                }
+            } else if (editEntry.vendorName && editEntry.payableToVendor) {
+                vendorsData = [{ vendor_name: editEntry.vendorName, payable_amount: editEntry.payableToVendor, vendor_detail: '' }];
+            }
+
             setFormInitialValues({
                 userName: editEntry.userName || '',
                 agentName: editEntry.agent_name || '',
                 customerAdd: editEntry.customerAdd || '',
                 reference: editEntry.reference || '',
                 booking_date: formatDateForInput(editEntry.booking_date),
+                status: editEntry.status || 'Processing',
                 entry: editEntry.entry || '0/0',
                 packageDetail: editEntry.packageDetail || '',
                 depart_date: formatDateForInput(editEntry.depart_date),
@@ -530,9 +576,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paidCash: editEntry.paidCash || '',
                 bank_title: editEntry.bank_title || '',
                 paidInBank: editEntry.paidInBank || '',
-                vendors: editEntry.vendorName && editEntry.payableToVendor ? 
-                    [{ vendor_name: editEntry.vendorName, payable_amount: editEntry.payableToVendor }] : 
-                    [{ vendor_name: '', payable_amount: '' }],
+                vendors: vendorsData,
                 profit: editEntry.profit || '',
                 remainingAmount: editEntry.remainingAmount || '0'
             });
@@ -570,6 +614,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             const requestData = {
                 userName: values.userName,
                 agent_name: values.agentName || null,
+                status: values.status || null,
                 customerAdd: values.customerAdd,
                 reference: values.reference,
                 entry: entryValueToSubmit,
@@ -633,7 +678,8 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
                             vender_name: vendor.vendor_name,
-                            detail: commonDetail,
+                            detail:vendor.vendor_detail || commonDetail,
+                            vendor_detail: vendor.vendor_detail || '',
                             credit: parseFloat(vendor.payable_amount) || 0,
                             date: new Date().toISOString().split('T')[0],
                             entry: entryValueToSubmit,
@@ -773,6 +819,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section1Fields = [
     { name: 'userName', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
     { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Enter booking date', icon: 'calendar-alt' },
+    { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map(opt => opt.value), placeholder: 'Select status', icon: 'tasks' },
     { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
     { name: 'customerAdd', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
     { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },

@@ -549,20 +549,37 @@ const Visa = () => {
                             </button>
                         </div>
                         <div className="bg-gray-100 p-4 rounded mb-4">
+                
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <strong>Visa ID:</strong> {selectedVisaForPay?.id}
-                                </div>
-                                <div>
-                                    <strong>Customer:</strong> {selectedVisaForPay?.customer_add}
-                                </div>
-                                <div>
-                                    <strong>Reference:</strong> {selectedVisaForPay?.reference}
-                                </div>
-                                <div>
-                                    <strong>Remaining Amount:</strong> {selectedVisaForPay?.remaining_amount || '0'}
-                                </div>
+                            <div>
+                                <strong>Ticket ID:</strong> {selectedVisaForPay.id}
                             </div>
+                            <div>
+                                <strong>Entry :</strong> {selectedVisaForPay.entry}
+                            </div>
+                            <div>
+                                <strong>Date :</strong> {selectedVisaForPay.booking_date}
+                            </div>
+                            <div>
+                                <strong>Receivable Amount</strong> {selectedVisaForPay.receivable_amount}
+                            </div>
+                             
+                            <div>
+                                <strong>Paid Cash</strong> {selectedVisaForPay.initial_paid_cash}
+                            </div>
+                            <div>
+                                <strong>Paid in Bank</strong> {selectedVisaForPay.initial_paid_in_bank}
+                            </div>
+                            <div>
+                                <strong>Remaining Amount:</strong> {selectedVisaForPay.remaining_amount || '0'}
+                            </div>
+                            {/* <div>
+                   <strong>Initial Remaining:</strong> 
+                 <span className="font-semibold text-purple-700">
+                 {selectedVisaForPay.initial_remaining_amount || '0'}
+                     </span>
+                   </div> */}
+                        </div>
                         </div>
                         <VisaRemainingPay
                             visaId={selectedVisaForPay?.id}

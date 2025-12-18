@@ -85,6 +85,25 @@ const Services = () => {
     const columns = [
         { header: 'VISA TYPE', accessor: 'visa_type' },
         { header: 'BOOKING DATE', accessor: 'booking_date' },
+        {
+            header: 'STATUS',
+            accessor: 'status',
+            render: (cellValue, row) => (
+                <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        row.status === 'Processing'
+                            ? 'bg-red-100 text-red-500'
+                            : row.status === 'Complete'
+                            ? 'bg-green-100 text-green-500'
+                            : row.status === 'Deliver'
+                            ? 'bg-blue-100 text-blue-500'
+                            : 'bg-gray-100 text-gray-500'
+                    }`}
+                >
+                    {row.status || 'N/A'}
+                </span>
+            )
+        },
         { header: 'EMPLOYEE NAME', accessor: 'user_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
@@ -304,20 +323,56 @@ const Services = () => {
                 </Modal>
             )}
 
-            {/* Service payment modal (controlled by showRemainingPay) */}
+            {/* Service payment overlay (controlled by showRemainingPay) */}
             {showRemainingPay && (
-                <Modal
-                    isOpen={showRemainingPay}
-                    onClose={() => setShowRemainingPay(false)}
-                    title="Service Payments"
-                    width="4xl"
-                >
-                    <ServiceRemainingPay
-                        serviceId={selectedService?.id}
-                        onClose={() => setShowRemainingPay(false)}
-                        onPaymentSuccess={handlePaymentSuccess}
-                    />
-                </Modal>
+                <div className="fixed inset-0 z-500 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-semibold">Payment Details</h2>
+                            <button
+                                onClick={() => setShowRemainingPay(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <i className="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div className="bg-gray-100 p-4 rounded mb-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <strong>Service ID:</strong> {selectedService?.id}
+                                </div>
+                                <div>
+                                    <strong>Entry :</strong> {selectedService?.entry}
+                                </div>
+                                <div>
+                                    <strong>Date :</strong> {selectedService?.booking_date}
+                                </div>
+                                <div>
+                                    <strong>Receivable Amount</strong> {selectedService?.receivable_amount}
+                                </div>
+                                <div>
+                                    <strong>Paid Cash</strong> {selectedService?.paid_cash || '0'}
+                                </div>
+                                <div>
+                                    <strong>Paid in Bank</strong> {selectedService?.paid_in_bank || '0'}
+                                </div>
+                                <div>
+                                    <strong>Remaining Amount:</strong> {selectedService?.remaining_amount || '0'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <ServiceRemainingPay
+                            serviceId={selectedService?.id}
+                            onClose={() => setShowRemainingPay(false)}
+                            onPaymentSuccess={() => {
+                                setShowRemainingPay(false);
+                                fetchData();
+                            }}
+                        />
+                    </div>
+                </div>
             )}
             
         </div>

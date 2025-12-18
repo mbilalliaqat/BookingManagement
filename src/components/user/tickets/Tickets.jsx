@@ -614,7 +614,7 @@ const Tickets = () => {
                                 <strong>Ticket ID:</strong> {selectedTicketForPay.id}
                             </div>
                             <div>
-                                <strong>Entry :</strong> {selectedTicketForPay.initial_paid_cash}
+                                <strong>Entry :</strong> {selectedTicketForPay.entry}
                             </div>
                             <div>
                                 <strong>Date :</strong> {selectedTicketForPay.booking_date}

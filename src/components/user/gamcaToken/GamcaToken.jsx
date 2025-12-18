@@ -451,19 +451,55 @@ const GamcaToken = () => {
                     </button>
                 </div>
             </Modal>
-            <Modal
-                isOpen={showRemainingPay}
-                onClose={() => setShowRemainingPay(false)}
-                title={`Remaining Payment for Gamca Token ID: ${selectedGamcaToken?.id}`}>
+            {showRemainingPay && (
+                <div className="fixed inset-0 z-500 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-semibold">Payment Details</h2>
+                            <button
+                                onClick={() => setShowRemainingPay(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <i className="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
 
-                <GamcaTokenRemainingPay
-                    gamcaTokenId={selectedGamcaToken?.id}
-                    onPaymentSuccess={() => {
-                        setShowRemainingPay(false);
-                        fetchData();
-                    }}
-                />
-            </Modal>
+                        <div className="bg-gray-100 p-4 rounded mb-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <strong>Ticket ID:</strong> {selectedGamcaToken?.id}
+                                </div>
+                                <div>
+                                    <strong>Entry :</strong> {selectedGamcaToken?.entry}
+                                </div>
+                                <div>
+                                    <strong>Date :</strong> {selectedGamcaToken?.booking_date}
+                                </div>
+                                <div>
+                                    <strong>Receivable Amount</strong> {selectedGamcaToken?.receivable_amount}
+                                </div>
+                                <div>
+                                    <strong>Paid Cash</strong> {selectedGamcaToken?.paid_cash || '0'}
+                                </div>
+                                <div>
+                                    <strong>Paid in Bank</strong> {selectedGamcaToken?.paid_in_bank || '0'}
+                                </div>
+                                <div>
+                                    <strong>Remaining Amount:</strong> {selectedGamcaToken?.remaining_amount || '0'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <GamcaTokenRemainingPay
+                            gamcaTokenId={selectedGamcaToken?.id}
+                            onPaymentSuccess={() => {
+                                setShowRemainingPay(false);
+                                fetchData();
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
