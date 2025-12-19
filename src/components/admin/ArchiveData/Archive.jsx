@@ -20,8 +20,9 @@ const Archive = () => {
     const fetchArchives = async () => {
         setIsLoading(true);
         try {
-            const response = await axios.get(`${BASE_URL}/archive`);
+            const response = await axios.get(`${BASE_URL}/archive/ticket`);
             setArchives(response.data.records);
+            console.log("My Delete Data ",response.data.records);
         } catch (error) {
             console.error('Error fetching archives:', error);
             setError('Failed to load archived data');
@@ -65,26 +66,48 @@ const Archive = () => {
             header: 'DELETED BY', 
             accessor: 'deleted_by' 
         },
-        {
-            header: 'PREVIEW',
-            accessor: 'record_data',
-            render: (cellValue, row) => {
-                const data = row.record_data;
-                const ticket = data.ticket || {};
-                
-                return (
-                    <div className="text-sm">
-                        {row.module_name === 'ticket' && (
-                            <div>
-                                <div><strong>Entry:</strong> {ticket.entry}</div>
-                                <div><strong>Sector:</strong> {ticket.sector}</div>
-                                <div><strong>Amount:</strong> {ticket.receivable_amount}</div>
-                            </div>
-                        )}
+       {
+    header: 'PREVIEW',
+    accessor: 'record_data',
+    render: (cellValue, row) => {
+        const data = row.record_data;
+        const ticket = data.ticket || {};
+        const umrah = data.umrah || {};  // ADD
+        const visa = data.visa_processing || {};  // ADD
+        
+        return (
+            <div className="text-sm">
+                {row.module_name === 'ticket' && (
+                    <div>
+                        <div><strong>Entry:</strong> {ticket.entry}</div>
+                        <div><strong>Sector:</strong> {ticket.sector}</div>
+                        <div><strong>Amount:</strong> {ticket.receivable_amount}</div>
                     </div>
-                );
-            }
-        },
+                )}
+                
+                {/* ADD UMRAH CASE */}
+                {row.module_name === 'umrah' && (
+                    <div>
+                        <div><strong>Entry:</strong> {umrah.entry}</div>
+                        <div><strong>Sector:</strong> {umrah.sector}</div>
+                        <div><strong>Amount:</strong> {umrah.receivableAmount}</div>
+                        <div><strong>Status:</strong> {umrah.status}</div>
+                    </div>
+                )}
+                
+                {/* ADD VISA CASE */}
+                {row.module_name === 'visa_processing' && (
+                    <div>
+                        <div><strong>Entry:</strong> {visa.entry}</div>
+                        <div><strong>File No:</strong> {visa.file_number}</div>
+                        <div><strong>Embassy:</strong> {visa.embassy}</div>
+                        <div><strong>Amount:</strong> {visa.receivable_amount}</div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+},
         {
             header: 'ACTIONS',
             accessor: 'actions',
@@ -198,15 +221,15 @@ const Archive = () => {
                     </div>
 
                     <select
-                        value={moduleFilter}
-                        onChange={(e) => setModuleFilter(e.target.value)}
-                        className="p-2 border border-gray-300 rounded-md bg-white/90"
-                    >
-                        <option value="all">All Modules</option>
-                        <option value="ticket">Tickets</option>
-                        <option value="booking">Bookings</option>
-                        <option value="invoice">Invoices</option>
-                    </select>
+    value={moduleFilter}
+    onChange={(e) => setModuleFilter(e.target.value)}
+    className="p-2 border border-gray-300 rounded-md bg-white/90"
+>
+    <option value="all">All Modules</option>
+    <option value="ticket">Tickets</option>
+    <option value="umrah">Umrah</option>  {/* ADD */}
+    <option value="visa_processing">Visa Processing</option>  {/* ADD */}
+</select>
                 </div>
 
                 <button

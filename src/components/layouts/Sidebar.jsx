@@ -39,10 +39,11 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/admin/officeAccount', icon: 'fa-building', label: 'Office Accounts' },
     { path: '/admin/vender', icon: 'fa-store', label: 'Vender' },
     { path: '/admin/agent', icon: 'fa-user-tie', label: 'Agent' },
+     { path: '/admin/archive', icon: 'fa-user-check', label: 'Archive' },
     { path: '/admin/employee', icon: 'fa-user-check', label: 'Employees' },
     // {path:'/admin/remainingPay',icon:'fa-money-bill-wave',label:'Remaining Pay'},
     //  { path: '/admin/payment', icon: 'fa-store', label: 'Payment' }
-        { path: '/admin/archive', icon: 'fa-user-check', label: 'Archive' },
+    
 
 
    

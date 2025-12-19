@@ -531,9 +531,7 @@ const handleDelete = async (id) => {
     
     try {
         const response = await axios.delete(`${BASE_URL}/ticket/${parsedId}`, {
-            headers: {
-                'X-User-Name': user?.name || 'admin' // Pass current user name
-            }
+           
         });
         
         if (response.status === 200) {

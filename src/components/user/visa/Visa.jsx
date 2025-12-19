@@ -370,32 +370,26 @@ const Visa = () => {
         setDeleteId(null);
     };
 
-    const handleDelete = async (id) => {
-        setIsDeleting(true);
-        console.log('Attempting to delete visa processing with id:', id);
-        const parsedId = typeof id === 'object' && id !== null ? id.id : id;
-        if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
-            console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-            setError('Invalid visa processing ID. Cannot delete.');
-            setIsDeleting(false);
-            return;
+      const handleDelete = async (id) => {
+    setIsDeleting(true);
+    const parsedId = typeof id === 'object' ? id.id : id;
+    
+    try {
+        const response = await axios.delete(`${BASE_URL}/visa-processing/${parsedId}`, {
+           
+        });
+        
+        if (response.status === 200) {
+            setEntries(entries.filter(entry => entry.id !== parsedId));
+            console.log('Visa processing archived successfully');
         }
-        try {
-            const response = await axios.delete(`${BASE_URL}/visa-processing/${parsedId}`);
-            if (response.status === 200) {
-                setEntries(entries.filter(entry => entry.id !== parsedId));
-                console.log('Visa processing deleted successfully');
-            } else {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Error deleting visa processing:', error);
-            setError('Failed to delete visa processing. Please try again later.');
-        } finally {
-            setIsDeleting(false);
-            closeDeleteModal();
-        }
-    };
+    } catch (error) {
+        console.error('Error deleting visa processing:', error);
+        setError('Failed to delete visa processing.');
+    }
+    setIsDeleting(false);
+    closeDeleteModal();
+};
 
     const clearDateFilter = () => {
         setStartDate('');
