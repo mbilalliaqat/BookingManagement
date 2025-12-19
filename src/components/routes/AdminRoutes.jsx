@@ -19,6 +19,7 @@ import Navtcc from '../user/navtcc/Navtcc'
 import RemainingPay from '../user/paymentHistory/RemainingPay'
 import RemainingAmounts from '../user/paymentHistory/RemainingAmounts'
 import Profit from '../user/paymentHistory/Profit'
+import Archive from '../admin/ArchiveData/Archive'
 
 
 
@@ -45,6 +46,7 @@ const AdminRoutes = () => {
             <Route path="/remainingPay" element={<RemainingPay />} />
             <Route path="/remaining-amounts" element={<RemainingAmounts />} />
             <Route path="/profit" element={<Profit />} />
+             <Route path="/archive" element={<Archive/>} />
 
 
           </Routes>

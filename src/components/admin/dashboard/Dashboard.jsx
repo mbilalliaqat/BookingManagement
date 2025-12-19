@@ -1054,7 +1054,10 @@ saveToCache(newData); // Save to cache
   const totalProfit = profitBreakdownArray.reduce((sum, item) => sum + item.amount, 0);
 
   const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-  const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => sum + parseFloat(booking.remaining_amount || 0), 0);
+     const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
+    const val = Number(booking.remaining_amount);
+    return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
 
   const totalVendorPayable = dashboardData.totalVendorPayable || 0;
   const totalVendorPaid = dashboardData.totalVendorPaid || 0;

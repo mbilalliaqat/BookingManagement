@@ -14,6 +14,8 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         recorded_by: ''
     });
     const [gamcaTokenDetails, setGamcaTokenDetails] = useState(null);
+    const [editingPayment, setEditingPayment] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(null);
 
     const BANK_OPTIONS = [
         { value: "UBL M.A.R", label: "UBL M.A.R" },
@@ -230,6 +232,56 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         }
     };
 
+    // Function to handle payment deletion
+    const deletePayment = async (paymentId) => {
+        if (!confirm('Are you sure you want to delete this payment? This will also update the GAMCA token amounts.')) return;
+        setIsDeleting(paymentId);
+        try {
+            await axios.delete(`${BASE_URL}/gamca-token/payment/${paymentId}`);
+            // Refresh payments
+            await fetchPayments();
+            // Notify others to refresh dashboard
+            window.dispatchEvent(new CustomEvent('paymentUpdated', { detail: { gamcaTokenId } }));
+            alert('Payment deleted successfully');
+        } catch (error) {
+            console.error('Error deleting payment:', error);
+            alert('Failed to delete payment. Please try again.');
+        } finally {
+            setIsDeleting(null);
+        }
+    };
+
+    // Function to handle payment updates
+    const updatePayment = async (paymentId) => {
+        if (!editingPayment.payment_date || !editingPayment.recorded_by) return;
+
+        const cashAmount = parseFloat(editingPayment.payed_cash) || 0;
+        const bankAmount = parseFloat(editingPayment.paid_bank) || 0;
+
+        if (cashAmount === 0 && bankAmount === 0) {
+            alert('Please enter either cash paid or paid bank');
+            return;
+        }
+
+        try {
+            await axios.put(`${BASE_URL}/gamca-token/payment/${paymentId}`, {
+                payment_date: editingPayment.payment_date,
+                payed_cash: cashAmount,
+                paid_bank: bankAmount,
+                bank_title: editingPayment.bank_title || null,
+                recorded_by: editingPayment.recorded_by
+            });
+
+            await fetchPayments();
+            setEditingPayment(null);
+            window.dispatchEvent(new CustomEvent('paymentUpdated', { detail: { gamcaTokenId } }));
+            alert('Payment updated successfully');
+        } catch (error) {
+            console.error('Error updating payment:', error);
+            alert('Failed to update payment. Please try again.');
+        }
+    };
+
     const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.payed_cash || 0), 0);
 
     if (loading) {
@@ -255,12 +307,13 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                             <th className="border border-gray-300 px-4 py-2 text-left">Bank Title</th>
                             <th className="border border-gray-300 px-4 py-2 text-left">Recorded By</th>
                             <th className="border border-gray-300 px-4 py-2 text-left">Remaining Amount</th>
+                                <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {payments.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                <td colSpan="7" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
                                     No payments recorded yet
                                 </td>
                             </tr>
@@ -275,10 +328,107 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                                     <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.recorded_by || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setEditingPayment(payment)}
+                                                className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => deletePayment(payment.id)}
+                                                disabled={isDeleting === payment.id}
+                                                className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:bg-gray-400"
+                                            >
+                                                {isDeleting === payment.id ? 'Deleting...' : 'Delete'}
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))
                         )}
                     </tbody>
+
+                    {/* Edit Payment Modal */}
+                    {editingPayment && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                            <div className="bg-white rounded-lg p-6 w-96">
+                                <h3 className="text-lg font-semibold mb-4">Edit Payment</h3>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Payment Date</label>
+                                        <input
+                                            type="date"
+                                            value={editingPayment.payment_date}
+                                            onChange={(e) => setEditingPayment(prev => ({ ...prev, payment_date: e.target.value }))}
+                                            className="w-full border rounded px-3 py-2"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Cash Paid</label>
+                                        <input
+                                            type="text"
+                                            value={editingPayment.payed_cash}
+                                            onChange={(e) => setEditingPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
+                                            className="w-full border rounded px-3 py-2"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Paid Bank</label>
+                                        <input
+                                            type="text"
+                                            value={editingPayment.paid_bank}
+                                            onChange={(e) => setEditingPayment(prev => ({ ...prev, paid_bank: e.target.value }))}
+                                            className="w-full border rounded px-3 py-2"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Bank Title</label>
+                                        <select
+                                            value={editingPayment.bank_title || ''}
+                                            onChange={(e) => setEditingPayment(prev => ({ ...prev, bank_title: e.target.value }))}
+                                            className="w-full border rounded px-3 py-2"
+                                        >
+                                            <option value="">Select Bank (optional)</option>
+                                            {BANK_OPTIONS.map(option => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Recorded By</label>
+                                        <input
+                                            type="text"
+                                            value={editingPayment.recorded_by}
+                                            onChange={(e) => setEditingPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
+                                            className="w-full border rounded px-3 py-2"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end space-x-3 mt-6">
+                                    <button
+                                        onClick={() => setEditingPayment(null)}
+                                        className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-100"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => updatePayment(editingPayment.id)}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    >
+                                        Update Payment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </table>
             </div>
 

@@ -42,6 +42,8 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/admin/employee', icon: 'fa-user-check', label: 'Employees' },
     // {path:'/admin/remainingPay',icon:'fa-money-bill-wave',label:'Remaining Pay'},
     //  { path: '/admin/payment', icon: 'fa-store', label: 'Payment' }
+        { path: '/admin/archive', icon: 'fa-user-check', label: 'Archive' },
+
 
    
   ];
