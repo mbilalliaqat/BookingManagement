@@ -5,7 +5,7 @@ import * as Yup from 'yup';
 import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
-import { fetchEntryCounts, incrementFormEntry  } from '../../ui/api';
+import { fetchEntryCounts, incrementFormEntry } from '../../ui/api';
 import axios from 'axios';
 import VenderNameModal from '../../ui/VenderNameModal';
 
@@ -28,22 +28,22 @@ const STATUS_OPTIONS = [
 // Auto-calculation component for visa processing form
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
-    
+
     useEffect(() => {
         const receivable = parseFloat(values.receivable_amount) || 0;
         const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
         const additionalCharges = parseFloat(values.additional_charges) || 0;
         const payForProtector = parseFloat(values.pay_for_protector) || 0;
-        
+
         // Calculate total payable to all vendors
         const totalPayableToVendors = values.vendors?.reduce((sum, vendor) => {
             return sum + (parseFloat(vendor.payable_amount) || 0);
         }, 0) || 0;
-        
+
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining);
-        
+
         const profit = totalPayableToVendors > 0 ? receivable - totalPayableToVendors : receivable - additionalCharges - payForProtector;
         setFieldValue('profit', profit);
     }, [
@@ -55,11 +55,13 @@ const AutoCalculate = () => {
         values.vendors,
         setFieldValue
     ]);
-    
+
     return null;
 };
 
-const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry }) => {
+  
+
+const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry,user }) => {
     const addVendor = () => {
         const newVendors = [...(values.vendors || []), { vendor_name: '', payable_amount: '' }];
         setFieldValue('vendors', newVendors);
@@ -69,6 +71,10 @@ const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendor
         const newVendors = values.vendors.filter((_, i) => i !== index);
         setFieldValue('vendors', newVendors);
     };
+
+     if(user?.role !== 'admin') {
+    return null; // Don't render anything if user is not admin
+   }
 
     return (
         <div className="col-span-2 border border-purple-200 rounded-lg p-4 bg-purple-50">
@@ -281,12 +287,12 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, [editEntry]);
 
     useEffect(() => {
-    setFormInitialValues(prev => ({
-        ...prev,
-        employee_name: user?.username || '',
-        entry: editEntry ? (editEntry.entry || '0/0') : `VS ${entryNumber}/${totalEntries}`
-    }));
-}, [user, editEntry, entryNumber, totalEntries]);
+        setFormInitialValues(prev => ({
+            ...prev,
+            employee_name: user?.username || '',
+            entry: editEntry ? (editEntry.entry || '0/0') : `VS ${entryNumber}/${totalEntries}`
+        }));
+    }, [user, editEntry, entryNumber, totalEntries]);
 
     useEffect(() => {
         if (editEntry) {
@@ -295,7 +301,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 if (typeof editEntry.passport_detail === 'string') {
                     try {
                         parsedPassportDetails = JSON.parse(editEntry.passport_detail);
-                    } catch(e) {
+                    } catch (e) {
                         console.error("Error parsing passport details:", e);
                     }
                 } else if (typeof editEntry.passport_detail === 'object' && editEntry.passport_detail !== null) {
@@ -314,9 +320,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             // Parse vendor data
             let vendorsData = [{ vendor_name: '', payable_amount: '' }];
             if (editEntry.vendor_name && editEntry.payable_to_vendor) {
-                vendorsData = [{ 
-                    vendor_name: editEntry.vendor_name, 
-                    payable_amount: editEntry.payable_to_vendor 
+                vendorsData = [{
+                    vendor_name: editEntry.vendor_name,
+                    payable_amount: editEntry.payable_to_vendor
                 }];
             }
 
@@ -363,7 +369,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 booking_date: formatDate(editEntry.booking_date),
                 remaining_date: formatDate(editEntry.remaining_date),
             };
-            
+
             setFormInitialValues(newValues);
             console.log("Loaded edit values:", newValues);
         }
@@ -452,9 +458,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             if (!editEntry) {
                 // Submit vendor data for each vendor
-                 const parsedEntryNumber = parseInt(values.entry.replace('VS ', '').split('/')[0]);
-    await incrementFormEntry('visa', parsedEntryNumber);
-    
+                const parsedEntryNumber = parseInt(values.entry.replace('VS ', '').split('/')[0]);
+                await incrementFormEntry('visa', parsedEntryNumber);
+
                 for (const vendor of values.vendors) {
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
@@ -532,7 +538,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const formVariants = {
         hidden: { opacity: 0 },
-        visible: { 
+        visible: {
             opacity: 1,
             transition: { staggerChildren: 0.1, delayChildren: 0.2 }
         }
@@ -540,10 +546,10 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const itemVariants = {
         hidden: { opacity: 0, y: 20 },
-        visible: { 
-            opacity: 1, 
+        visible: {
+            opacity: 1,
             y: 0,
-            transition: { 
+            transition: {
                 type: "spring",
                 stiffness: 260,
                 damping: 20
@@ -554,7 +560,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section1Fields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
         { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: 'Select booking date', icon: 'calendar-check' },
-        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
         { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map(opt => opt.value), placeholder: 'Select status', icon: 'tasks' },
         { name: 'file_number', label: 'File No.', type: 'text', placeholder: 'Enter file number', icon: 'file-alt' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
@@ -566,8 +572,8 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'ptn_permission', label: 'PTN/Permission', type: 'text', placeholder: 'Enter PTN/Permission', icon: 'certificate' },
         { name: 'professional', label: 'Professional', type: 'text', placeholder: 'Enter professional', icon: 'briefcase' },
-    { name: 'mobile_no', label: 'Mobile No. (Use comma for multiple)', type: 'text', placeholder: 'Enter mobile number(s)', icon: 'phone' },
-    
+        { name: 'mobile_no', label: 'Mobile No. (Use comma for multiple)', type: 'text', placeholder: 'Enter mobile number(s)', icon: 'phone' },
+
     ];
 
     const section2Fields = [
@@ -590,19 +596,19 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const section4Fields = [
         { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' },
         { name: 'additional_charges', label: 'Additional Charges', type: 'number', placeholder: 'Enter additional charges', icon: 'plus-circle' },
-                { name: 'detail', label: 'Additional Detail', type: 'text', placeholder: 'Enter detail', icon: 'info-circle' }, // New Detail field      
+        { name: 'detail', label: 'Additional Detail', type: 'text', placeholder: 'Enter detail', icon: 'info-circle' }, // New Detail field      
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
         { name: 'pay_for_protector', label: 'Expence Emigrant', type: 'number', placeholder: 'Enter pay for protector', icon: 'shield-alt' },
-        { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
+        { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave'},
         { name: 'bank_title', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.value), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
-        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
-        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },
+        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line' },
+        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale' },
         { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: 'Expected delivery / remaining date', icon: 'clock' },
     ];
 
     const renderField = (field) => (
-        <motion.div 
+        <motion.div
             key={field.name}
             className="mb-4"
             variants={itemVariants}
@@ -651,16 +657,15 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         type={field.type}
                         name={field.name}
                         placeholder={field.placeholder}
-                        className={`w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${
-                            field.readOnly ? 'bg-gray-100' : ''
-                        }`}
+                        className={`w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400 ${field.readOnly ? 'bg-gray-100' : ''
+                            }`}
                         disabled={field.readOnly}
                         readOnly={field.readOnly}
                     />
                 )}
-                <ErrorMessage 
-                    name={field.name} 
-                    component="p" 
+                <ErrorMessage
+                    name={field.name}
+                    component="p"
                     className="mt-1 text-sm text-red-500 flex items-center !text-red-500"
                 >
                     {(msg) => (
@@ -678,7 +683,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
-                        <motion.h2 
+                        <motion.h2
                             className="text-2xl font-bold text-black flex items-center"
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -687,7 +692,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             <i className="fas fa-kaaba mr-3"></i>
                             {editEntry ? 'Update Visa Processing' : 'New Visa Processing'}
                         </motion.h2>
-                        <motion.p 
+                        <motion.p
                             className="text-indigo-600 mt-1"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -712,16 +717,15 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         <button
                             key={step}
                             onClick={() => setActiveSection(step)}
-                            className={`flex-1 relative ${
-                                step < activeSection ? 'text-green-500' : 
+                            className={`flex-1 relative ${step < activeSection ? 'text-green-500' :
                                 step === activeSection ? 'text-purple-600' : 'text-gray-400'
-                            }`}
+                                }`}
                         >
                             <div className="flex flex-col items-center">
                                 <div className={`
                                     w-10 h-10 flex items-center justify-center rounded-full mb-2
-                                    ${step < activeSection ? 'bg-green-100' : 
-                                      step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}
+                                    ${step < activeSection ? 'bg-green-100' :
+                                        step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}
                                 `}>
                                     {step < activeSection ? (
                                         <i className="fas fa-check"></i>
@@ -730,15 +734,14 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     )}
                                 </div>
                                 <span className="text-sm font-medium">
-                                    {step === 1 ? 'Basic Info' : 
-                                     step === 2 ? 'Passport Details' : 
-                                     step === 3 ? 'Dates' : 'Payment Details'}
+                                    {step === 1 ? 'Basic Info' :
+                                        step === 2 ? 'Passport Details' :
+                                            step === 3 ? 'Dates' : 'Payment Details'}
                                 </span>
                             </div>
                             {step < 4 && (
-                                <div className={`absolute top-5 left-full w-full h-0.5 -ml-2 ${
-                                    step < activeSection ? 'bg-green-500' : 'bg-gray-200'
-                                }`} style={{ width: "calc(100% - 2rem)" }}></div>
+                                <div className={`absolute top-5 left-full w-full h-0.5 -ml-2 ${step < activeSection ? 'bg-green-500' : 'bg-gray-200'
+                                    }`} style={{ width: "calc(100% - 2rem)" }}></div>
                             )}
                         </button>
                     ))}
@@ -755,7 +758,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     {({ isSubmitting, errors, values, setFieldValue }) => (
                         <Form>
                             <AutoCalculate />
-                            
+
                             <motion.div
                                 key={`section-${activeSection}`}
                                 variants={formVariants}
@@ -769,19 +772,20 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 {activeSection === 4 && (
                                     <>
                                         {section4Fields.map(renderField)}
-                                        <VendorSelectionFields 
-                                            values={values} 
-                                            setFieldValue={setFieldValue} 
+                                        <VendorSelectionFields
+                                            values={values}
+                                            setFieldValue={setFieldValue}
                                             vendorNames={vendorNames}
                                             setIsVendorModalOpen={setIsVendorModalOpen}
                                             editEntry={editEntry}
+                                            user={user}
                                         />
                                     </>
                                 )}
                             </motion.div>
 
                             {errors.general && (
-                                <motion.div 
+                                <motion.div
                                     className="text-red-600 mt-4"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -791,7 +795,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </motion.div>
                             )}
 
-                            <motion.div 
+                            <motion.div
                                 className="flex justify-between mt-8 pt-4 border-t border-gray-100"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -810,7 +814,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                         </motion.button>
                                     )}
                                 </div>
-                                
+
                                 <div className="flex space-x-3">
                                     <motion.button
                                         type="button"
@@ -822,7 +826,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     >
                                         Cancel
                                     </motion.button>
-                                    
+
                                     {activeSection < 4 ? (
                                         <motion.button
                                             type="button"

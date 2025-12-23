@@ -191,18 +191,17 @@ useEffect(() => {
     };
 
     const baseColumns = [
-        { header: 'BOOKING DATE', accessor: 'booking_date' },
-        {
-            header: 'EMPLOYEE & ENTRY',
-            accessor: 'employee_entry',
-            render: (cellValue, row) => (
-                <div className="uppercase">
-                    <div>{row?.userName || ''}</div>
-                    <div>{row?.entry || ''}</div>
-                </div>
-            )
-        },
-        { header: 'CUSTOMER ADD', accessor: 'customerAdd' },
+       {
+    header: 'BOOKING DATE & ENTRY',
+    accessor: 'booking_employee_entry',
+    render: (cellValue, row) => (
+        <div className="uppercase">
+            <div>{row?.booking_date || ''}</div>
+            <div>{row?.userName || ''}</div>
+            <div>{row?.entry || ''}</div>
+        </div>
+    )
+},
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'PACKAGE DETAIL', accessor: 'packageDetail' },
         {
@@ -519,32 +518,26 @@ useEffect(() => {
         setDeleteId(null);
     };
 
-    const handleDelete = async (id) => {
-        setIsDeleting(true);
-        console.log('Attempting to delete umrah booking with id:', id);
-        const parsedId = typeof id === 'object' && id !== null ? id.id : id;
-        if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
-            console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-            setError('Invalid umrah booking ID. Cannot delete.');
-            setIsDeleting(false);
-            return;
+     const handleDelete = async (id) => {
+    setIsDeleting(true);
+    const parsedId = typeof id === 'object' ? id.id : id;
+    
+    try {
+        const response = await axios.delete(`${BASE_URL}/umrah/${parsedId}`, {
+           
+        });
+        
+        if (response.status === 200) {
+            setEntries(entries.filter(entry => entry.id !== parsedId));
+            console.log('Umrah archived successfully');
         }
-        try {
-            const response = await axios.delete(`${BASE_URL}/umrah/${parsedId}`);
-            if (response.status === 200) {
-                setEntries(entries.filter(entry => entry.id !== parsedId));
-                console.log('Umrah booking deleted successfully');
-            } else {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-        } catch (error) {
-            console.error('Error deleting umrah booking:', error);
-            setError('Failed to delete umrah booking. Please try again later.');
-        } finally {
-            setIsDeleting(false);
-            closeDeleteModal();
-        }
-    };
+    } catch (error) {
+        console.error('Error deleting umrah:', error);
+        setError('Failed to delete umrah.');
+    }
+    setIsDeleting(false);
+    closeDeleteModal();
+};
 
     const clearDateFilter = () => {
         setStartDate('');

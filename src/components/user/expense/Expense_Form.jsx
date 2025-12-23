@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
+import axios from 'axios';
 
 const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -10,7 +11,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [totalEntries, setTotalEntries] = useState(0);
     const [vendors, setVendors] = useState([]);
     const [hideFields, setHideFields] = useState(false);
-    
+
     const [data, setData] = useState({
         user_name: user?.username || '',
         entry: '0/0',
@@ -20,7 +21,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         selection: '',
         withdraw: '',
         vendor_id: '',
-        cash_office: ''
+        cash_office: '',
+        bank_title: ''
     });
 
     const [prevError, setPrevError] = useState({
@@ -32,8 +34,18 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         selection: '',
         vendor_id: '',
         cash_office: '',
+        bank_title: '',
         general: ''
     });
+
+    const bankOptions = [
+        { value: "UBL M.A.R", label: "UBL M.A.R" },
+        { value: "UBL F.Z", label: "UBL F.Z" },
+        { value: "HBL M.A.R", label: "HBL M.A.R" },
+        { value: "HBL F.Z", label: "HBL F.Z" },
+        { value: "JAZ C", label: "JAZ C" },
+        { value: "MCB FIT", label: "MCB FIT" },
+    ];
 
     const isEditing = !!editEntry;
 
@@ -96,7 +108,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 selection: editEntry.selection || '',
                 withdraw: editEntry.withdraw || '',
                 vendor_id: editEntry.vendor_id || '',
-                cash_office: editEntry.cash_office || ''
+                cash_office: editEntry.cash_office || '',
+                bank_title: editEntry.bank_title || ''
             });
         }
     }, [editEntry, entryNumber, totalEntries, user]);
@@ -109,10 +122,10 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const handleCheckboxChange = (e) => {
         // Don't allow changing to "Opening Balance" mode when editing
         if (isEditing) return;
-        
+
         const isChecked = e.target.checked;
         setHideFields(isChecked);
-        
+
         if (isChecked) {
             // Clear fields not needed for opening balance
             setData(prev => ({
@@ -120,7 +133,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 total_amount: '',
                 selection: '',
                 withdraw: '',
-                vendor_id: ''
+                vendor_id: '',
+                bank_title: ''
             }));
         } else {
             // Clear cash_office when unchecking
@@ -164,10 +178,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         } else {
             // Normal mode validations
             // Validate vendor_id if withdraw value is provided
-            if (data.withdraw && !data.vendor_id) {
-                newErrors.vendor_id = 'Select Vendor for withdraw';
-                isValid = false;
-            }
+          
         }
 
         // Validate date format
@@ -200,14 +211,15 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 requestData.selection = 'OPENING BALANCE';
                 requestData.withdraw = cashOfficeValue < 0 ? Math.abs(cashOfficeValue) : 0;
                 requestData.vendor_name = null;
-                // Store cash_office for the backend to handle
                 requestData.cash_office = cashOfficeValue;
+                requestData.bank_title = null;
             } else {
                 // Normal mode
                 requestData.total_amount = parseInt(data.total_amount) || 0;
                 requestData.selection = data.selection;
                 requestData.withdraw = data.withdraw ? parseInt(data.withdraw) : null;
                 requestData.vendor_name = data.vendor_id || null;
+                requestData.bank_title = data.bank_title || null;
             }
 
             console.log('Submitting expense data:', requestData);
@@ -234,6 +246,32 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 const result = await response.json();
                 console.log('Success response:', result);
 
+                // Add vendor transaction if vendor and withdraw amount are provided
+                if (data.vendor_id && data.withdraw && parseFloat(data.withdraw) > 0) {
+                    await axios.post(`${BASE_URL}/vender`, {
+                        vender_name: data.vendor_id,
+                        detail: data.detail,
+                        credit: parseFloat(data.withdraw),
+                        date: data.date,
+                        entry: data.entry,
+                        bank_title: data.bank_title || null,
+                        debit: null
+                    });
+                }
+
+                // Add bank transaction if bank_title and withdraw amount are provided
+                if (data.bank_title && data.withdraw && parseFloat(data.withdraw) > 0) {
+                    await axios.post(`${BASE_URL}/accounts`, {
+                        bank_name: data.bank_title,
+                        employee_name: data.user_name,
+                        detail: `Expense - ${data.detail}`,
+                        credit: 0,
+                        debit: parseFloat(data.withdraw),
+                        date: data.date,
+                        entry: data.entry,
+                    });
+                }
+
                 setData({
                     user_name: user?.username || '',
                     entry: `${entryNumber}/${totalEntries}`,
@@ -243,7 +281,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     selection: '',
                     withdraw: '',
                     vendor_id: '',
-                    cash_office: ''
+                    cash_office: '',
+                    bank_title: ''
                 });
                 setHideFields(false);
 
@@ -370,6 +409,23 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                         ))}
                                     </select>
                                     {prevError.vendor_id && <span className="text-red-500">{prevError.vendor_id}</span>}
+                                </div>
+                                <div className="w-full sm:w-[calc(50%-10px)]">
+                                    <label className="block font-medium mb-1">Bank Title</label>
+                                    <select
+                                        value={data.bank_title}
+                                        name="bank_title"
+                                        onChange={handleChange}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                                    >
+                                        <option value="">SELECT BANK</option>
+                                        {bankOptions.map((bank) => (
+                                            <option key={bank.value} value={bank.value}>
+                                                {bank.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {prevError.bank_title && <span className="text-red-500">{prevError.bank_title}</span>}
                                 </div>
                                 <div className="w-full sm:w-[calc(50%-10px)]">
                                     <label className="block font-medium mb-1">Withdraw</label>

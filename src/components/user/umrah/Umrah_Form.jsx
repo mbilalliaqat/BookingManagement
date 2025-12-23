@@ -270,7 +270,7 @@ const PassengerCountSlider = ({ values, setFieldValue, setShowPassengerSlider })
     );
 };
 
-const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry }) => {
+const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry,user  }) => {
     const addVendor = () => {
         const newVendors = [...(values.vendors || []), { vendor_name: '', payable_amount: '' }];
         setFieldValue('vendors', newVendors);
@@ -280,6 +280,10 @@ const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendor
         const newVendors = values.vendors.filter((_, i) => i !== index);
         setFieldValue('vendors', newVendors);
     };
+
+    if (user?.role !== 'admin') {
+    return null; // Don't render anything if user is not admin
+}
 
     return (
         <div className="col-span-2 border border-purple-200 rounded-lg p-4 bg-purple-50">
@@ -841,13 +845,13 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     ];
 
     const section3Fields = [
-        { name: 'receivableAmount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd' },
-        { name: 'agentName', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
-        { name: 'paidCash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
-        { name: 'bank_title', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
-        { name: 'paidInBank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university' },
-        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
-        { name: 'remainingAmount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true }
+        { name: 'receivableAmount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd',readOnly: !!editEntry },
+        { name: 'agentName', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie',readOnly: !!editEntry },
+        { name: 'paidCash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave',readOnly: !!editEntry },
+        { name: 'bank_title', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university',readOnly: !!editEntry },
+        { name: 'paidInBank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment amount', icon: 'university',readOnly: !!editEntry },
+        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line',readOnly: !!editEntry },
+        { name: 'remainingAmount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale' }
     ];
 
     const renderField = (field, values, setFieldValue) => (

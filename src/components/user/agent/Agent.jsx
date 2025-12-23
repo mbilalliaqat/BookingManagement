@@ -11,7 +11,7 @@ import { useLocation } from 'react-router-dom';
 const Agent = () => {
     const { user } = useAppContext();
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null); 
+    const [error, setError] = useState(null);
     const [data, setData] = useState([]);
     const [showForm, setShowForm] = useState(false);
     const [agentNames, setAgentNames] = useState([]);
@@ -29,7 +29,7 @@ const Agent = () => {
         if (!dateString) return '';
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return '';
-        return date.toLocaleDateString('en-GB'); 
+        return date.toLocaleDateString('en-GB');
     };
 
     const location = useLocation();
@@ -45,14 +45,14 @@ const Agent = () => {
         try {
             setIsLoading(true);
             const response = await axios.get(`${BASE_URL}/agent`)
-            
+
             // Format dates for display - same as Services component
             const formattedData = response.data.agents.map((entry) => ({
                 ...entry,
                 date: formatDate(entry.date),
             }))
-            .sort((a, b) => b.id - a.id) || [];
-            
+                .sort((a, b) => b.id - a.id) || [];
+
             setData(formattedData);
         } catch (error) {
             setError(error.message);
@@ -84,14 +84,14 @@ const Agent = () => {
             // Show only unique agents (one entry per agent)
             const uniqueAgents = [];
             const seenAgents = new Set();
-            
+
             data.forEach(item => {
                 if (!seenAgents.has(item.agent_name)) {
                     seenAgents.add(item.agent_name);
                     uniqueAgents.push(item);
                 }
             });
-            
+
             setFilteredData(uniqueAgents);
         } else {
             // Show all entries for the selected agent
@@ -144,10 +144,10 @@ const Agent = () => {
             console.error('Entry is undefined or null');
             return;
         }
-        
+
         // Set loading state for this specific row
         setLoadingActionId(entry.id);
-        
+
         console.log('Updating entry:', entry);
         const entryForEdit = {
             ...entry,
@@ -155,32 +155,32 @@ const Agent = () => {
             date: entry.date ? convertToInputDate(entry.date) : '',
         };
         console.log('Prepared entry for edit:', entryForEdit);
-        
+
         // Small timeout to show the loading spinner
         setTimeout(() => {
             setEditingEntry(entryForEdit);
             setShowForm(true);
             setLoadingActionId(null);
         }, 500);
-        
+
     }, []);
 
     // Helper function to convert MM/DD/YYYY back to YYYY-MM-DD for form input
     const convertToInputDate = (formattedDate) => {
         if (!formattedDate) return '';
-        
+
         // Check if it's already in YYYY-MM-DD format
         if (formattedDate.includes('-') && formattedDate.length === 10) {
             return formattedDate;
         }
-        
+
         // Convert MM/DD/YYYY to YYYY-MM-DD
         const parts = formattedDate.split('/');
         if (parts.length === 3) {
             const [month, day, year] = parts;
             return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
         }
-        
+
         return formattedDate;
     };
 
@@ -190,12 +190,14 @@ const Agent = () => {
             setError('Invalid agent ID. Cannot delete.');
             return;
         }
-        
+
         setIsDeleting(true);
         setLoadingActionId(parsedId);
-        
+
         try {
-            const response = await axios.delete(`${BASE_URL}/agent/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/agent/${parsedId}`, {
+                data: { user_name: user.name }
+            });
             if (response.status === 200) {
                 setData(data.filter(entry => entry.id !== parsedId));
                 console.log('Agent entry deleted successfully');
@@ -211,7 +213,7 @@ const Agent = () => {
             setLoadingActionId(null);
             closeDeleteModal();
         }
-    }, [data, closeDeleteModal]);
+    }, [data, closeDeleteModal, user.name, BASE_URL, fetchData]);
 
     const handleAgentChange = (e) => {
         setSelectedAgent(e.target.value);
@@ -223,13 +225,13 @@ const Agent = () => {
     }, []);
 
     const columns = useMemo(() => [
-        { 
-            header: 'AGENT NAME', 
+        {
+            header: 'AGENT NAME',
             accessor: 'agent_name',
             render: (row, fullRow) => {
                 const agentName = fullRow?.agent_name || row?.agent_name || row;
                 return (
-                    <span 
+                    <span
                         className={selectedAgent === 'all' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : ''}
                         onClick={() => selectedAgent === 'all' && handleAgentClick(agentName)}
                     >
@@ -250,37 +252,37 @@ const Agent = () => {
         { header: 'BALANCE', accessor: 'balance' },
         ...(user.role === 'admin'
             ? [
-                  {
-                      header: 'ACTIONS',
-                      accessor: 'actions',
-                      render: (row, index) => (
-                          <>
-                              <button
-                                  className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
-                                  onClick={() => handleUpdate(index)}
-                                  disabled={loadingActionId === index.id}
-                              >
-                                  {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
-                              </button>
-                              <button
-                                  className="text-red-500 hover:text-red-700 text-[13px]"
-                                  onClick={() => openDeleteModal(index.id)}
-                                  disabled={loadingActionId === index.id}
-                              >
-                                  <i className="fas fa-trash"></i>
-                              </button>
-                          </>
-                      ),
-                  },
-              ]
+                {
+                    header: 'ACTIONS',
+                    accessor: 'actions',
+                    render: (row, index) => (
+                        <>
+                            <button
+                                className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
+                                onClick={() => handleUpdate(index)}
+                                disabled={loadingActionId === index.id}
+                            >
+                                {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
+                            </button>
+                            <button
+                                className="text-red-500 hover:text-red-700 text-[13px]"
+                                onClick={() => openDeleteModal(index.id)}
+                                disabled={loadingActionId === index.id}
+                            >
+                                <i className="fas fa-trash"></i>
+                            </button>
+                        </>
+                    ),
+                },
+            ]
             : []),
     ], [user.role, loadingActionId, handleUpdate, openDeleteModal, selectedAgent, handleAgentClick]);
-    
+
     return (
         <div className='flex flex-col h-full'>
-           {showForm ? (
-                <AgentForm 
-                    onCancel={handleCancel} 
+            {showForm ? (
+                <AgentForm
+                    onCancel={handleCancel}
                     onSubmitSuccess={handleFormSubmit}
                     editingEntry={editingEntry}
                 />
@@ -288,7 +290,7 @@ const Agent = () => {
                 <>
                     <div className='flex justify-between items-center mb-4 relative'>
                         <div className="flex items-center gap-4">
-                            <select 
+                            <select
                                 className="p-2 border border-gray-300 rounded-md"
                                 value={selectedAgent}
                                 onChange={handleAgentChange}
@@ -300,7 +302,7 @@ const Agent = () => {
                                     </option>
                                 ))}
                             </select>
-                            
+
                             <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 shadow-sm">
                                 <span className="text-sm font-semibold text-gray-700">Outstanding Balance:</span>
                                 <span className={`text-lg font-bold ${outstandingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -308,7 +310,7 @@ const Agent = () => {
                                 </span>
                             </div>
                         </div>
-                        
+
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
                             onClick={() => setShowForm(true)}
@@ -327,15 +329,15 @@ const Agent = () => {
                                 </div>
                             </div>
                         ) : (
-                            <Table 
-                                columns={columns} 
-                                data={filteredData.length ? filteredData : []} 
+                            <Table
+                                columns={columns}
+                                data={filteredData.length ? filteredData : []}
                             />
                         )}
                     </div>
                 </>
             )}
-            
+
             {/* Delete Confirmation Modal */}
             <Modal
                 isOpen={showDeleteModal}
@@ -346,7 +348,7 @@ const Agent = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this agent entry? 
+                    Are you sure you want to delete this agent entry?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button

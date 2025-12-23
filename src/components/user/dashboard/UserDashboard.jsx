@@ -1,21 +1,65 @@
 import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, Users, Plane, MapPin, FileText, CreditCard, Wallet, Landmark, Filter } from 'lucide-react'; // Added Wallet and Landmark icons
+// --- MODIFIED: Removed Recharts imports ---
+import { Plane, MapPin, FileText, CreditCard, Landmark, Shield, X, ChevronRight, DollarSign, User, Filter, Send, MessageSquare, Minimize2 } from 'lucide-react';
+// --------------------------------------------------------------------------
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import DateRangePicker from '../../ui/DateRangePicker';
+import { useNavigate } from 'react-router-dom';
+
+// --- NEW CHART IMPORTS ---
+
+import FinancialOverviewChart from '../../ui/FinancialOverviewChart';
+import MonthlyBookingsChart from '../../ui/MonthlyBookingsChart';
+// -------------------------
+
+// --- Custom Color Palette ---
+const COLOR_MAP = {
+  midnight: { border: 'border-[#1e3a8a]', bg: 'bg-[#1e3a8a]/10', text: 'text-[#1e3a8a]', textBold: 'text-[#1e3a8a]', gradient: 'bg-gradient-to-br from-[#1e3a8a]/5 to-[#1e3a8a]/10' },
+  emerald: { border: 'border-[#10b981]', bg: 'bg-[#10b981]/10', text: 'text-[#10b981]', textBold: 'text-[#10b981]', gradient: 'bg-gradient-to-br from-[#10b981]/5 to-[#10b981]/10' },
+  ivory: { border: 'border-[#f8fafc]', bg: 'bg-[#f8fafc]', text: 'text-[#1e3a8a]', textBold: 'text-[#1e3a8a]', gradient: 'bg-gradient-to-br from-[#f8fafc] to-[#e5e7eb]' },
+  rose: { border: 'border-[#e11d48]', bg: 'bg-[#e11d48]/10', text: 'text-[#e11d48]', textBold: 'text-[#e11d48]', gradient: 'bg-gradient-to-br from-[#e11d48]/5 to-[#e11d48]/10' },
+  teal: { border: 'border-teal-600', bg: 'bg-teal-600/10', text: 'text-teal-600', textBold: 'text-teal-700', gradient: 'bg-gradient-to-br from-teal-50 to-teal-100' },
+  indigo: { border: 'border-indigo-600', bg: 'bg-indigo-600/10', text: 'text-indigo-600', textBold: 'text-indigo-700', gradient: 'bg-gradient-to-br from-indigo-50 to-indigo-100' },
+};
+const ACCOUNT_COLORS = ['midnight', 'emerald', 'rose', 'teal', 'indigo', 'ivory'];
 
 // Create axios instance with base URL
 const api = axios.create({
   baseURL: import.meta.env.VITE_LIVE_API_BASE_URL
+
 });
 
 // Add caching for responses
-const cache = {
-  data: new Map(),
-  timestamp: new Map(),
-  ttl: 15 * 1000,
+const CACHE_KEY = 'dashboard_cache';
+const CACHE_TTL = 10 * 60 * 1000; // 5 minutes
+
+const getFromCache = () => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const { data, timestamp } = JSON.parse(cached);
+    const isExpired = Date.now() - timestamp > CACHE_TTL;
+
+    return isExpired ? null : data;
+  } catch {
+    return null;
+  }
 };
 
+const saveToCache = (data) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.error('Cache save failed:', error);
+  }
+};
+
+// --- Main Dashboard Component ---
 export default function UserDashboard() {
   const [dashboardData, setDashboardData] = useState({
     combinedBookings: [],
@@ -23,764 +67,1464 @@ export default function UserDashboard() {
     bookingsByType: [],
     totalRevenue: 0,
     totalProtectorWithdraw: 0,
-    totalExpenseWithdraw:0,
-    totalRefundedWithdraw:0,
-    totalVendorWithdraw:0,
-    TotalWithdraw:0,
-    cashInOffice: 0, // State to hold global cash in office calculation
-  });
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
-  const [filteredBookings, setFilteredBookings] = useState([]);
-  const [errors, setErrors] = useState({
-    dashboard: null,
-    umrah: null,
-    tickets: null,
-    visa: null,
-    gamcaToken: null,
-    services:null,
-    protector: null,
-    expenses:null,
-    refunded:null,
-    vendor:null,
+    totalExpenseWithdraw: 0,
+    totalRefundedWithdraw: 0,
+    totalVendorWithdraw: 0,
+    TotalWithdraw: 0,
+    cashInOffice: 0,
+    accounts: [],
+    vendors: [],
+    agents: [],
+    totalVendorPayable: 0,
+    totalVendorPaid: 0,
+    totalAgentPayable: 0,
+    totalAgentPaid: 0,
   });
 
-  // Cached data fetching function
-  const fetchWithCache = useCallback(async (endpoint) => {
-    const now = Date.now();
-    const cacheKey = endpoint;
-    
-    // Return cached data if it exists and is not expired
-    if (cache.data.has(cacheKey)) {
-      const timestamp = cache.timestamp.get(cacheKey);
-      if (now - timestamp < cache.ttl) {
-        return cache.data.get(cacheKey);
-      }
+  const [isLoading, setIsLoading] = useState(true);
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [delayHandler, setDelayHandler] = useState(null);
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  const [filteredBookings, setFilteredBookings] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [cachedData, setCachedData] = useState(null);
+  const [isFreshDataLoading, setIsFreshDataLoading] = useState(false);
+
+  const [selectedMonthEnd, setSelectedMonthEnd] = useState(new Date());
+  const navigate = useNavigate();
+
+  const [errors, setErrors] = useState({
+    dashboard: null, umrah: null, tickets: null, visa: null, gamcaToken: null, services: null,
+    navtcc: null, protector: null, expenses: null, refunded: null, vendor: null, agent: null, accounts: null,
+  });
+
+  const handleMouseEnter = (cardName) => {
+    if (delayHandler) {
+      clearTimeout(delayHandler);
     }
-    
-    // Make API call if cache is invalid or expired
+    setHoveredCard(cardName);
+  };
+
+  const handleMouseLeave = () => {
+    const handler = setTimeout(() => {
+      setHoveredCard(null);
+    }, 200);
+    setDelayHandler(handler);
+  };
+
+  const handleProtectorClick = useCallback(() => {
+    navigate('/admin/protector');
+  }, [navigate]);
+
+  const handleExpensesClick = useCallback(() => {
+    navigate('/admin/expense');
+  }, [navigate]);
+
+  const handleRefundedClick = useCallback(() => {
+    navigate('/admin/refunded');
+  }, [navigate]);
+
+  const fetchWithCache = useCallback(async (endpoint) => {
     const response = await api.get(endpoint);
-    
-    // Update cache
-    cache.data.set(cacheKey, response.data);
-    cache.timestamp.set(cacheKey, now);
-    
     return response.data;
   }, []);
 
+  const safeTimestamp = (dateValue) => {
+    if (!dateValue) return 0;
+    const date = new Date(dateValue);
+    return isNaN(date.getTime()) ? 0 : date.getTime();
+  };
+
+  const safeLocaleDateString = (dateValue) => {
+    if (!dateValue) return '--';
+    const date = new Date(dateValue);
+    // Added 'en-GB' for DD/MM/YYYY format and 'UTC' to fix the previous day issue
+    return isNaN(date.getTime()) ? '--' : date.toLocaleDateString('en-GB', { timeZone: 'UTC' });
+  };
+  // Calculate outstanding balances for vendors and agents
+  const vendorOutstandingBalance = dashboardData.vendors.reduce((sum, vendor) => sum + (vendor.remaining_amount || 0), 0);
+  const agentOutstandingBalance = dashboardData.agents.reduce((sum, agent) => sum + (agent.remaining_amount || 0), 0);
+
+  const handleModuleClick = (moduleName) => {
+    if (moduleName === 'Ticket') {
+      navigate('/admin/tickets');
+    }
+    if (moduleName === 'Umrah') {
+      navigate('/admin/umrah');
+    }
+    if (moduleName === 'Visa Processing') {
+      navigate('/admin/visa');
+    }
+    if (moduleName === 'GAMCA Token') {
+      navigate('/admin/gamcaToken');
+    }
+    if (moduleName === 'Navtcc') {
+      navigate('/admin/navtcc');
+    }
+    if (moduleName === 'Services') {
+      navigate('/admin/services');
+    }
+  };
+
+  const handleAccountClick = useCallback((account) => {
+    navigate('/admin/officeAccount', {
+      state: { selectedBank: account.name }
+    });
+  }, [navigate]);
+
+  const handleVendorClick = useCallback((vendorName) => {
+    navigate('/admin/vender/', {
+      state: { selectedVendor: vendorName }
+    });
+  }, [navigate]);
+
+  const handleAgentClick = useCallback((agentName) => {
+    navigate('/admin/agent', {
+      state: { selectedAgent: agentName }
+    });
+  }, [navigate]);
+
+  const handleRemainingAmountClick = useCallback((typeName) => {
+    navigate('/admin/remaining-amounts', {
+      state: { selectedType: typeName }
+    });
+  }, [navigate]);
+
   const handleDateRangeChange = useCallback((startDate, endDate) => {
-    setDateRange({ startDate, endDate });
+    setDateRange({ startDate: startDate || null, endDate: endDate || null });
   }, []);
 
-  // Filter bookings based on date range
+  const handleEntryClick = useCallback((booking) => {
+    const entryNumber = booking.entry;
+
+    // Navigate based on booking type
+    switch (booking.type) {
+      case 'Ticket':
+      case 'RE Ticket Payment':
+        navigate('/admin/tickets', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Umrah':
+      case 'RE Umrah Payment':
+        navigate('/admin/umrah', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Visa Processing':
+      case 'RE Visa Payment':
+        navigate('/admin/visa', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'GAMCA Token':
+      case 'RE GAMCA Token Payment':
+        navigate('/admin/gamcaToken', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Services':
+        navigate('/admin/services', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Navtcc':
+        navigate('/admin/navtcc', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Protector':
+        navigate('/admin/protector', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Expenses':
+        navigate('/admin/expense', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Refunded':
+        navigate('/admin/refunded', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Vender':
+        navigate('/admin/vender', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      default:
+        console.log('Unknown booking type:', booking.type);
+    }
+  }, [navigate]);
+
+
   const filterBookingsByDateRange = useCallback((bookings, startDate, endDate) => {
     if (!startDate || !endDate) return bookings;
-    
+
     const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // Set time to start and end of day for accurate comparison
     start.setHours(0, 0, 0, 0);
+    const startTimestamp = start.getTime();
+
+    const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
-    
+    const endTimestamp = end.getTime();
+
     return bookings.filter(booking => {
-      const bookingDate = new Date(booking.booking_date);
-      return bookingDate >= start && bookingDate <= end;
+      return booking.timestamp >= startTimestamp && booking.timestamp <= endTimestamp;
     });
   }, []);
 
   // Update filtered bookings when date range or dashboard data changes
   useEffect(() => {
     const filtered = filterBookingsByDateRange(
-      dashboardData.combinedBookings, 
-      dateRange.startDate, 
+      dashboardData.combinedBookings,
+      dateRange.startDate,
       dateRange.endDate
     );
     setFilteredBookings(filtered);
   }, [dashboardData.combinedBookings, dateRange, filterBookingsByDateRange]);
 
+  // Calculate summary totals for the current table data (filtered or all)
+  const calculateSummaryTotals = useCallback((bookings) => {
+    return bookings.reduce((totals, booking) => {
+      return {
+        receivable_amount: totals.receivable_amount + parseFloat(booking.receivable_amount || 0),
+        paid_cash: totals.paid_cash + parseFloat(booking.paid_cash || 0),
+        paid_in_bank: totals.paid_in_bank + parseFloat(booking.paid_in_bank || 0),
+        remaining_amount: totals.remaining_amount + parseFloat(booking.remaining_amount || 0),
+        withdraw: totals.withdraw + parseFloat(booking.withdraw || 0),
+      };
+    }, {
+      receivable_amount: 0,
+      paid_cash: 0,
+      paid_in_bank: 0,
+      remaining_amount: 0,
+      withdraw: 0,
+    });
+  }, []);
+
+  // Calculate monthly summary data
+  const calculateMonthlySummary = useCallback(() => {
+    const startDate = new Date(selectedMonth);
+    const endDate = new Date(selectedMonthEnd);
+
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const dateRangeBookings = dashboardData.combinedBookings.filter(booking => {
+      const bookingDate = new Date(booking.timestamp);
+      return bookingDate >= startDate && bookingDate <= endDate;
+    });
+
+    // Group bookings by date
+    const groupedByDate = {};
+
+    dateRangeBookings.forEach(booking => {
+      const bookingDate = new Date(booking.timestamp);
+      const dateKey = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      if (!groupedByDate[dateKey]) {
+        groupedByDate[dateKey] = {
+          date: dateKey,
+          Ticket: 0,
+          Umrah: 0,
+          Visa: 0,
+          Gamca: 0,
+          NAVTCC: 0,
+          Services: 0,
+          Vendor: 0,
+          Banks: 0,
+        };
+      }
+
+      if (booking.type === 'Ticket' && booking.receivable_amount > 0) {
+        groupedByDate[dateKey].Ticket++;
+      } else if (booking.type === 'Umrah' && booking.receivable_amount > 0) {
+        groupedByDate[dateKey].Umrah++;
+      } else if (booking.type === 'Visa Processing') {
+        groupedByDate[dateKey].Visa++;
+      } else if (booking.type === 'GAMCA Token') {
+        groupedByDate[dateKey].Gamca++;
+      } else if (booking.type === 'Navtcc') {
+        groupedByDate[dateKey].NAVTCC++;
+      } else if (booking.type === 'Services') {
+        groupedByDate[dateKey].Services++;
+      } else if (booking.type === 'Vender') {
+        groupedByDate[dateKey].Vendor++;
+      }
+
+      if (parseFloat(booking.paid_in_bank || 0) > 0) {
+        groupedByDate[dateKey].Banks++;
+      }
+    });
+
+    return Object.values(groupedByDate);
+  }, [dashboardData.combinedBookings, selectedMonth, selectedMonthEnd]);
+
+  // Get current table data and calculate totals
+  const currentTableData = dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings;
+  const summaryTotals = calculateSummaryTotals(currentTableData);
+  const monthlySummaryData = calculateMonthlySummary();
+
+  const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth() &&
+    selectedMonth.getFullYear() === selectedMonthEnd.getFullYear()
+    ? selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : `${selectedMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${selectedMonthEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
-      
+
+      const cached = getFromCache();
+
+      if (cached) {
+        // Show cached data immediately
+        setDashboardData(cached);
+        setIsLoading(false);
+        setIsFreshDataLoading(true); // Start loading fresh data in background
+      } else {
+        setIsLoading(true); // Only show full loading if no cache
+      }
+
       try {
-        // Fetch all data in parallel using Promise.all
         const [
-          dashboardStats,
-          umrahData,
-          ticketsData,
-          visaData,
-          gamcaTokenData,
-          servicesData,
-          protectorData, 
-          expensesData,
-          refundedData,
-          venderData,
+          dashboardStats, umrahData, ticketsData, visaData, gamcaTokenData, servicesData,
+          navtccData, protectorData, expensesData, refundedData, venderData, agentData,
         ] = await Promise.all([
           fetchWithCache('/dashboard').catch(err => {
-            setErrors(prev => ({...prev, dashboard: 'Failed to load dashboard summary'}));
-            console.error('Dashboard fetch error:', err);
+            setErrors(prev => ({ ...prev, dashboard: 'Failed to load dashboard summary' }));
             return { data: { totalBookings: 0, bookingsByType: [], totalRevenue: 0 } };
           }),
           fetchWithCache('/umrah').catch(err => {
-            setErrors(prev => ({...prev, umrah: 'Failed to load Umrah data'}));
-            console.error('Umrah fetch error:', err);
+            setErrors(prev => ({ ...prev, umrah: 'Failed to load Umrah data' }));
             return { umrahBookings: [] };
           }),
           fetchWithCache('/ticket').catch(err => {
-            setErrors(prev => ({...prev, tickets: 'Failed to load Tickets data'}));
-            console.error('Tickets fetch error:', err);
+            setErrors(prev => ({ ...prev, tickets: 'Failed to load Tickets data' }));
             return { ticket: [] };
           }),
           fetchWithCache('/visa-processing').catch(err => {
-            setErrors(prev => ({...prev, visa: 'Failed to load Visa data'}));
-            console.error('Visa fetch error:', err);
+            setErrors(prev => ({ ...prev, visa: 'Failed to load Visa data' }));
             return { visa_processing: [] };
           }),
           fetchWithCache('/gamca-token').catch(err => {
-            setErrors(prev => ({...prev, gamcaToken: 'Failed to load Gamca Token data'}));
-            console.error('Gamca Token fetch error:', err);
+            setErrors(prev => ({ ...prev, gamcaToken: 'Failed to load Gamca Token data' }));
             return { gamcaTokens: [] };
           }),
-           fetchWithCache('/services').catch(err => {
-            setErrors(prev => ({...prev, services: 'Failed to load Services data'}));
-            console.error('Services fetch error:', err);
+          fetchWithCache('/services').catch(err => {
+            setErrors(prev => ({ ...prev, services: 'Failed to load Services data' }));
             return { services: [] };
           }),
-          fetchWithCache('/protector').catch(err => { // New fetch for Protector data
-            setErrors(prev => ({...prev, protector: 'Failed to load Protector data'}));
-            console.error('Protector fetch error:', err);
+          fetchWithCache('/navtcc').catch(err => {
+            setErrors(prev => ({ ...prev, navtcc: 'Failed to load Navtcc data' }));
+            return { navtcc: [] };
+          }),
+          fetchWithCache('/protector').catch(err => {
+            setErrors(prev => ({ ...prev, protector: 'Failed to load Protector data' }));
             return { protectors: [] };
           }),
           fetchWithCache('/expenses').catch(err => {
-            setErrors(prev => ({...prev, expenses: 'Failed to load Expenses data'}));
-            console.error('Expenses fetch error:', err);
+            setErrors(prev => ({ ...prev, expenses: 'Failed to load Expenses data' }));
             return { expenses: [] };
           }),
           fetchWithCache('/refunded').catch(err => {
-            setErrors(prev => ({...prev, refunded: 'Failed to load Refunded data'}));
-            console.error('Refunded fetch error:', err);
+            setErrors(prev => ({ ...prev, refunded: 'Failed to load Refunded data' }));
             return { refunded: [] };
           }),
           fetchWithCache('/vender').catch(err => {
-            setErrors(prev => ({...prev, vender: 'Failed to load Vender data'}));
-            console.error('Vendor fetch error:', err);
-            return { vender: [] };
+            setErrors(prev => ({ ...prev, vendor: 'Failed to load Vendor data' }));
+            return { vendors: [] };
+          }),
+          fetchWithCache('/agent').catch(err => {
+            setErrors(prev => ({ ...prev, agent: 'Failed to load Agent data' }));
+            return { agents: [] };
           }),
         ]);
 
-        // Process Umrah data
-        const umrahBookings = umrahData.umrahBookings.map(booking => {
-          let passportDetails = {};
-          try {
-              if (typeof booking.passportDetail === 'string') {
-                  passportDetails = JSON.parse(booking.passportDetail);
-              } else if (typeof booking.passportDetail === 'object' && booking.passportDetail !== null) {
-                  passportDetails = booking.passportDetail;
-              }
-          } catch (e) {
-              console.error("Error parsing passport details for Umrah booking:", e);
+        const accountNames = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
+        const accountsData = await Promise.all(
+          accountNames.map(async (name) => {
+            try {
+              const data = await fetchWithCache(`/accounts/${name}`);
+              const lastEntry = data.length > 0 ? data[data.length - 1] : null;
+              return { name, balance: lastEntry ? lastEntry.balance : 0 };
+            } catch (error) {
+              console.error(`Error fetching ${name}:`, error);
+              return { name, balance: 0 };
+            }
+          })
+        );
+
+        const vendorsData = venderData.vendors?.map((entry, index) => ({
+          id: entry.id || index,
+          vender_name: entry.vender_name || '',
+          credit: Number(entry.credit) || 0,
+          debit: Number(entry.debit) || 0,
+        })) || [];
+        const aggregatedVendors = vendorsData.reduce((acc, curr) => {
+          const existing = acc.find(v => v.vender_name === curr.vender_name);
+          if (existing) {
+            existing.credit += curr.credit;
+            existing.debit += curr.debit;
+            existing.remaining_amount = existing.credit - existing.debit;
+          } else {
+            acc.push({
+              vender_name: curr.vender_name,
+              credit: curr.credit,
+              debit: curr.debit,
+              remaining_amount: curr.credit - curr.debit
+            });
           }
+          return acc;
+        }, []);
+
+        const totalVendorPayable = aggregatedVendors.reduce((sum, curr) => sum + curr.credit, 0);
+        const totalVendorPaid = aggregatedVendors.reduce((sum, curr) => sum + curr.debit, 0);
+
+        const agentsData = agentData.agents?.map((entry, index) => ({
+          id: entry.id || index,
+          agent_name: entry.agent_name || '',
+          credit: Number(entry.credit) || 0,
+          debit: Number(entry.debit) || 0,
+        })) || [];
+        const aggregatedAgents = agentsData.reduce((acc, curr) => {
+          const existing = acc.find(a => a.agent_name === curr.agent_name);
+          if (existing) {
+            existing.credit += curr.credit;
+            existing.debit += curr.debit;
+            existing.remaining_amount = existing.credit - existing.debit;
+          } else {
+            acc.push({
+              agent_name: curr.agent_name,
+              credit: curr.credit,
+              debit: curr.debit,
+              remaining_amount: curr.credit - curr.debit
+            });
+          }
+          return acc;
+        }, []);
+
+        const totalAgentPayable = aggregatedAgents.reduce((sum, curr) => sum + curr.credit, 0);
+        const totalAgentPaid = aggregatedAgents.reduce((sum, curr) => sum + curr.debit, 0);
+
+        const parsePassportDetail = (detail) => {
+          try { return JSON.parse(detail); } catch { return {}; }
+        };
+
+        const umrahBookings = umrahData.umrahBookings.map(umrah => {
+          let firstPassengerName = null;
+          try {
+            let parsedDetails = [];
+            if (typeof umrah.passportDetail === 'string') {
+              parsedDetails = JSON.parse(umrah.passportDetail);
+            } else if (Array.isArray(umrah.passportDetail)) {
+              parsedDetails = umrah.passportDetail;
+            }
+
+            if (parsedDetails.length > 0) {
+              const firstPassenger = parsedDetails[0];
+              firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+            }
+          } catch (e) {
+            console.error("Error parsing Umrah passenger details:", e);
+          }
+
           return {
-              type: 'Umrah',
-              employee_name: booking.userName || booking.reference,
-              receivable_amount: booking.receivableAmount,
-              paid_cash: booking.paidCash,
-              paid_in_bank: booking.paidInBank,
-              remaining_amount: booking.remainingAmount,
-              booking_date: new Date(booking.createdAt).toLocaleDateString(),
-              withdraw: 0, 
-              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
+            type: 'Umrah',
+            employee_name: umrah.userName,
+            receivable_amount: umrah.receivableAmount,
+            entry: umrah.entry,
+            paid_cash: umrah.initial_paid_cash,
+            paid_in_bank: umrah.initial_paid_in_bank,
+            remaining_amount: umrah.initial_remaining_amount,
+            booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt),
+            timestamp: safeTimestamp(umrah.createdAt),
+            withdraw: 0,
+            passengerName: firstPassengerName || umrah.customerAdd || null,
+            profit: umrah.profit,
           };
         });
 
-        // Process Tickets data
+        const allUmrahPayments = [];
+        for (const umrah of umrahData.umrahBookings) {
+          try {
+            const paymentHistory = await fetchWithCache(`/umrah_payments/${umrah.id}`);
+            if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+              const paymentsWithUmrahInfo = paymentHistory.payments.map(payment => ({
+                ...payment,
+                umrah_id: umrah.id,
+                umrah_entry: umrah.entry,
+                customer_name: umrah.customerAdd,
+                employee_name: payment.recorded_by || umrah.userName,
+              }));
+              allUmrahPayments.push(...paymentsWithUmrahInfo);
+            }
+          } catch (err) {
+            console.error(`Failed to load payments for umrah ${umrah.id}`);
+          }
+        }
+
+        const umrahPaymentEntries = allUmrahPayments.map(payment => {
+          const originalUmrah = umrahData.umrahBookings.find(u => u.id === payment.umrah_id);
+          let passengerName = payment.customer_name;
+
+          if (originalUmrah) {
+            try {
+              let parsedDetails = [];
+              if (typeof originalUmrah.passportDetail === 'string') {
+                parsedDetails = JSON.parse(originalUmrah.passportDetail);
+              } else if (Array.isArray(originalUmrah.passportDetail)) {
+                parsedDetails = originalUmrah.passportDetail;
+              }
+
+              if (parsedDetails.length > 0) {
+                const firstPassenger = parsedDetails[0];
+                passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing umrah payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE Umrah Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.umrah_entry,
+            paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: payment.remaining_amount,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalUmrah?.customerAdd || null,
+            profit: 0,
+          };
+        });
+
+        console.log('Umrah payment entries:', umrahPaymentEntries);
+
         const ticketBookings = ticketsData.ticket.map(ticket => {
-          let passportDetails = {};
+          let firstPassengerName = null;
           try {
-              if (typeof ticket.passport_detail === 'string') {
-                  passportDetails = JSON.parse(ticket.passport_detail);
-              } else if (typeof ticket.passport_detail === 'object' && ticket.passport_detail !== null) {
-                  passportDetails = ticket.passport_detail;
-              }
+            let parsedDetails = [];
+            if (typeof ticket.passport_detail === 'string') {
+              parsedDetails = JSON.parse(ticket.passport_detail);
+            } else if (Array.isArray(ticket.passport_detail)) {
+              parsedDetails = ticket.passport_detail;
+            }
+
+            if (parsedDetails.length > 0) {
+              const firstPassenger = parsedDetails[0];
+              firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+            }
           } catch (e) {
-              console.error("Error parsing passport details for Ticket:", e);
+            console.error("Error parsing passenger details:", e);
           }
+
           return {
-              type: 'Ticket',
-              employee_name: ticket.employee_name || ticket.reference,
-              receivable_amount: ticket.receivable_amount,
-              paid_cash: ticket.paid_cash,
-              paid_in_bank: ticket.paid_in_bank,
-              remaining_amount: ticket.remaining_amount,
-              booking_date: new Date(ticket.created_at).toLocaleDateString(),
-              withdraw: 0,
-              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
+            type: 'Ticket',
+            employee_name: ticket.employee_name,
+            receivable_amount: ticket.receivable_amount,
+            entry: ticket.entry,
+            paid_cash: ticket.initial_paid_cash,
+            paid_in_bank: ticket.initial_paid_in_bank,
+            remaining_amount: ticket.initial_remaining_amount,
+            booking_date: safeLocaleDateString(ticket.booking_date || ticket.created_at),
+            timestamp: safeTimestamp(ticket.created_at),
+            withdraw: 0,
+            passengerName: firstPassengerName || ticket.customer_add || null,
+            profit: ticket.profit,
           };
         });
 
-        // Process Visa data
+        const allTicketPayments = [];
+        for (const ticket of ticketsData.ticket) {
+          try {
+            const paymentHistory = await fetchWithCache(`/ticket_payments/${ticket.id}`);
+            if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+              const paymentsWithTicketInfo = paymentHistory.payments.map(payment => ({
+                ...payment,
+                ticket_id: ticket.id,
+                ticket_entry: ticket.entry,
+                customer_name: ticket.customer_add,
+                employee_name: payment.recorded_by || ticket.employee_name,
+
+                // employee_name: ticket.passengerName,
+              }));
+              allTicketPayments.push(...paymentsWithTicketInfo);
+            }
+          } catch (err) {
+            console.error(`Failed to load payments for ticket ${ticket.id}`);
+          }
+        }
+
+        const ticketPaymentEntries = allTicketPayments.map(payment => {
+          // Find the original ticket to get passenger details
+          const originalTicket = ticketsData.ticket.find(t => t.id === payment.ticket_id);
+          let passengerName = payment.customer_name;
+
+          if (originalTicket) {
+            try {
+              let parsedDetails = [];
+              if (typeof originalTicket.passport_detail === 'string') {
+                parsedDetails = JSON.parse(originalTicket.passport_detail);
+              } else if (Array.isArray(originalTicket.passport_detail)) {
+                parsedDetails = originalTicket.passport_detail;
+              }
+
+              if (parsedDetails.length > 0) {
+                const firstPassenger = parsedDetails[0];
+                passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing ticket payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE Ticket Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.ticket_entry,
+            paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: payment.remaining_amount,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalTicket?.customer_add || null,
+            profit: 0,
+          };
+        });
+
+        console.log('Ticket payment entries:', ticketPaymentEntries);
+
         const visaBookings = visaData.visa_processing.map(visa => {
-          let passportDetails = {};
-          try {
-              if (typeof visa.passport_detail === 'string') {
-                  passportDetails = JSON.parse(visa.passport_detail);
-              } else if (typeof visa.passport_detail === 'object' && visa.passport_detail !== null) {
-                  passportDetails = visa.passport_detail;
-              }
-          } catch (e) {
-              console.error("Error parsing passport details for Visa:", e);
-          }
+          const details = parsePassportDetail(visa.passport_detail);
           return {
-              type: 'Visa',
-              employee_name: visa.employee_name || visa.reference,
-              receivable_amount: visa.receivable_amount,
-              paid_cash: visa.paid_cash,
-              paid_in_bank: visa.paid_in_bank,
-              remaining_amount: visa.remaining_amount,
-              booking_date: new Date(visa.created_at).toLocaleDateString(),
-              withdraw: 0,
-              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(), 
+            type: 'Visa Processing',
+            employee_name: visa.employee_name,
+            receivable_amount: visa.receivable_amount,
+            entry: visa.entry,
+            paid_cash: visa.initial_paid_cash,
+            paid_in_bank: visa.initial_paid_in_bank,
+            remaining_amount: visa.initial_remaining_amount,
+            booking_date: safeLocaleDateString(visa.created_at),
+            timestamp: safeTimestamp(visa.created_at),
+            withdraw: 0,
+            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
+            profit: visa.profit,
           };
         });
 
-        // Process Gamca Token data
+        const allVisaPayments = [];
+        for (const visa of visaData.visa_processing) {
+          try {
+            const paymentHistory = await fetchWithCache(`/visa-processing/${visa.id}/payments`);
+            if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+              const paymentsWithVisaInfo = paymentHistory.payments.map(payment => ({
+                ...payment,
+                visa_id: visa.id,
+                visa_entry: visa.entry,
+                customer_name: visa.customer_add,
+                employee_name: payment.recorded_by || visa.employee_name,
+              }));
+              allVisaPayments.push(...paymentsWithVisaInfo);
+            }
+          } catch (err) {
+            console.error(`Failed to load payments for visa ${visa.id}`);
+          }
+        }
+
+        const visaPaymentEntries = allVisaPayments.map(payment => {
+          const originalVisa = visaData.visa_processing.find(v => v.id === payment.visa_id);
+          let passengerName = payment.customer_name;
+
+          if (originalVisa) {
+            try {
+              const details = parsePassportDetail(originalVisa.passport_detail);
+              if (details.firstName || details.lastName) {
+                passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing visa payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE Visa Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.visa_entry,
+            paid_cash: parseFloat(payment.payed_cash || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: 0,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalVisa?.customer_add || null,
+            profit: 0,
+          };
+        });
+
+        console.log('Visa payment entries:', visaPaymentEntries);
+
         const gamcaTokenBookings = gamcaTokenData.gamcaTokens.map(token => {
-          let passportDetails = {};
-          try {
-              if (typeof token.passport_detail === 'string') {
-                  passportDetails = JSON.parse(token.passport_detail);
-              } else if (typeof token.passport_detail === 'object' && token.passport_detail !== null) {
-                  passportDetails = token.passport_detail;
-              }
-          } catch (e) {
-              console.error("Error parsing passport details for GAMCA token:", e);
-          }
+          const details = parsePassportDetail(token.passport_detail);
           return {
-              type: 'Gamca Token',
-              employee_name: token.employee_name || token.reference,
-              receivable_amount: token.receivable_amount,
-              paid_cash: token.paid_cash,
-              paid_in_bank: token.paid_in_bank,
-              remaining_amount: token.remaining_amount,
-              booking_date: new Date(token.created_at).toLocaleDateString(),
-              withdraw: 0, // Initialize withdraw for non-protector types
-              passengerName: `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim(),
+            type: 'GAMCA Token',
+            employee_name: token.employee_name,
+            receivable_amount: token.receivable_amount,
+            entry: token.entry,
+            paid_cash: token.initial_paid_cash,
+            paid_in_bank: token.initial_paid_in_bank,
+            remaining_amount: token.initial_remaining_amount,
+            booking_date: safeLocaleDateString(token.created_at),
+            timestamp: safeTimestamp(token.created_at),
+            withdraw: 0,
+            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
+            profit: token.profit,
           };
         });
 
-        // Process Services data
-        const servicesBookings = servicesData.services.map(services => ({
-          type: 'Services',
-          employee_name: services.user_name,
-          receivable_amount: services.receivable_amount,
-          paid_cash: services.paid_cash,
-          paid_in_bank: services.paid_in_bank,
-          remaining_amount: services.remaining_amount,
-          booking_date: new Date(services.booking_date).toLocaleDateString(),
-          withdraw: 0, // Initialize withdraw for non-protector types
-          passengerName: null, // No passport detail for this type
-        }));
+        const allGamcaTokenPayments = [];
+        for (const token of gamcaTokenData.gamcaTokens) {
+          try {
+            const paymentHistory = await fetchWithCache(`/gamca-token/${token.id}/payments`);
+            if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+              const paymentsWithGamcaInfo = paymentHistory.payments.map(payment => ({
+                ...payment,
+                gamca_token_id: token.id,
+                gamca_entry: token.entry,
+                customer_name: token.customer_add,
+                employee_name: payment.recorded_by || token.employee_name,
+              }));
+              allGamcaTokenPayments.push(...paymentsWithGamcaInfo);
+            }
+          } catch (err) {
+            console.error(`Failed to load payments for GAMCA Token ${token.id}`);
+          }
+        }
 
-        // Process Protector data (NEW)
+        const gamcaTokenPaymentEntries = allGamcaTokenPayments.map(payment => {
+          const originalGamca = gamcaTokenData.gamcaTokens.find(g => g.id === payment.gamca_token_id);
+          let passengerName = payment.customer_name;
+
+          if (originalGamca) {
+            try {
+              const details = parsePassportDetail(originalGamca.passport_detail);
+              if (details.firstName || details.lastName) {
+                passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing GAMCA payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE GAMCA Token Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.gamca_entry,
+            paid_cash: parseFloat(payment.payed_cash || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: 0,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalGamca?.customer_add || null,
+            profit: 0,
+          };
+        });
+
+        console.log('GAMCA Token payment entries:', gamcaTokenPaymentEntries);
+
+        const servicesBookings = servicesData.services.map(services => {
+          console.log('Service entry:', {
+            entry: services.entry,
+            created_at: services.created_at,
+            booking_date: services.booking_date
+          });
+
+          return {
+            type: 'Services',
+            employee_name: services.specific_detail,
+            receivable_amount: services.receivable_amount,
+            entry: services.entry,
+            paid_cash: services.paid_cash,
+            paid_in_bank: services.paid_in_bank,
+            remaining_amount: services.remaining_amount,
+            booking_date: safeLocaleDateString(services.booking_date),
+            timestamp: safeTimestamp(services.createdAt),
+            withdraw: 0,
+            passengerName: null,
+            profit: services.profit,
+          };
+        });
+
+        const navtccBookings = navtccData.navtcc.map(navtcc => {
+          const details = parsePassportDetail(navtcc.passport_detail);
+          return {
+            type: 'Navtcc',
+            employee_name: navtcc.employee_name || navtcc.reference,
+            receivable_amount: navtcc.receivable_amount,
+            entry: navtcc.entry,
+            paid_cash: navtcc.paid_cash,
+            paid_in_bank: navtcc.paid_in_bank,
+            remaining_amount: navtcc.remaining_amount,
+            booking_date: safeLocaleDateString(navtcc.created_at),
+            timestamp: safeTimestamp(navtcc.created_at),
+            withdraw: 0,
+            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
+            profit: navtcc.profit,
+          };
+        });
+
         const protectorBookings = protectorData.protectors.map(protector => ({
           type: 'Protector',
           employee_name: protector.employee,
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: new Date(protector.protector_date).toLocaleDateString(),
-          withdraw: parseFloat(protector.withdraw || 0), // Use the withdraw field from protector
-          passengerName: protector.name || null, // No passport detail for this type
+          entry: protector.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(protector.protector_date),
+          timestamp: safeTimestamp(protector.createdAt),
+          withdraw: parseFloat(protector.withdraw || 0),
+          passengerName: protector.name || null,
+          profit: 0,
         }));
+
         const expensesBookings = expensesData.expenses.map(expenses => ({
           type: 'Expenses',
           employee_name: expenses.user_name,
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: new Date(expenses.date).toLocaleDateString(),
-          withdraw: parseFloat(expenses.withdraw || 0), // Use the withdraw field from expenses
-          passengerName: null, // No passport detail for this type
+          entry: expenses.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(expenses.date),
+          timestamp: safeTimestamp(expenses.createdAt),
+          withdraw: parseFloat(expenses.withdraw || 0),
+          passengerName: expenses.detail || null,
+          profit: 0,
         }));
+
         const refundedBookings = (refundedData.refunded || []).map(refund => ({
           type: 'Refunded',
           employee_name: refund.employee,
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: new Date(refund.date).toLocaleDateString(), // Changed from refund.refunded_date
+          entry: refund.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(refund.date),
+          timestamp: safeTimestamp(refund.created_at),
           withdraw: parseFloat(refund.withdraw || 0),
-          passengerName:refund.name || null, // No passport detail for this type
-        }));
-          const venderBookings = (venderData.vender || []).map(vender => ({
-          type: 'Vender',
-          employee_name: vender.user_name, // Changed from vender.employee
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: new Date(vender.date).toLocaleDateString(), // Changed from vender.vender_date
-          withdraw: parseFloat(vender.withdraw || 0),
-          passengerName: null, // No passport detail for this type
+          passengerName: refund.name || null,
+          profit: 0,
         }));
 
-        // Combine all bookings
+        const venderBookings = (venderData.vendors || []).map(vender => ({
+          type: 'Vender',
+          employee_name: vender.user_name,
+          entry: vender.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(vender.date),
+          timestamp: safeTimestamp(vender.created_at),
+          withdraw: parseFloat(vender.withdraw || 0),
+          passengerName: null,
+          profit: 0,
+        }));
+
         const combinedBookingsRaw = [
-          ...umrahBookings,
-          ...ticketBookings,
-          ...visaBookings,
-          ...gamcaTokenBookings,
-          ...servicesBookings,
-          ...protectorBookings,
-          ...expensesBookings,
-          ...refundedBookings,
-          ...venderBookings, 
+          ...umrahBookings, ...ticketBookings, ...ticketPaymentEntries, ...visaBookings,
+          ...gamcaTokenBookings, ...servicesBookings, ...umrahPaymentEntries, ...visaPaymentEntries,
+          ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings,
+          ...gamcaTokenPaymentEntries,
         ];
 
-        // Sort bookings by date (oldest first) to calculate running cash in office
-        const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => 
-          new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()
-        );
+        const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));
 
         let runningCashInOffice = 0;
-        // Calculate running cash in office for each booking
         const bookingsWithCashInOffice = sortedForRunningTotal.map(booking => {
-          // Add paid_cash if it's a type that generates cash
           runningCashInOffice += parseFloat(booking.paid_cash || 0);
-          // Subtract withdraw if it's a type that involves withdrawal
           runningCashInOffice -= parseFloat(booking.withdraw || 0);
-          
-          return {
-            ...booking,
-            cash_in_office_running: runningCashInOffice, // Store the running balance
-          };
+          return { ...booking, cash_in_office_running: runningCashInOffice };
         });
 
-        // No re-sorting by date (most recent first) for display,
-        // so the table will display in chronological order (oldest to newest)
-        const finalCombinedBookings = bookingsWithCashInOffice; 
+        console.log('Sample booking timestamps:', bookingsWithCashInOffice.slice().map(b => ({
+          entry: b.entry,
+          type: b.type,
+          booking_date: b.booking_date,
+          timestamp: b.timestamp,
+          timestampDate: new Date(b.timestamp)
+        })));
 
-        // Calculate total protector withdraw
-        const totalProtectorWithdraw = protectorBookings.reduce((sum, entry) => {
-          return sum + entry.withdraw;
-        }, 0);
-        
-        const totalExpensesWithdraw = expensesBookings.reduce((sum, entry) => {
-          return sum + entry.withdraw;
-        }, 0);
-        const totalRefundedWithdraw = refundedBookings.reduce((sum, entry) => {
-          return sum + entry.withdraw;
-        }, 0);
-        const totalVendorWithdraw = venderBookings.reduce((sum, entry) => {
-          return sum + entry.withdraw;
-        }, 0);
+        const finalCombinedBookings = [...bookingsWithCashInOffice].sort((a, b) => {
+          return b.timestamp - a.timestamp;
+        });
 
-        // Calculate total paid cash from all combined bookings (global total)
-        const totalPaidCash = finalCombinedBookings.reduce((sum, booking) => {
-          return sum + parseFloat(booking.paid_cash || 0);
-        }, 0);
+        const totalProtectorWithdraw = protectorBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
+        const totalExpensesWithdraw = expensesBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
+        const totalRefundedWithdraw = refundedBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
+        const totalVendorWithdraw = venderBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
+        const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw;
 
-        // Calculate global Cash in Office (NEW: total paid cash - total withdraws)
-        const cashInOffice =  totalPaidCash - totalProtectorWithdraw - totalExpensesWithdraw - totalRefundedWithdraw - totalVendorWithdraw;
-        const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw
-
-
-        // Update state with both dashboard stats and combined bookings
-        setDashboardData({
-          combinedBookings: finalCombinedBookings, // Use the processed array
+        const newData = {
+          combinedBookings: finalCombinedBookings,
           totalBookings: dashboardStats.data.totalBookings,
           bookingsByType: dashboardStats.data.bookingsByType,
           totalRevenue: dashboardStats.data.totalRevenue,
-          totalProtectorWithdraw, 
-          totalExpensesWithdraw,
-          totalRefundedWithdraw,
-          totalVendorWithdraw,
-          cashInOffice, // This remains the global calculated value
-          TotalWithdraw,
-        });
-        
-        console.log("Dashboard data loaded successfully");
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
+          totalProtectorWithdraw: totalProtectorWithdraw,
+          totalExpenseWithdraw: totalExpensesWithdraw,
+          totalRefundedWithdraw: totalRefundedWithdraw,
+          totalVendorWithdraw: totalVendorWithdraw,
+          TotalWithdraw: TotalWithdraw,
+          cashInOffice: runningCashInOffice,
+          accounts: accountsData,
+          vendors: aggregatedVendors,
+          agents: aggregatedAgents,
+          totalVendorPayable: totalVendorPayable,
+          totalVendorPaid: totalVendorPaid,
+          totalAgentPayable: totalAgentPayable,
+          totalAgentPaid: totalAgentPaid,
+        };
+
+        setDashboardData(newData);
+        saveToCache(newData); // Save to cache
+
+      } catch (error) {
+        console.error('Final fetch error:', error);
       } finally {
         setIsLoading(false);
+        setIsFreshDataLoading(false);
       }
     };
-    
+
     fetchDashboardData();
-    
-    // Clean-up function (optional)
-    return () => {
-      // Any cleanup if needed
-    };
   }, [fetchWithCache]);
 
-  // Extract counts for individual booking types
-  const booking = dashboardData.bookingsByType || [];
+  const booking = dashboardData.bookingsByType;
   const ticketCount = booking.find(item => item.type === 'Ticket')?.count || 0;
   const umrahCount = booking.find(item => item.type === 'Umrah')?.count || 0;
   const visaCount = booking.find(item => item.type === 'Visa Processing')?.count || 0;
   const gamcaTokenCount = booking.find(item => item.type === 'GAMCA Token')?.count || 0;
   const serviceCount = booking.find(item => item.type === 'Services')?.count || 0;
+  const navtccCount = booking.find(item => item.type === 'Navtcc')?.count || 0;
 
-  // Calculate total receivable amount
-  const totalReceivableAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
-    return sum + parseFloat(booking.receivable_amount || 0); // Convert to number
-  }, 0);
+  const moduleBreakdown = [
+    { name: 'Ticket', count: ticketCount, color: 'midnight', icon: Plane },
+    { name: 'Umrah', count: umrahCount, color: 'emerald', icon: MapPin },
+    { name: 'Visa Processing', count: visaCount, color: 'rose', icon: FileText },
+    { name: 'GAMCA Token', count: gamcaTokenCount, color: 'teal', icon: CreditCard },
+    { name: 'Services', count: serviceCount, color: 'indigo', icon: CreditCard },
+    { name: 'Navtcc', count: navtccCount, color: 'ivory', icon: Shield },
+  ];
 
-  // Calculate total paid cash (already derived above for cashInOffice calculation, but keeping this for consistency with existing code)
-  const totalPaidCash = dashboardData.combinedBookings.reduce((sum, booking) => {
-    return sum + parseFloat(booking.paid_cash || 0); // Convert to number
-  }, 0);
+  // Calculate profit breakdown by module (using profit field from data)
+  const profitBreakdown = dashboardData.combinedBookings.reduce((acc, booking) => {
+    const mainBookingTypes = ['Ticket', 'Umrah', 'Visa Processing', 'GAMCA Token', 'Services', 'Navtcc'];
+    if (mainBookingTypes.includes(booking.type)) {
+      const profit = parseFloat(booking.profit || 0);
+      acc[booking.type] = (acc[booking.type] || 0) + profit;
+    }
+    return acc;
+  }, {});
 
-  // Calculate total paid in bank
-  const totalPaidInBank = dashboardData.combinedBookings.reduce((sum, booking) => {
-    return sum + parseFloat(booking.paid_in_bank || 0); // Convert to number
-  }, 0);
+  const profitBreakdownArray = Object.keys(profitBreakdown)
+    .map(type => ({ name: type, amount: profitBreakdown[type], }))
+    .filter(item => item.amount !== 0);
 
-  // Calculate total remaining amount
+  const totalProfit = profitBreakdownArray.reduce((sum, item) => sum + item.amount, 0);
+
+  const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
   const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
-    return sum + parseFloat(booking.remaining_amount || 0); // Convert to number
+    const val = Number(booking.remaining_amount);
+    return sum + (Number.isFinite(val) ? val : 0);
   }, 0);
+
+  const totalVendorPayable = dashboardData.totalVendorPayable || 0;
+  const totalVendorPaid = dashboardData.totalVendorPaid || 0;
+  const totalAgentPayable = dashboardData.totalAgentPayable || 0;
+  const totalAgentPaid = dashboardData.totalAgentPaid || 0;
 
   const showPartialData = !isLoading && dashboardData.combinedBookings.length > 0;
 
-  // Define table columns (Add new columns)
+  const remainingBreakdown = dashboardData.combinedBookings.reduce((acc, booking) => {
+    if (booking.receivable_amount > 0) {
+      const remaining = parseFloat(booking.remaining_amount || 0);
+      if (remaining > 0) {
+        acc[booking.type] = (acc[booking.type] || 0) + remaining;
+      }
+    }
+    return acc;
+  }, {});
+
+  const remainingBreakdownArray = Object.keys(remainingBreakdown)
+    .map(type => ({
+      name: type,
+      amount: remainingBreakdown[type],
+      color: moduleBreakdown.find(m => m.name === type)?.color || 'ivory',
+    }))
+    .filter(item => item.amount !== 0);
+
+  // --- DERIVED DATA FOR CHARTS (Kept in Dashboard as it depends on main state) ---
+  const financialOverviewData = [
+    { name: 'Receivable Amount', value: summaryTotals.receivable_amount, color: '#3b82f6' },
+    { name: 'Paid Cash', value: summaryTotals.paid_cash, color: '#10b981' },
+    { name: 'Paid In Bank', value: summaryTotals.paid_in_bank, color: '#f59e0b' },
+    { name: 'Remaining Amount', value: summaryTotals.remaining_amount, color: '#ef4444' },
+    { name: 'Total Withdraw', value: summaryTotals.withdraw, color: '#8b5cf6' },
+  ].filter(item => item.value > 0);
+  // -------------------------------------------------------------------------------
+
+  // Table Structure
   const columns = [
     { header: 'DATE', accessor: 'booking_date' },
-    { header: 'EMPLOYEE NAME', accessor: 'employee_name' },
+    { header: 'ENTRY', accessor: 'entry' },
     { header: 'TYPE', accessor: 'type' },
-    { header: 'NAME', accessor: 'passengerName' }, // New NAME column
+    { header: 'NAME', accessor: 'passengerName' },
     { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
     { header: 'PAID CASH', accessor: 'paid_cash' },
     { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
     { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
-    { header: 'WITHDRAW', accessor: 'withdraw' }, // New column for withdraw
-    { header: 'CASH IN OFFICE', accessor: 'cash_in_office_display' }, // New column for calculated cash in office
+    { header: 'WITHDRAW', accessor: 'withdraw' },
+    { header: 'CASH IN OFFICE', accessor: 'cash_in_office_display' },
   ];
 
   return (
-    <div className="bg-gray-50 p-2 rounded-lg  overflow-hidden">
-      {/* Stats Cards Section */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+    <div className=""> {/* Stats Cards Section - Adjusted for 8 columns */}
+      {isFreshDataLoading && (
+        <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2 animate-pulse">
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-medium">Refreshing data...</span>
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
         {/* Total Bookings Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-purple-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Total Entries</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ? 
-                  <span className="text-gray-300">--</span> : 
-                  dashboardData.totalBookings
-                }
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('bookings')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-blue-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Total Bookings" >
+            <div className="relative z-10">
+              <h2 className="text-black text-[0.65rem] font-bold uppercase tracking-wide font-inter mb-1 truncate">Total Bookings</h2>
+              <p className="text-sm font-bold text-white">
+                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.totalBookings.toLocaleString()}
               </p>
             </div>
-            <div className="bg-purple-100 p-1 sm:p-3 rounded-full">
-              <Users size={18} className="text-purple-500" />
+          </div>
+          {hoveredCard === 'bookings' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {moduleBreakdown.map((module, index) => (
+                    <div key={index} className="list-item text-[0.65rem] text-[#333] cursor-pointer hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center" onClick={() => handleModuleClick(module.name)}>
+                      <span className={`font-semibold ${COLOR_MAP[module.color].textBold} flex items-center space-x-1`}>
+                        {module.icon && <module.icon className={`w-3 h-3 ${COLOR_MAP[module.color].text}`} />}
+                        <span className="truncate pr-2 hover:underline">{module.name}</span>
+                      </span>
+                      <span className={`font-bold text-sm ${COLOR_MAP[module.color].textBold} flex-shrink-0`}>
+                        {module.count.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          )}
+        </div>
+
+
+
+        {/* Total Withdraw Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('withdraw')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Total Withdraw" >
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-1">
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Total Withdraw</h2>
+              </div>
+              <p className="text-sm font-bold text-white mt-0 break-all">
+                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.TotalWithdraw.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          {hoveredCard === 'withdraw' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" onClick={handleProtectorClick} >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Protector</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalProtectorWithdraw.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" onClick={handleExpensesClick} >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Expenses</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalExpenseWithdraw.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" onClick={handleRefundedClick} >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Refunded</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalRefundedWithdraw.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" >
+                    <span className="font-semibold text-fuchsia-700 hover:underline">Vendor</span>
+                    <span className="font-bold text-fuchsia-600">{dashboardData.totalVendorWithdraw.toLocaleString()}</span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total:</span>
+                    <span className="text-fuchsia-600">{dashboardData.TotalWithdraw.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Cash in Office Card */}
+        <div className="bg-red-500 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group cursor-pointer">
+          <div className="relative z-10 w-full">
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Cash in Office</h2>
+            </div>
+            <p className="text-sm font-bold text-white mt-0 break-all">
+              {isLoading && !showPartialData ? <span className="text-white/60">--</span> : dashboardData.cashInOffice.toLocaleString()}
+            </p>
           </div>
         </div>
 
-        {/* Ticket Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-blue-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Ticket</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ? 
-                  <span className="text-gray-300">--</span> : 
-                  ticketCount
-                }
+
+
+
+
+        {/* Agents Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('agents')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-blue-500  p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Agents" >
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-1">
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Agents</h2>
+              </div>
+              {/* <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
+         {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()} / ${totalAgentPaid.toLocaleString()}`}
+      </p> */}
+              <p className="text-[0.75rem] font-semibold text-black mt-1">
+                <span className={agentOutstandingBalance >= 0 ? 'text-white' : 'text-red-200'}>{agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}</span>
               </p>
-            </div>
-            <div className="bg-blue-100 p-1 sm:p-3 rounded-full">
-              <Plane size={18} className="text-blue-500" />
             </div>
           </div>
-        </div>
-        
-        {/* Umrah Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-yellow-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Umrah</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ? 
-                  <span className="text-gray-300">--</span> : 
-                  umrahCount
-                }
-              </p>
+          {hoveredCard === 'agents' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-[50] p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {dashboardData.agents.map((agent, index) => (
+                    <div key={agent.agent_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleAgentClick(agent.agent_name)} >
+                      <span className="font-semibold text-cyan-700 truncate pr-2 hover:underline">
+                        {agent.agent_name}
+                      </span>
+                      <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
+                        {agent.remaining_amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                  {errors.agent && (
+                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+                      {errors.agent}
+                    </div>
+                  )}
+                  {/* <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+            <span>Total Payable:</span>
+            <span className="text-emerald-600">{totalAgentPayable.toLocaleString()}</span>
+          </div>
+          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between">
+            <span>Total Paid:</span>
+            <span className="text-red-600">{totalAgentPaid.toLocaleString()}</span>
+          </div> */}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between border-t border-gray-200 pt-2">
+                    <span>Outstanding Balance:</span>
+                    <span className={agentOutstandingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                      {agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
+                    Total Agents: {dashboardData.agents.length}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="bg-yellow-100 p-1 sm:p-3 rounded-full">
-              <MapPin size={18} className="text-yellow-500" />
+          )}
+        </div>
+
+        {/* Remaining Amount Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('remaining')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Remaining Amount" >
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-1">
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Remaining Amount</h2>
+              </div>
+              <p className="text-sm font-bold text-white mt-0 break-all">
+                {isLoading && !showPartialData ? <span className="text-white/60">--</span> : totalRemainingAmount.toLocaleString()}
+              </p>
             </div>
           </div>
+          {hoveredCard === 'remaining' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : remainingBreakdownArray.length > 0 ? (
+                <div className="space-y-1">
+                  {remainingBreakdownArray.map((item, index) => (
+                    <div key={item.name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleRemainingAmountClick(item.name)}>
+                      <span className={`font-semibold ${COLOR_MAP[item.color].textBold} truncate pr-2 hover:underline`}>
+                        {item.name}
+                      </span>
+                      <span className={`font-bold text-amber-600 flex-shrink-0`}>
+                        {item.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+                    <span>Total:</span>
+                    <span className="text-amber-600">{totalRemainingAmount.toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-500 text-[0.65rem] text-center p-1">
+                  No pending remaining amounts.
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        
-        {/* Visa Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-green-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Visa</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ? 
-                  <span className="text-gray-300">--</span> : 
-                  visaCount
-                }
-              </p>
-            </div>
-            <div className="bg-green-100 p-1 sm:p-3 rounded-full">
-              <FileText size={18} className="text-green-500" />
-            </div>
+
+
+      </div>
+
+      
+
+
+      {/* --- RECENT BOOKINGS TABLE --- */}
+      <div className="px-4 py-3 bg-white rounded-xl shadow-lg border border-indigo-100 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-800 font-inter">All Bookings</h2>
+
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
+          <div className="flex items-center space-x-2">
+            <Filter size={18} className="text-indigo-600" />
+            <span className="text-sm text-gray-600 font-medium">Filter by Date:</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="date"
+              value={dateRange.startDate || ''}
+              onChange={(e) => handleDateRangeChange(e.target.value, dateRange.endDate)}
+              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Start Date"
+            />
+            <span className="text-sm font-medium text-gray-600">to</span>
+            <input
+              type="date"
+              value={dateRange.endDate || ''}
+              onChange={(e) => handleDateRangeChange(dateRange.startDate, e.target.value)}
+              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="End Date"
+            />
+          </div>
+          {(dateRange.startDate || dateRange.endDate) && (
+            <button
+              onClick={() => setDateRange({ startDate: null, endDate: null })}
+              className="text-xs px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors self-start sm:self-auto"
+            >
+              Clear Filter
+            </button>
+          )}
+        </div>
+
+        {/* Table Totals Summary */}
+        <div className="mb-4 grid grid-cols-2 md:grid-cols-5 gap-4 bg-indigo-50 p-3 rounded-xl border border-indigo-200">
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Receivable Total</p>
+            <p className="font-bold text-indigo-700">{summaryTotals.receivable_amount.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Cash Paid Total</p>
+            <p className="font-bold text-emerald-700">{summaryTotals.paid_cash.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Bank Paid Total</p>
+            <p className="font-bold text-amber-700">{summaryTotals.paid_in_bank.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Remaining Total</p>
+            <p className="font-bold text-rose-700">{summaryTotals.remaining_amount.toLocaleString()}</p>
+          </div>
+          <div className="text-xs font-inter">
+            <p className="text-gray-600 font-medium">Withdraw Total</p>
+            <p className="font-bold text-fuchsia-700">{summaryTotals.withdraw.toLocaleString()}</p>
           </div>
         </div>
 
-        {/* GAMCA Token Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-red-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">GAMCA Token</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ? 
-                  <span className="text-gray-300">--</span> : 
-                  gamcaTokenCount
-                }
-              </p>
-            </div>
-            <div className="bg-red-100 p-1 sm:p-3 rounded-full">
-              <CreditCard size={18} className="text-red-500" />
-            </div>
-          </div>
-        </div>
+        {/* Actual Table */}
+        <div className="overflow-x-auto rounded-xl border border-gray-200 font-semibold shadow-md">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-indigo-600 text-white">
+              <tr>
+                {columns.map(column => (
+                  <th key={column.header} scope="col" className="px-1 py-2 text-center text-[0.6rem] font-bold uppercase tracking-wider">
+                    {column.header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {isLoading && !showPartialData ? (
+                <tr>
+                  <td colSpan={columns.length} className="py-8 text-center">
+                    <TableSpinner message="Loading dashboard data..." />
+                  </td>
+                </tr>
+              ) : currentTableData.length > 0 ? (
+                <>
+                  {currentTableData.map((booking, index) => (
+                    <tr key={index} className="hover:bg-indigo-50 transition-colors duration-150">
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate">
+                        {booking.booking_date}
+                      </td>
+                      <td
+                        className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate cursor-pointer hover:text-indigo-600 hover:underline"
+                        title={booking.entry}
+                        onClick={() => handleEntryClick(booking)}
+                      >
+                        {booking.entry ? booking.entry : <span className="text-slate-400">--</span>}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] font-bold font-large truncate">
+                        <span className="px-1 py-0.5 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 text-[0.70rem] font-semibold">
+                          {booking.type}
+                        </span>
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate">
+                        {booking.passengerName || booking.employee_name || '--'}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-emerald-600 font-bold font-large truncate">
+                        {booking.receivable_amount.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-teal-600 font-bold font-large truncate">
+                        {booking.paid_cash.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-cyan-600 font-bold font-large truncate">
+                        {booking.paid_in_bank.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-amber-600 font-bold font-large truncate">
+                        {(() => {
+                          // Get the entry number without the (Payment) suffix
+                          const baseEntry = booking.entry.replace(' (Payment)', '');
 
-         <div className="bg-white p-4 rounded-lg border-l-4 border-red-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Service</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ? 
-                  <span className="text-gray-300">--</span> : 
-                  serviceCount
-                }
-              </p>
-            </div>
-            <div className="bg-red-100 p-1 sm:p-3 rounded-full">
-              <CreditCard size={18} className="text-red-500" />
-            </div>
-          </div>
-        </div>
+                          // Find all entries (original + payments) with the same entry number
+                          const allRelatedEntries = currentTableData.filter(
+                            b => b.entry === baseEntry || b.entry === `${baseEntry} (Payment)`
+                          );
 
-        {/* Total Receivable Amount Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-teal-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Total Receivable</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ?
-                  <span className="text-gray-300">--</span> :
-                  totalReceivableAmount.toLocaleString() 
-                }
-              </p>
-            </div>
-            <div className="bg-teal-100 p-1 sm:p-3 rounded-full">
-              <CreditCard size={18} className="text-teal-500" /> 
-            </div>
-          </div>
-        </div>
+                          // Sort by timestamp to get chronological order
+                          const sortedEntries = allRelatedEntries.sort((a, b) => a.timestamp - b.timestamp);
 
-        {/* Total Paid Cash Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-indigo-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Total Paid Cash</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ?
-                  <span className="text-gray-300">--</span> :
-                  totalPaidCash.toLocaleString() 
-                }
-              </p>
-            </div>
-            <div className="bg-indigo-100 p-1 sm:p-3 rounded-full">
-              <CreditCard size={18} className="text-indigo-500" /> 
-            </div>
-          </div>
-        </div>
+                          // Find if there are any entries after this one
+                          const hasLaterPayments = sortedEntries.some(
+                            entry => entry.timestamp > booking.timestamp
+                          );
 
-        {/* Total Paid In Bank Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-orange-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Total Paid In Bank</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ?
-                  <span className="text-gray-300">--</span> :
-                  totalPaidInBank.toLocaleString() 
-                }
-              </p>
-            </div>
-            <div className="bg-orange-100 p-1 sm:p-3 rounded-full">
-              <CreditCard size={18} className="text-orange-500" /> 
-            </div>
-          </div>
-        </div>
-
-        {/* Total Remaining Amount Card */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-pink-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Total Remaining Amount</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ?
-                  <span className="text-gray-300">--</span> :
-                  totalRemainingAmount.toLocaleString() 
-                }
-              </p>
-            </div>
-            <div className="bg-pink-100 p-1 sm:p-3 rounded-full">
-              <CreditCard size={18} className="text-pink-500" /> 
-            </div>
-          </div>
-        </div>
-
-        {/* Total Withdraw Card (NEW) */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-purple-700 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium"> Withdraw</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ?
-                  <span className="text-gray-300">--</span> :
-                  dashboardData.TotalWithdraw.toLocaleString()
-                }
-              </p>
-            </div>
-            <div className="bg-purple-200 p-1 sm:p-3 rounded-full">
-              <Wallet size={18} className="text-purple-700" />
-            </div>
-          </div>
-        </div>
-
-        {/* Cash in Office Card (NEW) */}
-        <div className="bg-white p-4 rounded-lg border-l-4 border-cyan-500 shadow">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-gray-600 text-sm font-medium">Cash in Office</h2>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading && !showPartialData ?
-                  <span className="text-gray-300">--</span> :
-                  dashboardData.cashInOffice.toLocaleString()
-                }
-              </p>
-            </div>
-            <div className="bg-cyan-100 p-1 sm:p-3 rounded-full">
-              <Landmark size={18} className="text-cyan-500" />
-            </div>
-          </div>
+                          // If this is a payment entry, show it differently
+                          if (booking.type.includes('RE ') && booking.type.includes('Payment')) {
+                            return hasLaterPayments ? (
+                              <span className="line-through text-red-500">
+                                {booking.remaining_amount.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-green-600">{booking.remaining_amount.toLocaleString()}</span>
+                            );
+                          } else {
+                            // For original entry
+                            return hasLaterPayments ? (
+                              <span className="line-through text-red-500">
+                                {booking.remaining_amount.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span>{booking.remaining_amount.toLocaleString()}</span>
+                            );
+                          }
+                        })()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate">
+                        {booking.withdraw.toLocaleString()}
+                      </td>
+                      <td className="px-1 py-2 text-[0.70rem] text-indigo-600 font-bold font-large truncate">
+                        {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : <span className="text-slate-400">--</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              ) : (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-8 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-2xl text-indigo-400">📋</span>
+                      </div>
+                      <p className="text-sm text-black font-bold">
+                        {dateRange.startDate && dateRange.endDate ? 'No bookings found in the selected date range' : 'No recent bookings found'}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Table Section */}
-      {isLoading && !showPartialData ? (
-        <div className="flex justify-center py-12">
-          <TableSpinner />
-        </div>
-      ) : (
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-700">All Bookings</h2>
-            <div className="flex items-center space-x-4">
-              {(errors.umrah || errors.tickets || errors.visa || errors.gamcaToken || errors.services || errors.protector) && ( 
-                <span className="text-xs text-red-500">
-                  {Object.values(errors).filter(e => e).join(', ')}
-                </span>
-              )}
-              <div className="flex items-center space-x-2">
-                <Filter size={16} className="text-indigo-600" />
-                <span className="text-sm text-gray-600 font-medium">Filter by Date:</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Date Range Picker */}
-          <div className="mb-4 flex items-center space-x-4">
-            <DateRangePicker
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onDateChange={handleDateRangeChange}
-              placeholder="Select date range to filter bookings"
-              className="max-w-md"
-            />
-            {(dateRange.startDate || dateRange.endDate) && (
-              <div className="text-sm text-gray-600">
-                Showing {filteredBookings.length} of {dashboardData.combinedBookings.length} bookings
-              </div>
-            )}
-          </div>
-          <div className="overflow-y-auto max-h-[60vh] rounded-lg border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 sticky top-0">
-                <tr>
-                  {columns.map((col, index) => (
-                    <th
-                      key={index}
-                      className="px-3 py-3 text-left text-xs font-bold text-white uppercase tracking-wider"
-                    >
-                      {col.header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {(dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings).length > 0 ? (
-                  (dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings).map((booking, index) => (
-                    <tr 
-                      key={index}
-                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-indigo-50/30 via-purple-50/20 to-pink-50/30'} hover:bg-gradient-to-r hover:from-indigo-100/40 hover:via-purple-100/30 hover:to-pink-100/40 transition-all duration-200`}
-                    >
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-700">{booking.booking_date}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 truncate" title={booking.employee_name}>{booking.employee_name}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold">
-                        <span className="px-2 py-1 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 inline-block">
-                          {booking.type}
-                        </span>
-                      </td>   
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 truncate" title={booking.passengerName}>
-                        {booking.passengerName ? booking.passengerName : <span className="text-gray-400">--</span>}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600">{booking.receivable_amount}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">{booking.paid_cash}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">{booking.paid_in_bank}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-amber-600">{booking.remaining_amount}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">{booking.withdraw}</td> 
-                      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-indigo-600">
-                        {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : <span className="text-gray-400">--</span>} 
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="10" className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center space-y-3">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
-                          <span className="text-2xl text-indigo-400">📋</span>
-                        </div>
-                        <p className="text-sm text-gray-500 font-medium">
-                          {dateRange.startDate && dateRange.endDate ? 'No bookings found in the selected date range' : 'No recent bookings found'}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

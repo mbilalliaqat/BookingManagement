@@ -17,12 +17,12 @@ const Protector = () => {
     const [editEntry, setEditEntry] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
-    const [isDeleting,setIsDeleting]=useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const { user } = useAppContext();
     const location = useLocation();
-    const [highlightEntry,setHighlightedEntry]=useState('');
+    const [highlightEntry, setHighlightedEntry] = useState('');
 
-        const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -52,26 +52,26 @@ const Protector = () => {
 
     useEffect(() => {
         fetchData();
-    },[]);
+    }, []);
 
-      useEffect(()=>{
-            if(location.state?.highlightEntry){
-                setHighlightedEntry(location.state.highlightEntry);
-                setSearch(location.state.highlightEntry)
-    
-                const timer = setTimeout(()=>{
-                    setHighlightedEntry(null)
-                },5000);
-    
-                return clearTimeout(timer)
-            }
-        },[location.state])
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
+
+            const timer = setTimeout(() => {
+                setHighlightedEntry(null)
+            }, 5000);
+
+            return clearTimeout(timer)
+        }
+    }, [location.state])
 
     const columns = [
         { header: 'Entry', accessor: 'entry' },
-        {header:'EMPLOYEE',accessor:'employee'},
+        { header: 'EMPLOYEE', accessor: 'employee' },
         { header: 'NAME', accessor: 'name' },
-        {header:'FILE_NO',accessor:'file_no'},
+        { header: 'FILE_NO', accessor: 'file_no' },
         { header: 'PASSPORT', accessor: 'passport' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'WITHDRAW', accessor: 'withdraw' },
@@ -80,7 +80,7 @@ const Protector = () => {
         { header: 'NCB FEE / 500 DATE', accessor: 'ncb_fee_500_date' },
         { header: 'Protector DATE', accessor: 'protector_date' },
         { header: 'ADDITIONAL CHARGES', accessor: 'additional_charges' },
-        
+
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
@@ -107,7 +107,7 @@ const Protector = () => {
         )
     );
 
-     const formatDate = (dateString) => {
+    const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
         return date.toLocaleDateString('en-GB'); // Format as day/month/year
@@ -149,7 +149,9 @@ const Protector = () => {
         }
         setIsDeleting(true);
         try {
-            const response = await axios.delete(`${BASE_URL}/protector/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/protector/${parsedId}`, {
+                data: { user_name: user.name }
+            });
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
                 console.log('Protector deleted successfully');
@@ -164,7 +166,6 @@ const Protector = () => {
             setIsDeleting(false);
             closeDeleteModal();
         }
-        
     };
 
 
@@ -220,7 +221,7 @@ const Protector = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this protector entry? 
+                    Are you sure you want to delete this protector entry?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button
@@ -234,7 +235,7 @@ const Protector = () => {
                         disabled={isDeleting}
                         className={`px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg flex items-center justify-center ${isDeleting ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-600'} focus:outline-none focus:ring-2 focus:ring-red-500`}
                     >
-                        {isDeleting && <ButtonSpinner/>}
+                        {isDeleting && <ButtonSpinner />}
                         Delete
                     </button>
                 </div>

@@ -11,7 +11,7 @@ const Register = () => {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const BASE_URL = 'https://bookingsms.mbilalliaqat01.workers.dev/';
+  const BASE_URL = 'https://bookingsms.mbilalliaqat01.workers.dev';
 
   // Validation states
   const [usernameError, setUsernameError] = useState('');

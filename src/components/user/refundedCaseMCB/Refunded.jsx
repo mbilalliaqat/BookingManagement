@@ -9,74 +9,74 @@ import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useLocation } from 'react-router-dom';
 
 const Refunded = () => {
-        const [search, setSearch] = useState('');
-        const [showForm,setShowForm]=useState(false);
-        const [entries,setEntries]=useState([]);
-        const [error,setError]=useState(null);
-        const [isLoading, setIsLoading] = useState(true);
-        const [editEntry, setEditEntry] = useState(null);
-        const [showDeleteModal, setShowDeleteModal] = useState(false);
-        const [deleteId, setDeleteId] = useState(null);
-        const [isDeleting, setIsDeleting] = useState(false);
-        const { user } = useAppContext();
-        const location = useLocation();
-        const [highlightEntry,setHighlightedEntry]=useState('');
+    const [search, setSearch] = useState('');
+    const [showForm, setShowForm] = useState(false);
+    const [entries, setEntries] = useState([]);
+    const [error, setError] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [editEntry, setEditEntry] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteId, setDeleteId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { user } = useAppContext();
+    const location = useLocation();
+    const [highlightEntry, setHighlightedEntry] = useState('');
 
-        const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-        
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-        const fetchData = async()=>{
-            setIsLoading(true);
-            try{
-                const response = await axios.get(`${BASE_URL}/refunded`)
-                if(response.status!==200){
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data=response.data;
-                console.log("Fetched data:", data);
-                
-                const formattedData = data.refunded.map((entry) => ({
-                    ...entry,
-                    date: new Date(entry.date).toLocaleDateString('en-GB'),
-                    paid_fee_date: new Date(entry.paid_fee_date).toLocaleDateString('en-GB'),
-                    paid_refund_date: new Date(entry.paid_refund_date).toLocaleDateString('en-GB'),
-                    
-                    
-                }));
-                setEntries(formattedData.reverse());
 
-                
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const response = await axios.get(`${BASE_URL}/refunded`)
+            if (response.status !== 200) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-            catch(error){
-                console.log("Error Fetching data",error);
-                setError('Failed to load data. Please try again later.');
+            const data = response.data;
+            console.log("Fetched data:", data);
 
-            }  finally {
-                setIsLoading(false);
-            }
+            const formattedData = data.refunded.map((entry) => ({
+                ...entry,
+                date: new Date(entry.date).toLocaleDateString('en-GB'),
+                paid_fee_date: new Date(entry.paid_fee_date).toLocaleDateString('en-GB'),
+                paid_refund_date: new Date(entry.paid_refund_date).toLocaleDateString('en-GB'),
+
+
+            }));
+            setEntries(formattedData.reverse());
+
+
         }
-        useEffect(()=>{
-            fetchData();
+        catch (error) {
+            console.log("Error Fetching data", error);
+            setError('Failed to load data. Please try again later.');
 
-        },[])
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    useEffect(() => {
+        fetchData();
 
-         useEffect(()=>{
-        if(location.state?.highlightEntry){
+    }, [])
+
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
             setHighlightedEntry(location.state.highlightEntry);
             setSearch(location.state.highlightEntry)
 
-            const timer = setTimeout(()=>{
+            const timer = setTimeout(() => {
                 setHighlightedEntry(null)
-            },5000);
+            }, 5000);
 
             return clearTimeout(timer)
         }
-    },[location.state])
+    }, [location.state])
 
 
 
     const columns = [
-        { header: 'EMPLOYEE', accessor: 'employee'},
+        { header: 'EMPLOYEE', accessor: 'employee' },
         { header: 'Entry', accessor: 'entry' },
         { header: 'NAME', accessor: 'name' },
         { header: 'DATE', accessor: 'date' },
@@ -87,7 +87,7 @@ const Refunded = () => {
         { header: 'TOTAL BALANCE', accessor: 'total_balance' },
         // { header: 'BANK NAME', accessor: 'bank_name' },
         // { header: 'PAID BANK', accessor: 'paid_bank' },
-        
+
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
@@ -95,13 +95,13 @@ const Refunded = () => {
                         className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
                         onClick={() => handleUpdate(index)}
                     >
-                        <i className="fas fa-edit"></i> 
+                        <i className="fas fa-edit"></i>
                     </button>
                     <button
                         className="text-red-500 hover:text-red-700 text-[13px]"
                         onClick={() => openDeleteModal(index)}
                     >
-                        <i className="fas fa-trash"></i> 
+                        <i className="fas fa-trash"></i>
                     </button>
                 </>
             )
@@ -114,9 +114,9 @@ const Refunded = () => {
         )
     );
 
-  
 
- 
+
+
 
     const handleCancel = () => {
         setShowForm(false);
@@ -153,7 +153,9 @@ const Refunded = () => {
             return;
         }
         try {
-            const response = await axios.delete(`${BASE_URL}/refunded/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/refunded/${parsedId}`, {
+                data: { user_name: user.name }
+            });
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
                 console.log('Refunded entry deleted successfully');
@@ -169,49 +171,48 @@ const Refunded = () => {
         }
     };
 
-  
-  return (
-    <div className="h-full flex flex-col">
-    {showForm ? (
-        <Refunded_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry}/>
-    ) : (
-        <div className="flex flex-col h-full ">
-            <div className="flex justify-between items-center mb-4 relative">
-                <input
-                    type="text"
-                    placeholder="Search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
-                />
-                                     <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
+    return (
+        <div className="h-full flex flex-col">
+            {showForm ? (
+                <Refunded_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry} />
+            ) : (
+                <div className="flex flex-col h-full ">
+                    <div className="flex justify-between items-center mb-4 relative">
+                        <input
+                            type="text"
+                            placeholder="Search"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
+                        />
+                        <i className="fas fa-search absolute left-33 top-7 transform -translate-y-1/2 text-gray-400"></i>
 
-                <button
-                    className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
-                    onClick={() => setShowForm(true)}
-                >
-                    <i className="fas fa-plus mr-1"></i> Add New
-                </button>
-            </div>
-            <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
-            {
-                    isLoading ? (
-                       <TableSpinner/> 
-                    ):error? (
-                        <div className="flex items-center justify-center w-full h-64">
-                            <div className="text-red-500">
-                                <i className="fas fa-exclamation-circle mr-2"></i>
-                                {error}
-                            </div>
-                        </div> 
-                    ):(
-                        <Table data={filteredData} columns={columns} />
-                    )
-                }
-            </div>
-        </div>
-    )}
-     <Modal
+                        <button
+                            className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+                            onClick={() => setShowForm(true)}
+                        >
+                            <i className="fas fa-plus mr-1"></i> Add New
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
+                        {
+                            isLoading ? (
+                                <TableSpinner />
+                            ) : error ? (
+                                <div className="flex items-center justify-center w-full h-64">
+                                    <div className="text-red-500">
+                                        <i className="fas fa-exclamation-circle mr-2"></i>
+                                        {error}
+                                    </div>
+                                </div>
+                            ) : (
+                                <Table data={filteredData} columns={columns} />
+                            )
+                        }
+                    </div>
+                </div>
+            )}
+            <Modal
                 isOpen={showDeleteModal}
                 onClose={closeDeleteModal}
                 title="Delete Confirmation"
@@ -220,7 +221,7 @@ const Refunded = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this refunded entry? 
+                    Are you sure you want to delete this refunded entry?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button
@@ -245,8 +246,8 @@ const Refunded = () => {
                     </button>
                 </div>
             </Modal>
-</div>
-  )
+        </div>
+    )
 }
 
 export default Refunded

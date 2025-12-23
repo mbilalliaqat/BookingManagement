@@ -35,7 +35,7 @@ const Vender = () => {
 
   const formatDate = (dateString) => {
     if (!dateString || typeof dateString !== 'string') return '';
-    
+
     const parts = dateString.split('T')[0].split('-');
     if (parts.length !== 3) return dateString;
 
@@ -48,7 +48,7 @@ const Vender = () => {
       setIsLoading(true);
       setError(null);
       const response = await axios.get(`${BASE_URL}/vender`);
-      
+
       if (response.data.status === 'success') {
         const formattedData = response.data.vendors?.map((entry, index) => ({
           ...entry,
@@ -56,11 +56,11 @@ const Vender = () => {
           date: formatDate(entry.date),
           debit: Number(entry.debit) || 0,
           credit: Number(entry.credit) || 0,
-          remaining_amount: Number(entry.remaining_amount) || 0, 
+          remaining_amount: Number(entry.remaining_amount) || 0,
           bank_title: entry.bank_title || '',
         }))
-        .sort((a, b) => b.id - a.id) || [];
-        
+          .sort((a, b) => b.id - a.id) || [];
+
         setData(formattedData);
       } else {
         throw new Error(response.data.message || 'Failed to fetch data');
@@ -113,14 +113,14 @@ const Vender = () => {
     if (selectedVendor === 'all') {
       const uniqueVendors = [];
       const seenVendors = new Set();
-      
+
       data.forEach(item => {
         if (!seenVendors.has(item.vender_name)) {
           seenVendors.add(item.vender_name);
           uniqueVendors.push(item);
         }
       });
-      
+
       setFilteredData(uniqueVendors);
     } else {
       setFilteredData(data.filter(item => item.vender_name === selectedVendor));
@@ -154,10 +154,10 @@ const Vender = () => {
       console.error('Entry is undefined, null, or missing ID');
       return;
     }
-    
+
     setLoadingActionId(entry.id);
     console.log('Updating entry:', entry);
-    
+
     const entryForEdit = {
       id: entry.id,
       vender_name: entry.vender_name || '',
@@ -169,9 +169,9 @@ const Vender = () => {
       debit: entry.debit || 0,
       remaining_amount: entry.remaining_amount || 0
     };
-    
+
     console.log('Prepared entry for edit:', entryForEdit);
-    
+
     setTimeout(() => {
       setEditingEntry(entryForEdit);
       setShowForm(true);
@@ -181,36 +181,38 @@ const Vender = () => {
 
   const convertToInputDate = (formattedDate) => {
     if (!formattedDate) return '';
-    
+
     if (formattedDate.includes('-') && formattedDate.length === 10) {
       return formattedDate;
     }
-    
+
     const parts = formattedDate.split('/');
     if (parts.length === 3) {
       const [month, day, year] = parts;
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    
+
     return formattedDate;
   };
 
   const handleDelete = useCallback(
     async (id) => {
       const parsedId = typeof id === 'object' && id !== null ? id.id : id;
-      
+
       if (!parsedId || isNaN(Number(parsedId))) {
         setError('Invalid vendor ID. Cannot delete.');
         return;
       }
-      
+
       const numericId = Number(parsedId);
       setIsDeleting(true);
       setLoadingActionId(numericId);
-      
+
       try {
-        const response = await axios.delete(`${BASE_URL}/vender/${numericId}`);
-        
+        const response = await axios.delete(`${BASE_URL}/vender/${numericId}`, {
+          data: { user_name: user.name }
+        });
+
         if (response.data.status === 'success') {
           console.log('Vendor entry deleted successfully');
           await fetchData();
@@ -227,7 +229,7 @@ const Vender = () => {
         closeDeleteModal();
       }
     },
-    [closeDeleteModal]
+    [closeDeleteModal, user.name, BASE_URL, fetchData]
   );
 
   const handleVendorChange = (e) => {
@@ -240,13 +242,13 @@ const Vender = () => {
 
   const columns = useMemo(
     () => [
-      { 
-        header: 'VENDOR NAME', 
+      {
+        header: 'VENDOR NAME',
         accessor: 'vender_name',
         render: (row, fullRow) => {
           const vendorName = fullRow?.vender_name || row?.vender_name || row;
           return (
-            <span 
+            <span
               className={selectedVendor === 'all' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : ''}
               onClick={() => selectedVendor === 'all' && handleVendorClick(vendorName)}
             >
@@ -264,29 +266,29 @@ const Vender = () => {
       { header: 'BALANCE', accessor: 'remaining_amount' },
       ...(user.role === 'admin'
         ? [
-            {
-              header: 'ACTIONS',
-              accessor: 'actions',
-              render: (row, index) => (
-                <>
-                  <button
-                    className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
-                    onClick={() => handleUpdate(index)}
-                    disabled={loadingActionId === index.id}
-                  >
-                    {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
-                  </button>
-                  <button
-                    className="text-red-500 hover:text-red-700 text-[13px]"
-                    onClick={() => openDeleteModal(index.id)}
-                    disabled={loadingActionId === index.id}
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
-                </>
-              ),
-            },
-          ]
+          {
+            header: 'ACTIONS',
+            accessor: 'actions',
+            render: (row, index) => (
+              <>
+                <button
+                  className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
+                  onClick={() => handleUpdate(index)}
+                  disabled={loadingActionId === index.id}
+                >
+                  {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
+                </button>
+                <button
+                  className="text-red-500 hover:text-red-700 text-[13px]"
+                  onClick={() => openDeleteModal(index.id)}
+                  disabled={loadingActionId === index.id}
+                >
+                  <i className="fas fa-trash"></i>
+                </button>
+              </>
+            ),
+          },
+        ]
         : []),
     ],
     [user.role, loadingActionId, handleUpdate, openDeleteModal, selectedVendor, handleVendorClick]
@@ -295,18 +297,18 @@ const Vender = () => {
   return (
     <div className="flex flex-col h-full">
       {showForm ? (
-        <VenderForm 
-          onCancel={handleCancel} 
-          onSubmitSuccess={handleFormSubmit} 
-          editingEntry={editingEntry} 
+        <VenderForm
+          onCancel={handleCancel}
+          onSubmitSuccess={handleFormSubmit}
+          editingEntry={editingEntry}
         />
       ) : (
         <>
           <div className="flex justify-between items-center mb-4 relative">
             <div className="flex items-center gap-4">
-              <select 
-                className="p-2 border border-gray-300 rounded-md" 
-                value={selectedVendor} 
+              <select
+                className="p-2 border border-gray-300 rounded-md"
+                value={selectedVendor}
                 onChange={handleVendorChange}
               >
                 <option value="all">All Vendors</option>
@@ -316,7 +318,7 @@ const Vender = () => {
                   </option>
                 ))}
               </select>
-              
+
               <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 shadow-sm">
                 <span className="text-sm font-semibold text-gray-700">Outstanding Balance:</span>
                 <span className={`text-lg font-bold ${outstandingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -324,7 +326,7 @@ const Vender = () => {
                 </span>
               </div>
             </div>
-            
+
             <button
               className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
               onClick={() => setShowForm(true)}
@@ -332,7 +334,7 @@ const Vender = () => {
               <i className="fas fa-plus mr-1"></i> Add New
             </button>
           </div>
-          
+
           <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
             {isLoading ? (
               <TableSpinner />
@@ -349,7 +351,7 @@ const Vender = () => {
           </div>
         </>
       )}
-      
+
       <Modal isOpen={showDeleteModal} onClose={closeDeleteModal} title="Delete Confirmation">
         <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
           <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>

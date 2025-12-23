@@ -52,9 +52,9 @@ const OfficeAccounts = () => {
             if (parts.length === 3) {
                 return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
             }
-            
+
             const date = new Date(dateString);
-            if (isNaN(date.getTime())) return ''; 
+            if (isNaN(date.getTime())) return '';
             return date.toISOString().split('T')[0];
         } catch (error) {
             console.error('Error formatting date for input:', dateString, error);
@@ -65,20 +65,20 @@ const OfficeAccounts = () => {
     // Fetch all entries from all banks
     const fetchAllEntries = useCallback(async () => {
         setIsLoading(true);
-        
+
         try {
             // Fetch from all banks
             const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
-            const promises = banks.map(bank => 
+            const promises = banks.map(bank =>
                 fetch(`${BASE_URL}/accounts/${bank}`)
                     .then(res => res.ok ? res.json() : [])
                     .catch(() => [])
             );
-            
+
             const results = await Promise.all(promises);
-            
+
             // Combine all data and add bank_name to each entry
-            const combinedData = results.flatMap((data, index) => 
+            const combinedData = results.flatMap((data, index) =>
                 (data || []).map(entry => ({
                     ...entry,
                     bank_name: banks[index],
@@ -86,13 +86,13 @@ const OfficeAccounts = () => {
                     originalDate: entry.date, // Keep original date for sorting
                 }))
             );
-            
+
             // Sort by ID in descending order (latest first - assuming higher ID = newer entry)
             combinedData.sort((a, b) => {
                 // Sort by ID in descending order
                 return b.id - a.id;
             });
-            
+
             setAllData(combinedData);
         } catch (error) {
             console.error('Error fetching entries:', error);
@@ -113,14 +113,14 @@ const OfficeAccounts = () => {
             // Show only unique banks (one entry per bank)
             const uniqueBanks = [];
             const seenBanks = new Set();
-            
+
             allData.forEach(item => {
                 if (!seenBanks.has(item.bank_name)) {
                     seenBanks.add(item.bank_name);
                     uniqueBanks.push(item);
                 }
             });
-            
+
             setFilteredData(uniqueBanks);
         } else {
             // Show all entries for the selected bank
@@ -128,44 +128,44 @@ const OfficeAccounts = () => {
         }
     }, [allData, selectedBank]);
 
-  const totals = useMemo(() => {
-    let totalCredit = 0;
-    let totalDebit = 0;
-    let totalBalance = 0;
+    const totals = useMemo(() => {
+        let totalCredit = 0;
+        let totalDebit = 0;
+        let totalBalance = 0;
 
-    if (selectedBank === 'all') {
-        // For "All Banks", calculate the last balance of each bank
-        const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
-        
-        banks.forEach(bank => {
-            const bankEntries = allData.filter(item => item.bank_name === bank);
-            if (bankEntries.length > 0) {
-                // Get the most recent entry's balance (since data is sorted by ID desc)
-                const latestBalance = parseFloat(bankEntries[0].balance) || 0;
-                totalBalance += latestBalance;
+        if (selectedBank === 'all') {
+            // For "All Banks", calculate the last balance of each bank
+            const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
+
+            banks.forEach(bank => {
+                const bankEntries = allData.filter(item => item.bank_name === bank);
+                if (bankEntries.length > 0) {
+                    // Get the most recent entry's balance (since data is sorted by ID desc)
+                    const latestBalance = parseFloat(bankEntries[0].balance) || 0;
+                    totalBalance += latestBalance;
+                }
+            });
+
+            // Calculate total credit and debit from all entries
+            allData.forEach(item => {
+                totalCredit += parseFloat(item.credit) || 0;
+                totalDebit += parseFloat(item.debit) || 0;
+            });
+        } else {
+            // For specific bank, sum all entries
+            filteredData.forEach(item => {
+                totalCredit += parseFloat(item.credit) || 0;
+                totalDebit += parseFloat(item.debit) || 0;
+            });
+
+            // Get the latest balance (first entry since sorted by ID desc)
+            if (filteredData.length > 0) {
+                totalBalance = parseFloat(filteredData[0].balance) || 0;
             }
-        });
-        
-        // Calculate total credit and debit from all entries
-        allData.forEach(item => {
-            totalCredit += parseFloat(item.credit) || 0;
-            totalDebit += parseFloat(item.debit) || 0;
-        });
-    } else {
-        // For specific bank, sum all entries
-        filteredData.forEach(item => {
-            totalCredit += parseFloat(item.credit) || 0;
-            totalDebit += parseFloat(item.debit) || 0;
-        });
-        
-        // Get the latest balance (first entry since sorted by ID desc)
-        if (filteredData.length > 0) {
-            totalBalance = parseFloat(filteredData[0].balance) || 0;
         }
-    }
 
-    return { credit: totalCredit, debit: totalDebit, balance: totalBalance };
-}, [allData, filteredData, selectedBank]);
+        return { credit: totalCredit, debit: totalDebit, balance: totalBalance };
+    }, [allData, filteredData, selectedBank]);
 
     const handleCancel = useCallback(() => {
         setShowForm(false);
@@ -193,9 +193,9 @@ const OfficeAccounts = () => {
             console.error('Entry is undefined or null');
             return;
         }
-        
+
         setLoadingActionId(entry.id);
-        
+
         console.log('Updating entry:', entry);
         const entryForEdit = {
             ...entry,
@@ -203,13 +203,13 @@ const OfficeAccounts = () => {
             date: entry.date ? formatDateForInput(entry.date) : '',
         };
         console.log('Prepared entry for edit:', entryForEdit);
-        
+
         setTimeout(() => {
             setEditingEntry(entryForEdit);
             setShowForm(true);
             setLoadingActionId(null);
         }, 500);
-        
+
     }, [selectedBank, formatDateForInput]);
 
     const handleDelete = useCallback(async (id) => {
@@ -218,12 +218,14 @@ const OfficeAccounts = () => {
             setError('Invalid entry ID. Cannot delete.');
             return;
         }
-        
+
         setIsDeleting(true);
         setLoadingActionId(parsedId);
-        
+
         try {
-            const response = await axios.delete(`${BASE_URL}/accounts/${parsedId}`);
+            const response = await axios.delete(`${BASE_URL}/accounts/${parsedId}`, {
+                data: { user_name: user.name }
+            });
             if (response.status === 200) {
                 console.log('Entry deleted successfully');
                 fetchAllEntries();
@@ -238,7 +240,7 @@ const OfficeAccounts = () => {
             setLoadingActionId(null);
             closeDeleteModal();
         }
-    }, [closeDeleteModal, fetchAllEntries, BASE_URL]);
+    }, [closeDeleteModal, fetchAllEntries, BASE_URL, user.name]);
 
     // Handle clicking on a bank name in the table
     const handleBankClick = useCallback((bankName) => {
@@ -246,13 +248,13 @@ const OfficeAccounts = () => {
     }, []);
 
     const columns = useMemo(() => [
-        { 
-            header: 'BANK NAME', 
+        {
+            header: 'BANK NAME',
             accessor: 'bank_name',
             render: (row, fullRow) => {
                 const bankName = fullRow?.bank_name || row?.bank_name || row;
                 return (
-                    <span 
+                    <span
                         className={selectedBank === 'all' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : ''}
                         onClick={() => selectedBank === 'all' && handleBankClick(bankName)}
                     >
@@ -271,29 +273,29 @@ const OfficeAccounts = () => {
         { header: 'BALANCE', accessor: 'balance' },
         ...(user.role === 'admin'
             ? [
-                  {
-                      header: 'ACTIONS',
-                      accessor: 'actions',
-                      render: (row, index) => (
-                          <>
-                              <button
-                                  className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
-                                  onClick={() => handleUpdate(index)}
-                                  disabled={loadingActionId === index.id}
-                              >
-                                  {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
-                              </button>
-                              <button
-                                  className="text-red-500 hover:text-red-700 text-[13px]"
-                                  onClick={() => openDeleteModal(index.id)}
-                                  disabled={loadingActionId === index.id}
-                              >
-                                  <i className="fas fa-trash"></i>
-                              </button>
-                          </>
-                      ),
-                  },
-              ]
+                {
+                    header: 'ACTIONS',
+                    accessor: 'actions',
+                    render: (row, index) => (
+                        <>
+                            <button
+                                className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
+                                onClick={() => handleUpdate(index)}
+                                disabled={loadingActionId === index.id}
+                            >
+                                {loadingActionId === index.id ? <ButtonSpinner /> : <i className="fas fa-edit"></i>}
+                            </button>
+                            <button
+                                className="text-red-500 hover:text-red-700 text-[13px]"
+                                onClick={() => openDeleteModal(index.id)}
+                                disabled={loadingActionId === index.id}
+                            >
+                                <i className="fas fa-trash"></i>
+                            </button>
+                        </>
+                    ),
+                },
+            ]
             : []),
     ], [user.role, loadingActionId, handleUpdate, openDeleteModal, selectedBank, handleBankClick]);
 
@@ -332,42 +334,42 @@ const OfficeAccounts = () => {
                         </select>
 
                         <div className="flex items-center gap-4">
-    <select
-        value={selectedBank}
-        onChange={(e) => setSelectedBank(e.target.value)}
-        className="p-2 border border-gray-300 rounded-md"
-    >
-        {bankOptions.map(option => (
-            <option key={option.value} value={option.value}>
-                {option.label}
-            </option>
-        ))}
-    </select>
-    
-   {/* Total Summary */}
-<div className="flex gap-4 items-center bg-purple-50 border border-purple-200 rounded-md px-4 py-2">
-    <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-600">Total Credit:</span>
-        <span className="text-sm font-bold text-green-600">
-            {totals.credit.toFixed(0)}
-        </span>
-    </div>
-    <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-600">Total Debit:</span>
-        <span className="text-sm font-bold text-red-600">
-            {totals.debit.toFixed(0)}
-        </span>
-    </div>
-    <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-600">
-            {selectedBank === 'all' ? 'Total Balance (All Banks):' : 'Current Balance:'}
-        </span>
-        <span className="text-sm font-bold text-blue-600">
-            {totals.balance.toFixed(0)}
-        </span>
-    </div>
-</div>
-</div>
+                            <select
+                                value={selectedBank}
+                                onChange={(e) => setSelectedBank(e.target.value)}
+                                className="p-2 border border-gray-300 rounded-md"
+                            >
+                                {bankOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {/* Total Summary */}
+                            <div className="flex gap-4 items-center bg-purple-50 border border-purple-200 rounded-md px-4 py-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-600">Total Credit:</span>
+                                    <span className="text-sm font-bold text-green-600">
+                                        {totals.credit.toFixed(0)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-600">Total Debit:</span>
+                                    <span className="text-sm font-bold text-red-600">
+                                        {totals.debit.toFixed(0)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-600">
+                                        {selectedBank === 'all' ? 'Total Balance (All Banks):' : 'Current Balance:'}
+                                    </span>
+                                    <span className="text-sm font-bold text-blue-600">
+                                        {totals.balance.toFixed(0)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
 
                         <button
                             className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
@@ -401,7 +403,7 @@ const OfficeAccounts = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this entry? 
+                    Are you sure you want to delete this entry?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button

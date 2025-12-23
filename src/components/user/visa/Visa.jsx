@@ -17,7 +17,7 @@ const Visa = () => {
     const [entries, setEntries] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [editEntry, setEditEntry] = useState(null); 
+    const [editEntry, setEditEntry] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -25,20 +25,20 @@ const Visa = () => {
     const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
     const [selectedVisaForPay, setSelectedVisaForPay] = useState(null);
     const location = useLocation();
-    const [highlightEntry,setHighlightedEntry]=useState('');
-    
+    const [highlightEntry, setHighlightedEntry] = useState('');
+
     // Date filter states
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    
+
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
-    
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const response = await axios.get(`${BASE_URL}/visa-processing`); 
+            const response = await axios.get(`${BASE_URL}/visa-processing`);
             if (response.status !== 200) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -57,12 +57,12 @@ const Visa = () => {
 
                 let totalCashPaid = parseFloat(visa.paid_cash || 0);
                 let totalBankPaid = parseFloat(visa.paid_in_bank || 0);
-                
-                const initialCash = visa.initial_paid_cash !== undefined 
-                    ? parseFloat(visa.initial_paid_cash) 
+
+                const initialCash = visa.initial_paid_cash !== undefined
+                    ? parseFloat(visa.initial_paid_cash)
                     : parseFloat(visa.paid_cash || 0);
-                const initialBank = visa.initial_paid_in_bank !== undefined 
-                    ? parseFloat(visa.initial_paid_in_bank) 
+                const initialBank = visa.initial_paid_in_bank !== undefined
+                    ? parseFloat(visa.initial_paid_in_bank)
                     : parseFloat(visa.paid_in_bank || 0);
 
                 return {
@@ -88,16 +88,16 @@ const Visa = () => {
                     passport_deliver_date: visa.passport_deliver_date
                         ? new Date(visa.passport_deliver_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                         : 'N/A',
-                        booking_date: visa.booking_date 
-                          ? new Date(visa.booking_date).toLocaleDateString('en-GB') 
-                                    : '-',
-                         booking_date_raw: visa.booking_date,
+                    booking_date: visa.booking_date
+                        ? new Date(visa.booking_date).toLocaleDateString('en-GB')
+                        : '-',
+                    booking_date_raw: visa.booking_date,
 
-                       remaining_date: visa.remaining_date 
-                       ? new Date(visa.remaining_date).toLocaleDateString('en-GB') 
-                            : '-',
-                         remaining_date_raw: visa.remaining_date,
-                    
+                    remaining_date: visa.remaining_date
+                        ? new Date(visa.remaining_date).toLocaleDateString('en-GB')
+                        : '-',
+                    remaining_date_raw: visa.remaining_date,
+
                     passengerTitle: passportDetails.title || '',
                     passengerFirstName: passportDetails.firstName || '',
                     passengerLastName: passportDetails.lastName || '',
@@ -126,18 +126,18 @@ const Visa = () => {
         fetchData();
     }, []);
 
-     useEffect(()=>{
-            if(location.state?.highlightEntry){
-                setHighlightedEntry(location.state.highlightEntry);
-                setSearch(location.state.highlightEntry)
-    
-                const timer = setTimeout(()=>{
-                    setHighlightedEntry(null)
-                },5000);
-    
-                return clearTimeout(timer)
-            }
-        },[location.state])
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
+
+            const timer = setTimeout(() => {
+                setHighlightedEntry(null)
+            }, 5000);
+
+            return clearTimeout(timer)
+        }
+    }, [location.state])
 
     const handleRemainingPay = (visa) => {
         setSelectedVisaForPay(visa);
@@ -210,7 +210,7 @@ const Visa = () => {
                 </div>
             )
         },
-        
+
         { header: 'PTN/PERMISSION', accessor: 'ptn_permission' },
         { header: 'MOBILE NUMBER', accessor: 'mobile_no' },
         {
@@ -218,20 +218,19 @@ const Visa = () => {
             accessor: 'status',
             render: (cellValue, row) => (
                 <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        row.status === 'Processing'
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'Processing'
                             ? 'bg-red-100 text-red-500'
                             : row.status === 'Complete'
-                            ? 'bg-green-100 text-green-500'
-                            : row.status === 'Deliver'
-                            ? 'bg-blue-100 text-blue-500'
-                            : 'bg-gray-100 text-gray-500'
-                    }`}
+                                ? 'bg-green-100 text-green-500'
+                                : row.status === 'Deliver'
+                                    ? 'bg-blue-100 text-blue-500'
+                                    : 'bg-gray-100 text-gray-500'
+                        }`}
                 >
                     {row.status || 'N/A'}
                 </span>
             )
-        }, 
+        },
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'VENDOR NAME', accessor: 'vendor_name' },
     ];
@@ -283,7 +282,7 @@ const Visa = () => {
         },
         { header: 'REMAINING DATE', accessor: 'remaining_date' },
     ];
-       
+
     const actionColumns = user.role === 'admin' ? [{
         header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
             <>
@@ -321,7 +320,7 @@ const Visa = () => {
         let matchesDateRange = true;
         if (startDate || endDate) {
             const createdDate = entry.created_at_raw ? new Date(entry.created_at_raw) : null;
-            
+
             if (createdDate) {
                 if (startDate && endDate) {
                     const start = new Date(startDate);
@@ -348,7 +347,7 @@ const Visa = () => {
         setShowForm(false);
         setEditEntry(null);
     };
-    
+
     const handleFormSubmit = () => {
         fetchData();
         setShowForm(false);
@@ -370,26 +369,38 @@ const Visa = () => {
         setDeleteId(null);
     };
 
-      const handleDelete = async (id) => {
-    setIsDeleting(true);
-    const parsedId = typeof id === 'object' ? id.id : id;
-    
-    try {
-        const response = await axios.delete(`${BASE_URL}/visa-processing/${parsedId}`, {
-           
-        });
-        
-        if (response.status === 200) {
-            setEntries(entries.filter(entry => entry.id !== parsedId));
-            console.log('Visa processing archived successfully');
+
+
+    const handleDelete = async (id) => {
+        console.log('Attempting to delete ticket with id:', id);
+        setIsDeleting(true);
+        const parsedId = typeof id === 'object' && id !== null ? id.id : id;
+
+        if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
+            console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
+            setError('Invalid ticket ID. Cannot delete.');
+            setIsDeleting(false);
+            return;
         }
-    } catch (error) {
-        console.error('Error deleting visa processing:', error);
-        setError('Failed to delete visa processing.');
-    }
-    setIsDeleting(false);
-    closeDeleteModal();
-};
+
+        try {
+            const response = await axios.delete(`${BASE_URL}/visa-processing/${parsedId}`, {
+
+            });
+
+            if (response.status === 200) {
+                setEntries(entries.filter(entry => entry.id !== parsedId));
+                console.log('Visa archived successfully');
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error deleting visa:', error);
+            setError('Failed to delete visa. Please try again later.');
+        }
+        setIsDeleting(false);
+        closeDeleteModal();
+    };
 
     const clearDateFilter = () => {
         setStartDate('');
@@ -399,7 +410,7 @@ const Visa = () => {
     return (
         <div className="h-full flex flex-col">
             {showForm ? (
-                <VisaProcessing_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry}/>
+                <VisaProcessing_Form onCancel={handleCancel} onSubmitSuccess={handleFormSubmit} editEntry={editEntry} />
             ) : (
                 <div className="flex flex-col h-full">
                     <div className="flex justify-between items-center mb-4 relative">
@@ -448,11 +459,10 @@ const Visa = () => {
                             </div>
 
                             <button
-                                className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${
-                                    showPassportFields 
-                                        ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                className={`font-semibold text-sm rounded-md shadow px-4 py-2 transition-colors duration-200 ${showPassportFields
+                                        ? 'bg-purple-600 text-white hover:bg-purple-700'
                                         : 'bg-white text-gray-700 hover:bg-gray-100'
-                                }`}
+                                    }`}
                                 onClick={() => setShowPassportFields(!showPassportFields)}
                             >
                                 <i className={`fas ${showPassportFields ? 'fa-eye-slash' : 'fa-eye'} mr-1`}></i>
@@ -487,7 +497,7 @@ const Visa = () => {
                                         <i className="fas fa-exclamation-circle mr-2"></i>
                                         {error}
                                     </div>
-                                </div> 
+                                </div>
                             ) : (
                                 <Table data={filteredData} columns={columns} />
                             )
@@ -504,7 +514,7 @@ const Visa = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this visa processing record? 
+                    Are you sure you want to delete this visa processing record?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button
@@ -521,7 +531,7 @@ const Visa = () => {
                     >
                         {isDeleting ? (
                             <>
-                                <ButtonSpinner /> 
+                                <ButtonSpinner />
                                 Deleting...
                             </>
                         ) : (
@@ -543,37 +553,37 @@ const Visa = () => {
                             </button>
                         </div>
                         <div className="bg-gray-100 p-4 rounded mb-4">
-                
+
                             <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <strong>Ticket ID:</strong> {selectedVisaForPay.id}
-                            </div>
-                            <div>
-                                <strong>Entry :</strong> {selectedVisaForPay.entry}
-                            </div>
-                            <div>
-                                <strong>Date :</strong> {selectedVisaForPay.booking_date}
-                            </div>
-                            <div>
-                                <strong>Receivable Amount</strong> {selectedVisaForPay.receivable_amount}
-                            </div>
-                             
-                            <div>
-                                <strong>Paid Cash</strong> {selectedVisaForPay.initial_paid_cash}
-                            </div>
-                            <div>
-                                <strong>Paid in Bank</strong> {selectedVisaForPay.initial_paid_in_bank}
-                            </div>
-                            <div>
-                                <strong>Remaining Amount:</strong> {selectedVisaForPay.remaining_amount || '0'}
-                            </div>
-                            {/* <div>
+                                <div>
+                                    <strong>Ticket ID:</strong> {selectedVisaForPay.id}
+                                </div>
+                                <div>
+                                    <strong>Entry :</strong> {selectedVisaForPay.entry}
+                                </div>
+                                <div>
+                                    <strong>Date :</strong> {selectedVisaForPay.booking_date}
+                                </div>
+                                <div>
+                                    <strong>Receivable Amount</strong> {selectedVisaForPay.receivable_amount}
+                                </div>
+
+                                <div>
+                                    <strong>Paid Cash</strong> {selectedVisaForPay.initial_paid_cash}
+                                </div>
+                                <div>
+                                    <strong>Paid in Bank</strong> {selectedVisaForPay.initial_paid_in_bank}
+                                </div>
+                                <div>
+                                    <strong>Remaining Amount:</strong> {selectedVisaForPay.remaining_amount || '0'}
+                                </div>
+                                {/* <div>
                    <strong>Initial Remaining:</strong> 
                  <span className="font-semibold text-purple-700">
                  {selectedVisaForPay.initial_remaining_amount || '0'}
                      </span>
                    </div> */}
-                        </div>
+                            </div>
                         </div>
                         <VisaRemainingPay
                             visaId={selectedVisaForPay?.id}

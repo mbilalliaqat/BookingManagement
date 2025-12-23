@@ -24,7 +24,7 @@ const Services = () => {
     const [selectedService, setSelectedService] = useState(null);
     const { user } = useAppContext();
     const location = useLocation();
-    const [highlightEntry,setHighlightedEntry]=useState('');
+    const [highlightEntry, setHighlightedEntry] = useState('');
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
@@ -58,19 +58,19 @@ const Services = () => {
     }, []);
 
 
-        useEffect(()=>{
-        if(location.state?.highlightEntry){
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
             setHighlightedEntry(location.state.highlightEntry);
             setSearch(location.state.highlightEntry)
 
-            const timer = setTimeout(()=>{
+            const timer = setTimeout(() => {
                 setHighlightedEntry(null)
-            },5000);
+            }, 5000);
 
             return clearTimeout(timer)
         }
-    },[location.state])
-   
+    }, [location.state])
+
 
     const handleRemainingPay = (service) => {
         setSelectedService(service);
@@ -90,15 +90,14 @@ const Services = () => {
             accessor: 'status',
             render: (cellValue, row) => (
                 <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        row.status === 'Processing'
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'Processing'
                             ? 'bg-red-100 text-red-500'
                             : row.status === 'Complete'
-                            ? 'bg-green-100 text-green-500'
-                            : row.status === 'Deliver'
-                            ? 'bg-blue-100 text-blue-500'
-                            : 'bg-gray-100 text-gray-500'
-                    }`}
+                                ? 'bg-green-100 text-green-500'
+                                : row.status === 'Deliver'
+                                    ? 'bg-blue-100 text-blue-500'
+                                    : 'bg-gray-100 text-gray-500'
+                        }`}
                 >
                     {row.status || 'N/A'}
                 </span>
@@ -110,16 +109,16 @@ const Services = () => {
         { header: 'SPECIAL DETAIL', accessor: 'specific_detail' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         {
-        header: 'VENDOR & PAYABLE',
-        accessor: 'vendor_payable',
-        render: (cellValue, row) => (
-            <div>
-                <div>{row?.vendor_name || ''}</div>
-                <div >{row?.payable_to_vendor || ''}</div>
-            </div>
-        )
-    },
-    { header: 'AGENT NAME', accessor: 'agent_name' },
+            header: 'VENDOR & PAYABLE',
+            accessor: 'vendor_payable',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.vendor_name || ''}</div>
+                    <div >{row?.payable_to_vendor || ''}</div>
+                </div>
+            )
+        },
+        { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
         { header: 'PROFIT', accessor: 'profit' },
@@ -140,7 +139,7 @@ const Services = () => {
             )
         },
 
-         { header: 'REMAINING DATE', accessor: 'remaining_date' },
+        { header: 'REMAINING DATE', accessor: 'remaining_date' },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
@@ -167,7 +166,7 @@ const Services = () => {
         )
     );
 
-     const formatDate = (dateString) => {
+    const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
         return date.toLocaleDateString('en-GB'); // Format as day/month/year
@@ -223,9 +222,8 @@ const Services = () => {
     const handleDelete = async (id) => {
         setIsDeleting(true);
         console.log('Attempting to delete service with id:', id);
-        // The id passed here should already be a number from openDeleteModal
-        const parsedId = typeof id === 'object' && id !== null ? id.id : id; // This line might not be needed if id is always correct
-        if (!parsedId || typeof parsedId !== 'number') { // Simplified check
+        const parsedId = typeof id === 'object' && id !== null ? id.id : id;
+        if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
             console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
             setError('Invalid service ID. Cannot delete.');
             setIsDeleting(false);
@@ -235,7 +233,7 @@ const Services = () => {
             const response = await axios.delete(`${BASE_URL}/services/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
-                console.log('Service deleted successfully');
+                console.log('Service archived successfully');
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -290,7 +288,7 @@ const Services = () => {
                     </div>
                 </div>
             )}
-            
+
             {/* Delete confirmation modal (controlled by showDeleteModal) */}
             {showDeleteModal && (
                 <Modal
@@ -374,7 +372,7 @@ const Services = () => {
                     </div>
                 </div>
             )}
-            
+
         </div>
     );
 };

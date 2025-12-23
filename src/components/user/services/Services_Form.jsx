@@ -64,7 +64,7 @@ const AutoCalculate = () => {
 };
 
 // --- Vendor Selection Component ---
-const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry }) => {
+const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry,user }) => {
     const addVendor = () => {
         const newVendors = [...(values.vendors || []), { vendor_name: '', payable_amount: '' }];
         setFieldValue('vendors', newVendors);
@@ -74,6 +74,10 @@ const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendor
         const newVendors = values.vendors.filter((_, i) => i !== index);
         setFieldValue('vendors', newVendors);
     };
+
+    if (user?.role !== 'admin') {   
+    return null; // Don't render anything if user is not admin
+    }
 
     return (
         <div className="col-span-2 border border-purple-200 rounded-lg p-4 bg-purple-50">
@@ -588,15 +592,15 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     ];
 
     const section3Fields = [
-        { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' },
-        { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave' },
+        { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd' , readOnly: !!editEntry },
+        { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave', readOnly: !!editEntry },
         { name: 'paid_from_bank', label: 'Bank Title', type: 'select', options: BANK_OPTIONS.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
-        { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university' },
+        { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment details', icon: 'university', readOnly: !!editEntry },
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
-        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: true },
-        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: true },
+        { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Calculated automatically', icon: 'chart-line', readOnly: !!editEntry },
+        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Calculated automatically', icon: 'balance-scale', readOnly: !!editEntry },
         { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: '', icon: 'calendar-times' },
-    ];
+    ];  
 
     const renderField = (field, values, setFieldValue) => (
         <motion.div 
@@ -768,6 +772,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                                 vendorNames={vendorNames}
                                                 setIsVendorModalOpen={setIsVendorModalOpen}
                                                 editEntry={editEntry}
+                                                user={user}
                                             />
                                         </>
                                     )}

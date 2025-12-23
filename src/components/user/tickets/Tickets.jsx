@@ -22,12 +22,12 @@ const Tickets = () => {
     const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
     const [selectedTicketForPay, setSelectedTicketForPay] = useState(null);
     const location = useLocation();
-    const [highlightEntry,setHighlightedEntry]=useState('');
-    
+    const [highlightEntry, setHighlightedEntry] = useState('');
+
     // Date filter states
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    
+
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -66,12 +66,12 @@ const Tickets = () => {
 
                 let totalCashPaid = parseFloat(ticket.paid_cash || 0);
                 let totalBankPaid = parseFloat(ticket.paid_in_bank || 0);
-                
-                const initialCash = ticket.initial_paid_cash !== undefined 
-                    ? parseFloat(ticket.initial_paid_cash) 
+
+                const initialCash = ticket.initial_paid_cash !== undefined
+                    ? parseFloat(ticket.initial_paid_cash)
                     : parseFloat(ticket.paid_cash || 0);
-                const initialBank = ticket.initial_paid_in_bank !== undefined 
-                    ? parseFloat(ticket.initial_paid_in_bank) 
+                const initialBank = ticket.initial_paid_in_bank !== undefined
+                    ? parseFloat(ticket.initial_paid_in_bank)
                     : parseFloat(ticket.paid_in_bank || 0);
 
                 return {
@@ -80,17 +80,17 @@ const Tickets = () => {
                     initial_paid_in_bank: initialBank,
                     paid_cash: totalCashPaid,
                     paid_in_bank: totalBankPaid,
-                    depart_date: ticket.depart_date 
-                        ? new Date(ticket.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                    depart_date: ticket.depart_date
+                        ? new Date(ticket.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                         : '',
-                    return_date: ticket.return_date 
-                        ? new Date(ticket.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                    return_date: ticket.return_date
+                        ? new Date(ticket.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                         : '',
-                    booking_date: ticket.booking_date 
-                        ? new Date(ticket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                    booking_date: ticket.booking_date
+                        ? new Date(ticket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                         : '',
                     remaining_date: ticket.remaining_date
-                        ? new Date(ticket.remaining_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                        ? new Date(ticket.remaining_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                         : '',
                     booking_date_raw: ticket.booking_date, // Store raw date for filtering
                     allPassengerDetails: parsedPassengerDetails,
@@ -132,20 +132,20 @@ const Tickets = () => {
             const formattedTicket = {
                 ...updatedTicket,
                 serialNo: entries[entryIndex].serialNo,
-                depart_date: updatedTicket.depart_date 
-                    ? new Date(updatedTicket.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                depart_date: updatedTicket.depart_date
+                    ? new Date(updatedTicket.depart_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                     : '',
-                return_date: updatedTicket.return_date 
-                    ? new Date(updatedTicket.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                return_date: updatedTicket.return_date
+                    ? new Date(updatedTicket.return_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                     : '',
-                created_at: updatedTicket.created_at 
-                    ? new Date(updatedTicket.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                created_at: updatedTicket.created_at
+                    ? new Date(updatedTicket.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                     : '',
-                booking_date: updatedTicket.booking_date 
-                    ? new Date(updatedTicket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                booking_date: updatedTicket.booking_date
+                    ? new Date(updatedTicket.booking_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                     : '',
                 remaining_date: updatedTicket.remaining_date
-                    ? new Date(updatedTicket.remaining_date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) 
+                    ? new Date(updatedTicket.remaining_date).toLocaleDateString('en-GB', { timeZone: 'UTC' })
                     : '',
                 booking_date_raw: updatedTicket.booking_date,
                 allPassengerDetails: parsedPassengerDetails,
@@ -164,18 +164,18 @@ const Tickets = () => {
         fetchTickets();
     }, []);
 
-    useEffect(()=>{
-        if(location.state?.highlightEntry){
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
             setHighlightedEntry(location.state.highlightEntry);
             setSearch(location.state.highlightEntry)
 
-            const timer = setTimeout(()=>{
+            const timer = setTimeout(() => {
                 setHighlightedEntry(null)
-            },5000);
+            }, 5000);
 
             return clearTimeout(timer)
         }
-    },[location.state])
+    }, [location.state])
 
     const handleRemainingPay = (ticket) => {
         setSelectedTicketForPay(ticket);
@@ -207,16 +207,16 @@ const Tickets = () => {
     };
 
     const baseColumns = [
-           {
-        header: 'BOOKING DATE',
-        accessor: 'booking_employee',
-        render: (cellValue, row) => (
-            <div className="uppercase">
-                <div>{row?.booking_date || ''}</div>
-                <div>{row?.employee_name || ''}</div>
-            </div>
-        )
-    },
+        {
+            header: 'BOOKING DATE',
+            accessor: 'booking_employee',
+            render: (cellValue, row) => (
+                <div className="uppercase">
+                    <div>{row?.booking_date || ''}</div>
+                    <div>{row?.employee_name || ''}</div>
+                </div>
+            )
+        },
         // {
         //     header: 'EMPLOYEE',
         //     accessor: 'employee_entry',
@@ -226,7 +226,7 @@ const Tickets = () => {
         //         </div>
         //     )
         // },
-        
+
         // { header: 'REFERENCE', accessor: 'reference' },
         {
             header: 'DEPART & RETURN DATE',
@@ -238,25 +238,25 @@ const Tickets = () => {
                 </div>
             )
         },
-     
-     { 
-    header: 'SECTOR', 
-    accessor: 'sector',
-    render: (cellValue, row) => (
-        <div className="uppercase">
-            <div>{ row?.sector || ''}</div>
-        </div>
-    )
-},
-        { 
-    header: 'AIRLINE', 
-    accessor: 'airline',
-    render: (cellValue, row) => (
-        <div className="uppercase">
-            <div>{row?.airline_select || row?.airline || ''}</div>
-        </div>
-    )
-},
+
+        {
+            header: 'SECTOR',
+            accessor: 'sector',
+            render: (cellValue, row) => (
+                <div className="uppercase">
+                    <div>{row?.sector || ''}</div>
+                </div>
+            )
+        },
+        {
+            header: 'AIRLINE',
+            accessor: 'airline',
+            render: (cellValue, row) => (
+                <div className="uppercase">
+                    <div>{row?.airline_select || row?.airline || ''}</div>
+                </div>
+            )
+        },
         {
             header: 'PASSENGERS',
             accessor: 'passengerCount',
@@ -460,7 +460,7 @@ const Tickets = () => {
         let matchesDateRange = true;
         if (startDate || endDate) {
             const bookingDate = entry.booking_date_raw ? new Date(entry.booking_date_raw) : null;
-            
+
             if (bookingDate) {
                 if (startDate && endDate) {
                     const start = new Date(startDate);
@@ -499,8 +499,8 @@ const Tickets = () => {
     };
 
     const handleUpdate = (entry) => {
-        const actualEntry = typeof entry === 'number' 
-            ? filteredData[entry] 
+        const actualEntry = typeof entry === 'number'
+            ? filteredData[entry]
             : entry;
         setEditEntry(actualEntry);
         setShowForm(true);
@@ -516,37 +516,37 @@ const Tickets = () => {
         setDeleteId(null);
     };
 
-   
-const handleDelete = async (id) => {
-    console.log('Attempting to delete ticket with id:', id);
-    setIsDeleting(true);
-    const parsedId = typeof id === 'object' && id !== null ? id.id : id;
-    
-    if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
-        console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
-        setError('Invalid ticket ID. Cannot delete.');
-        setIsDeleting(false);
-        return;
-    }
-    
-    try {
-        const response = await axios.delete(`${BASE_URL}/ticket/${parsedId}`, {
-           
-        });
-        
-        if (response.status === 200) {
-            setEntries(entries.filter(entry => entry.id !== parsedId));
-            console.log('Ticket archived successfully');
-        } else {
-            throw new Error(`HTTP error! status: ${response.status}`);
+
+    const handleDelete = async (id) => {
+        console.log('Attempting to delete ticket with id:', id);
+        setIsDeleting(true);
+        const parsedId = typeof id === 'object' && id !== null ? id.id : id;
+
+        if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
+            console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
+            setError('Invalid ticket ID. Cannot delete.');
+            setIsDeleting(false);
+            return;
         }
-    } catch (error) {
-        console.error('Error deleting ticket:', error);
-        setError('Failed to delete ticket. Please try again later.');
-    }
-    setIsDeleting(false);
-    closeDeleteModal();
-};
+
+        try {
+            const response = await axios.delete(`${BASE_URL}/ticket/${parsedId}`, {
+
+            });
+
+            if (response.status === 200) {
+                setEntries(entries.filter(entry => entry.id !== parsedId));
+                console.log('Ticket archived successfully');
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error deleting ticket:', error);
+            setError('Failed to delete ticket. Please try again later.');
+        }
+        setIsDeleting(false);
+        closeDeleteModal();
+    };
 
     const clearDateFilter = () => {
         setStartDate('');
@@ -613,7 +613,7 @@ const handleDelete = async (id) => {
                             <i className="fas fa-times text-xl"></i>
                         </button>
                     </div>
-                    
+
                     <div className="bg-gray-100 p-4 rounded mb-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -628,7 +628,7 @@ const handleDelete = async (id) => {
                             <div>
                                 <strong>Receivable Amount</strong> {selectedTicketForPay.receivable_amount}
                             </div>
-                             
+
                             <div>
                                 <strong>Paid Cash</strong> {selectedTicketForPay.initial_paid_cash}
                             </div>
@@ -639,11 +639,11 @@ const handleDelete = async (id) => {
                                 <strong>Remaining Amount:</strong> {selectedTicketForPay.remaining_amount || '0'}
                             </div>
                             <div>
-                   <strong>Initial Remaining:</strong> 
-                 <span className="font-semibold text-purple-700">
-                 {selectedTicketForPay.initial_remaining_amount || '0'}
-                     </span>
-                   </div>
+                                <strong>Initial Remaining:</strong>
+                                <span className="font-semibold text-purple-700">
+                                    {selectedTicketForPay.initial_remaining_amount || '0'}
+                                </span>
+                            </div>
                         </div>
                     </div>
 

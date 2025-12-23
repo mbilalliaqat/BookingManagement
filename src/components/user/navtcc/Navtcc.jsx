@@ -19,12 +19,12 @@ const Navtcc = () => {
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const location = useLocation();
-    const [highlightEntry,setHighlightedEntry]=useState('');
-    
+    const [highlightEntry, setHighlightedEntry] = useState('');
+
     // Date filter states
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    
+
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -40,11 +40,11 @@ const Navtcc = () => {
             console.log("Fetched data:", data);
 
             const formattedData = data.navtcc?.map((navtcc) => {
-                
+
                 let passportDetails = {};
                 let vendorsList = [];
-                
-                
+
+
                 try {
                     if (typeof navtcc.passport_detail === 'string') {
                         passportDetails = JSON.parse(navtcc.passport_detail);
@@ -54,7 +54,7 @@ const Navtcc = () => {
                 } catch (e) {
                     console.error("Error parsing passport details:", e);
                 }
-                
+
                 // Parse vendors
                 try {
                     if (typeof navtcc.vendors === 'string') {
@@ -65,7 +65,7 @@ const Navtcc = () => {
                 } catch (e) {
                     console.error("Error parsing vendors:", e);
                 }
-                
+
                 return {
                     ...navtcc,
                     created_at: new Date(navtcc.created_at).toLocaleDateString('en-GB'),
@@ -97,18 +97,18 @@ const Navtcc = () => {
         fetchTickets();
     }, []);
 
-    useEffect(()=>{
-        if(location.state?.highlightEntry){
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
             setHighlightedEntry(location.state.highlightEntry);
             setSearch(location.state.highlightEntry)
 
-            const timer = setTimeout(()=>{
+            const timer = setTimeout(() => {
                 setHighlightedEntry(null)
-            },5000);
+            }, 5000);
 
             return clearTimeout(timer)
         }
-    },[location.state])
+    }, [location.state])
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'booking_date' },
@@ -152,11 +152,11 @@ const Navtcc = () => {
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
-        { 
-  header: 'REMAINING DATE', 
-  accessor: 'remaining_date_raw',
-  render: (date) => date ? new Date(date).toLocaleDateString('en-GB') : '-'
-},
+        {
+            header: 'REMAINING DATE',
+            accessor: 'remaining_date_raw',
+            render: (date) => date ? new Date(date).toLocaleDateString('en-GB') : '-'
+        },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
@@ -188,7 +188,7 @@ const Navtcc = () => {
         let matchesDateRange = true;
         if (startDate || endDate) {
             const createdDate = entry.created_at_raw ? new Date(entry.created_at_raw) : null;
-            
+
             if (createdDate) {
                 if (startDate && endDate) {
                     const start = new Date(startDate);
@@ -251,16 +251,17 @@ const Navtcc = () => {
             const response = await axios.delete(`${BASE_URL}/navtcc/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries.filter(entry => entry.id !== parsedId));
-                console.log('navtcc deleted successfully');
+                console.log('Navtcc archived successfully');
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
         } catch (error) {
             console.error('Error deleting navtcc:', error);
             setError('Failed to delete navtcc. Please try again later.');
+        } finally {
+            setIsDeleting(false);
+            closeDeleteModal();
         }
-        setIsDeleting(false);
-        closeDeleteModal();
     };
 
     const clearDateFilter = () => {

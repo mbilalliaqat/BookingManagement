@@ -24,55 +24,55 @@ const GamcaToken = () => {
     const [showRemainingPay, setShowRemainingPay] = useState(false);
     const [selectedGamcaToken, setSelectedGamcaToken] = useState(null);
     const location = useLocation();
-    const [highlightEntry,setHighlightedEntry]=useState('');
-    
+    const [highlightEntry, setHighlightedEntry] = useState('');
+
     // Date filter states
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-    
+
     const { user } = useAppContext();
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
     const fetchData = async () => {
         setIsLoading(true);
-        setError(null); 
-        
+        setError(null);
+
         try {
             if (!BASE_URL) {
                 throw new Error('API base URL is not defined. Please check your environment configuration.');
             }
-            
+
             const apiUrl = `${BASE_URL}/gamca-token`;
             console.log('Fetching GAMCA token data from:', apiUrl);
-            
+
             const response = await axios.get(apiUrl, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             console.log('Raw API response:', response);
-            
+
             if (!response.data) {
                 console.error('Empty response data:', response);
                 throw new Error('Empty response received from server');
             }
-            
+
             if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
                 console.error('Received HTML instead of JSON. API endpoint may be incorrect.');
                 throw new Error('Received HTML instead of JSON. API endpoint may be incorrect.');
             }
-            
+
             if (!response.data.gamcaTokens) {
                 console.error('Response missing gamcaTokens property:', response.data);
                 throw new Error('Invalid response format: missing gamcaTokens data');
             }
-            
+
             const data = response.data.gamcaTokens;
             console.log('Parsed GAMCA tokens:', data);
-            
+
             const formattedData = data.map((token) => {
                 let passportDetails = {};
                 try {
@@ -104,15 +104,15 @@ const GamcaToken = () => {
                     passport_detail: token.passport_detail
                 };
             });
-            
+
             setEntries(formattedData.reverse());
-            
+
             if (formattedData.length === 0) {
                 console.log('No GAMCA tokens found in the response');
             }
         } catch (error) {
             console.error('Error fetching GAMCA token data:', error);
-            
+
             if (error.response) {
                 console.error('Server response:', error.response);
                 setError(`Server error: ${error.response.status}. ${error.response.data?.message || 'Please try again later.'}`);
@@ -131,24 +131,24 @@ const GamcaToken = () => {
         fetchData();
     }, []);
 
-     useEffect(()=>{
-            if(location.state?.highlightEntry){
-                setHighlightedEntry(location.state.highlightEntry);
-                setSearch(location.state.highlightEntry)
-    
-                const timer = setTimeout(()=>{
-                    setHighlightedEntry(null)
-                },5000);
-    
-                return clearTimeout(timer)
-            }
-        },[location.state])
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
+
+            const timer = setTimeout(() => {
+                setHighlightedEntry(null)
+            }, 5000);
+
+            return clearTimeout(timer)
+        }
+    }, [location.state])
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'created_at' },
-        { 
-            header: 'EMPLOYEE & ENTRY', 
-            accessor: 'employee_entry', 
+        {
+            header: 'EMPLOYEE & ENTRY',
+            accessor: 'employee_entry',
             render: (cellValue, row) => (
                 <div>
                     <div>{row?.employee_name || ''}</div>
@@ -159,9 +159,9 @@ const GamcaToken = () => {
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'COUNTRY', accessor: 'country' },
-        { 
-            header: 'PASSENGER DETAILS', 
-            accessor: 'passenger_details', 
+        {
+            header: 'PASSENGER DETAILS',
+            accessor: 'passenger_details',
             render: (cellValue, row) => (
                 <div>
                     <div>{row?.passengerTitle || ''} {row?.passengerFirstName || ''} {row?.passengerLastName || ''}</div>
@@ -185,9 +185,9 @@ const GamcaToken = () => {
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
-        { 
-            header: 'PAID FROM & IN BANK', 
-            accessor: 'paid_bank', 
+        {
+            header: 'PAID FROM & IN BANK',
+            accessor: 'paid_bank',
             render: (cellValue, row) => (
                 <div>
                     <div>{row?.paid_from_bank || ''}</div>
@@ -212,11 +212,11 @@ const GamcaToken = () => {
                 </div>
             )
         },
-        { 
-  header: 'REMAINING DATE', 
-  accessor: 'remaining_date_raw',
-  render: (date) => date ? new Date(date).toLocaleDateString('en-GB') : '-'
-},
+        {
+            header: 'REMAINING DATE',
+            accessor: 'remaining_date_raw',
+            render: (date) => date ? new Date(date).toLocaleDateString('en-GB') : '-'
+        },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
@@ -248,7 +248,7 @@ const GamcaToken = () => {
         let matchesDateRange = true;
         if (startDate || endDate) {
             const createdDate = entry.created_at_raw ? new Date(entry.created_at_raw) : null;
-            
+
             if (createdDate) {
                 if (startDate && endDate) {
                     const start = new Date(startDate);
@@ -316,7 +316,7 @@ const GamcaToken = () => {
             const response = await axios.delete(`${BASE_URL}/gamca-token/${parsedId}`);
             if (response.status === 200) {
                 setEntries(entries?.filter(entry => entry.id !== parsedId));
-                console.log('GAMCA token deleted successfully');
+                console.log('GAMCA token archived successfully');
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -432,7 +432,7 @@ const GamcaToken = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this GAMCA token entry? 
+                    Are you sure you want to delete this GAMCA token entry?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button
