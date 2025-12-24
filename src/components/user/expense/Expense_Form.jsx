@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
 import axios from 'axios';
+import { parse } from 'dotenv';
 
 const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -251,11 +252,11 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     await axios.post(`${BASE_URL}/vender`, {
                         vender_name: data.vendor_id,
                         detail: data.detail,
-                        credit: parseFloat(data.withdraw),
+                        credit: null,
                         date: data.date,
                         entry: data.entry,
                         bank_title: data.bank_title || null,
-                        debit: null
+                        debit: parseFloat(data.withdraw)
                     });
                 }
 
@@ -265,8 +266,8 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         bank_name: data.bank_title,
                         employee_name: data.user_name,
                         detail: `Expense - ${data.detail}`,
-                        credit: 0,
-                        debit: parseFloat(data.withdraw),
+                        credit: parseFloat(data.withdraw),
+                        debit: 0,
                         date: data.date,
                         entry: data.entry,
                     });

@@ -9,7 +9,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
     const [newPayment, setNewPayment] = useState({
         payment_date: new Date().toISOString().split('T')[0],
         remaining_amount: '',
-        paid_cash: '',
+        payed_cash: '',
         paid_bank: '',
         bank_title: '',
         recorded_by: ''
@@ -64,7 +64,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
         if (isSubmitting) return;
         if (!newPayment.payment_date || !newPayment.recorded_by) return;
 
-        const cashAmount = parseFloat(newPayment.paid_cash) || 0;
+        const cashAmount = parseFloat(newPayment.payed_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
         if (cashAmount === 0 && bankAmount === 0) {
@@ -75,19 +75,24 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
         setIsSubmitting(true);
 
         try {
-            // FIXED: Match backend field names - backend expects paid_cash and paid_in_bank
             const response = await axios.post(`${BASE_URL}/services/${serviceId}/payments`, {
                 service_id: serviceId,
                 payment_date: newPayment.payment_date,
                 paid_cash: cashAmount,
-                paid_in_bank: bankAmount, // FIXED: Changed from paid_bank to paid_in_bank
+                paid_in_bank: bankAmount,
                 bank_title: newPayment.bank_title || null,
                 recorded_by: newPayment.recorded_by
             });
 
             if (response.status === 201) {
+                // Add bank account entry if bank payment exists
                 if (newPayment.bank_title && bankAmount > 0) {
                     await addBankAccountEntry(bankAmount);
+                }
+
+                // Add agent entry if agent is assigned
+                if (serviceDetails && serviceDetails.agent_name) {
+                    await addAgentEntry();
                 }
 
                 setPayments([...payments, response.data.payment]);
@@ -106,7 +111,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
                 setNewPayment({
                     payment_date: new Date().toISOString().split('T')[0],
                     remaining_amount: '',
-                    paid_cash: '',
+                    payed_cash: '',
                     paid_bank: '',
                     bank_title: '',
                     recorded_by: ''
@@ -120,6 +125,65 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
             alert('Failed to add payment. Please try again.');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const addAgentEntry = async () => {
+        try {
+            console.log('Adding agent entry for service remaining payment');
+            console.log('ServiceDetails:', serviceDetails);
+
+            if (!serviceDetails) {
+                console.error('No service details available for agent entry');
+                return;
+            }
+
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            };
+
+            const commonDetail = [
+                serviceDetails.visa_type || '',
+                serviceDetails.customer_add || '',
+                formatDate(serviceDetails.booking_date),
+                serviceDetails.specific_detail || '',
+                '(Remaining Payment)'
+            ].filter(Boolean).join(',');
+
+            const agentData = {
+                agent_name: serviceDetails.agent_name,
+                employee: newPayment.recorded_by,
+                detail: commonDetail,
+                receivable_amount: 0,
+                paid_cash: cashAmount,
+                paid_bank: bankAmount,
+                credit: 0,
+                debit: cashAmount + bankAmount,
+                date: newPayment.payment_date,
+                entry: `${serviceDetails.entry || ''} (RP)`,
+                bank_title: newPayment.bank_title || null
+            };
+
+            console.log('Submitting agent data:', agentData);
+
+            const agentResponse = await axios.post(`${BASE_URL}/agent`, agentData);
+            
+            if (agentResponse.status === 200 || agentResponse.status === 201) {
+                console.log('Agent entry added successfully');
+            } else {
+                console.error('Agent submission failed:', agentResponse.status);
+            }
+        } catch (agentError) {
+            console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
+            console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
     };
 
@@ -171,7 +235,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
     const updatePayment = async (paymentId) => {
         if (!editingPayment.payment_date || !editingPayment.recorded_by) return;
 
-        const cashAmount = parseFloat(editingPayment.paid_cash) || 0;
+        const cashAmount = parseFloat(editingPayment.payed_cash) || 0;
         const bankAmount = parseFloat(editingPayment.paid_bank) || 0;
 
         if (cashAmount === 0 && bankAmount === 0) {
@@ -180,11 +244,10 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
         }
 
         try {
-            // FIXED: Match backend field names
             await axios.put(`${BASE_URL}/services/payment/${paymentId}`, {
                 payment_date: editingPayment.payment_date,
                 paid_cash: cashAmount,
-                paid_in_bank: bankAmount, // FIXED: Changed from paid_bank to paid_in_bank
+                paid_in_bank: bankAmount,
                 bank_title: editingPayment.bank_title || null,
                 recorded_by: editingPayment.recorded_by
             });
@@ -199,7 +262,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.paid_cash || 0), 0);
+    const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.payed_cash || 0), 0);
 
     if (loading) {
         return <div className="flex justify-center p-4">Loading payments...</div>;
@@ -241,7 +304,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
                                         {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_cash || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.paid_in_bank || payment.paid_bank || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.recorded_by || ''}</td>
