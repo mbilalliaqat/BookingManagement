@@ -9,7 +9,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
     const [newPayment, setNewPayment] = useState({
         payment_date: new Date().toISOString().split('T')[0],
         remaining_amount: '',
-        payed_cash: '',
+        paid_cash: '',
         paid_bank: '',
         bank_title: '',
         recorded_by: ''
@@ -64,7 +64,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
         if (isSubmitting) return;
         if (!newPayment.payment_date || !newPayment.recorded_by) return;
 
-        const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+        const cashAmount = parseFloat(newPayment.paid_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
         if (cashAmount === 0 && bankAmount === 0) {
@@ -111,7 +111,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
                 setNewPayment({
                     payment_date: new Date().toISOString().split('T')[0],
                     remaining_amount: '',
-                    payed_cash: '',
+                    paid_cash: '',
                     paid_bank: '',
                     bank_title: '',
                     recorded_by: ''
@@ -138,7 +138,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
                 return;
             }
 
-            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const cashAmount = parseFloat(newPayment.paid_cash) || 0;
             const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
             const formatDate = (dateStr) => {
@@ -235,7 +235,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
     const updatePayment = async (paymentId) => {
         if (!editingPayment.payment_date || !editingPayment.recorded_by) return;
 
-        const cashAmount = parseFloat(editingPayment.payed_cash) || 0;
+        const cashAmount = parseFloat(editingPayment.paid_cash) || 0;
         const bankAmount = parseFloat(editingPayment.paid_bank) || 0;
 
         if (cashAmount === 0 && bankAmount === 0) {
@@ -262,7 +262,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.payed_cash || 0), 0);
+    const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.paid_cash || 0), 0);
 
     if (loading) {
         return <div className="flex justify-center p-4">Loading payments...</div>;
@@ -304,7 +304,7 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
                                         {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_cash || '0'}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.paid_in_bank || payment.paid_bank || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
                                     <td className="border border-gray-300 px-4 py-2">{payment.recorded_by || ''}</td>
@@ -355,8 +355,8 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
                                     <label className="block text-sm font-medium mb-1">Cash Paid</label>
                                     <input
                                         type="text"
-                                        value={editingPayment.payed_cash}
-                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
+                                        value={editingPayment.paid_cash}
+                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, paid_cash: e.target.value }))}
                                         className="w-full border rounded px-3 py-2"
                                     />
                                 </div>
@@ -442,8 +442,8 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
                                 <label className="block text-sm font-medium mb-1">Cash Paid</label>
                                 <input
                                     type="text"
-                                    value={newPayment.payed_cash}
-                                    onChange={(e) => setNewPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
+                                    value={newPayment.paid_cash}
+                                    onChange={(e) => setNewPayment(prev => ({ ...prev, paid_cash: e.target.value }))}
                                     placeholder="Enter cash amount paid"
                                     className="w-full border rounded px-3 py-2"
                                 />

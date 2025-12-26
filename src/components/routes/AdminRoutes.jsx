@@ -20,7 +20,8 @@ import RemainingPay from '../user/paymentHistory/RemainingPay'
 import RemainingAmounts from '../user/paymentHistory/RemainingAmounts'
 import Profit from '../user/paymentHistory/Profit'
 import Archive from '../admin/ArchiveData/Archive'
-
+import E_Number from '../user/e_number/E_Number'
+import Banks_Detail from '../user/User_Banks_Details/Banks_Detail'
 
 
 const AdminRoutes = () => {
@@ -47,8 +48,9 @@ const AdminRoutes = () => {
             <Route path="/remaining-amounts" element={<RemainingAmounts />} />
             <Route path="/profit" element={<Profit />} />
              <Route path="/archive" element={<Archive/>} />
-
-
+             <Route path='/e-number' element={<E_Number/>}/>
+             <Route path='/banks-details' element={<Banks_Detail/>}/>
+             
           </Routes>
         </AdminLayout>
     </div>
