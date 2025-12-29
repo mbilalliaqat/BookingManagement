@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Table from '../../ui/Table';
-import E_Number_Form from './E_Number_Form';
+import Other_Cp_Form from './Other_Cp_Form';
 import { useAppContext } from '../../contexts/AppContext';
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
@@ -8,7 +8,7 @@ import Modal from '../../ui/Modal';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useLocation } from 'react-router-dom';
 
-const E_Number = () => {
+const Other_Cp = () => {
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [entries, setEntries] = useState([]);
@@ -38,8 +38,8 @@ const E_Number = () => {
                 throw new Error('API base URL is not defined. Please check your environment configuration.');
             }
 
-            const apiUrl = `${BASE_URL}/e-numbers`;
-            console.log('Fetching E-Number data from:', apiUrl);
+            const apiUrl = `${BASE_URL}/other-cp`;
+            console.log('Fetching Other CP data from:', apiUrl);
 
             const response = await axios.get(apiUrl, {
                 headers: {
@@ -48,22 +48,53 @@ const E_Number = () => {
                 }
             });
 
+            console.log('Raw API response:', response);
+
             if (!response.data) {
+                console.error('Empty response data:', response);
                 throw new Error('Empty response received from server');
             }
 
-            const data = response.data.eNumbers;
+            if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
+                console.error('Received HTML instead of JSON. API endpoint may be incorrect.');
+                throw new Error('Received HTML instead of JSON. API endpoint may be incorrect.');
+            }
 
-            const formattedData = data.map((entry) => ({
-                ...entry,
-                created_at: new Date(entry.created_at).toLocaleDateString('en-GB'),
-                created_at_raw: entry.created_at, // Store raw date for filtering
-            }));
+            if (!response.data.otherCpEntries) {
+                console.error('Response missing otherCpEntries property:', response.data);
+                throw new Error('Invalid response format: missing otherCpEntries data');
+            }
+
+            const data = response.data.otherCpEntries;
+            console.log('Parsed Other CP entries:', data);
+
+            const formattedData = data.map((entry) => {
+                return {
+                    ...entry,
+                    date: new Date(entry.date).toLocaleDateString('en-GB'),
+                    date_raw: entry.date, // Store raw date for filtering
+                    created_at: new Date(entry.created_at).toLocaleDateString('en-GB'),
+                    created_at_raw: entry.created_at
+                };
+            });
 
             setEntries(formattedData.reverse());
+
+            if (formattedData.length === 0) {
+                console.log('No Other CP entries found in the response');
+            }
         } catch (error) {
-            console.error('Error fetching E-Number data:', error);
-            setError(`Failed to load data: ${error.message}`);
+            console.error('Error fetching Other CP data:', error);
+
+            if (error.response) {
+                console.error('Server response:', error.response);
+                setError(`Server error: ${error.response.status}. ${error.response.data?.message || 'Please try again later.'}`);
+            } else if (error.request) {
+                console.error('No response received:', error.request);
+                setError('No response from server. Please check your network connection.');
+            } else {
+                setError(`Failed to load data: ${error.message}`);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -76,27 +107,23 @@ const E_Number = () => {
     useEffect(() => {
         if (location.state?.highlightEntry) {
             setHighlightedEntry(location.state.highlightEntry);
-            setSearch(location.state.highlightEntry)
+            setSearch(location.state.highlightEntry);
 
             const timer = setTimeout(() => {
-                setHighlightedEntry(null)
+                setHighlightedEntry(null);
             }, 5000);
 
-            return () => clearTimeout(timer)
+            return () => clearTimeout(timer);
         }
-    }, [location.state])
+    }, [location.state]);
 
     const columns = [
         { header: 'DATE', accessor: 'date' },
+        { header: 'ENTRY', accessor: 'entry' },
         { header: 'EMPLOYEE', accessor: 'employee' },
-        { header: 'ENTRY NO', accessor: 'entryNo' },
-        { header: 'FILE NUMBER', accessor: 'fileNo' },
-        { header: 'VISA ID', accessor: 'visaId' },
-        { header: 'REFERENCE', accessor: 'reference' },
-        { header: 'PASSPORT NO', accessor: 'passportNo' },
-        { header: 'MOBILE NO', accessor: 'mobileNo' },
-        { header: 'PAY FROM BANK CARD', accessor: 'payFromBankCard' },
-        { header: 'CARD AMOUNT', accessor: 'Card_Amount' },
+        { header: 'DETAIL', accessor: 'detail' },
+        { header: 'CARD PAYMENT', accessor: 'card_payment' },
+        { header: 'CARD AMOUNT', accessor: 'card_amount' },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
@@ -108,7 +135,7 @@ const E_Number = () => {
                     </button>
                     <button
                         className="text-red-500 hover:text-red-700 text-[13px]"
-                        onClick={() => openDeleteModal(row.id)}
+                        onClick={() => openDeleteModal(index.id)}
                     >
                         <i className="fas fa-trash"></i>
                     </button>
@@ -117,28 +144,31 @@ const E_Number = () => {
         }] : [])
     ];
 
+    // Enhanced filtering with date range
     const filteredData = entries?.filter((entry) => {
+        // Search filter
         const matchesSearch = Object.values(entry).some((value) =>
             String(value).toLowerCase().includes(search.toLowerCase())
         );
 
+        // Date range filter
         let matchesDateRange = true;
         if (startDate || endDate) {
-            const createdDate = entry.created_at_raw ? new Date(entry.created_at_raw) : null;
+            const entryDate = entry.date_raw ? new Date(entry.date_raw) : null;
 
-            if (createdDate) {
+            if (entryDate) {
                 if (startDate && endDate) {
                     const start = new Date(startDate);
                     const end = new Date(endDate);
-                    end.setHours(23, 59, 59, 999);
-                    matchesDateRange = createdDate >= start && createdDate <= end;
+                    end.setHours(23, 59, 59, 999); // Include the entire end date
+                    matchesDateRange = entryDate >= start && entryDate <= end;
                 } else if (startDate) {
                     const start = new Date(startDate);
-                    matchesDateRange = createdDate >= start;
+                    matchesDateRange = entryDate >= start;
                 } else if (endDate) {
                     const end = new Date(endDate);
                     end.setHours(23, 59, 59, 999);
-                    matchesDateRange = createdDate <= end;
+                    matchesDateRange = entryDate <= end;
                 }
             } else {
                 matchesDateRange = false;
@@ -176,12 +206,25 @@ const E_Number = () => {
 
     const handleDelete = async (id) => {
         setIsDeleting(true);
+        console.log('Attempting to delete Other CP entry with id:', id);
+        const parsedId = typeof id === 'object' && id !== null ? id.id : id;
+        if (!parsedId || isNaN(parsedId) || typeof parsedId !== 'number') {
+            console.error('Invalid ID:', id, 'Parsed ID:', parsedId);
+            setError('Invalid Other CP entry ID. Cannot delete.');
+            setIsDeleting(false);
+            return;
+        }
         try {
-            await axios.delete(`${BASE_URL}/e-numbers/${id}`);
-            setEntries(entries?.filter(entry => entry.id !== id));
+            const response = await axios.delete(`${BASE_URL}/other-cp/${parsedId}`);
+            if (response.status === 200) {
+                setEntries(entries?.filter(entry => entry.id !== parsedId));
+                console.log('Other CP entry deleted successfully');
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
         } catch (error) {
-            console.error('Error deleting E-Number:', error);
-            setError('Failed to delete E-Number. Please try again later.');
+            console.error('Error deleting Other CP entry:', error);
+            setError('Failed to delete Other CP entry. Please try again later.');
         } finally {
             setIsDeleting(false);
             closeDeleteModal();
@@ -196,7 +239,7 @@ const E_Number = () => {
     return (
         <div className="h-full flex flex-col">
             {showForm ? (
-                <E_Number_Form
+                <Other_Cp_Form
                     onCancel={handleCancel}
                     onSubmitSuccess={handleFormSubmit}
                     editEntry={editEntry}
@@ -216,6 +259,7 @@ const E_Number = () => {
                                 <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
                             </div>
 
+                            {/* Date Range Filter */}
                             <div className="flex items-center gap-2">
                                 <div className="relative">
                                     <input
@@ -256,9 +300,10 @@ const E_Number = () => {
                         </button>
                     </div>
 
+                    {/* Display filtered count */}
                     {(startDate || endDate) && (
                         <div className="mb-2 text-sm text-gray-600">
-                            Showing {filteredData?.length || 0} of {entries?.length || 0} E-Numbers
+                            Showing {filteredData?.length || 0} of {entries?.length || 0} entries
                             {startDate && ` from ${new Date(startDate).toLocaleDateString('en-GB')}`}
                             {endDate && ` to ${new Date(endDate).toLocaleDateString('en-GB')}`}
                         </div>
@@ -289,7 +334,7 @@ const E_Number = () => {
                     <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
                 </div>
                 <p className="text-sm text-center text-white mb-6">
-                    Are you sure you want to delete this E-Number entry?
+                    Are you sure you want to delete this entry?
                 </p>
                 <div className="flex items-center justify-center space-x-4">
                     <button
@@ -312,4 +357,4 @@ const E_Number = () => {
     );
 };
 
-export default E_Number;
+export default Other_Cp;

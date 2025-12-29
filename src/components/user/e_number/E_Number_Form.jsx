@@ -30,6 +30,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             passportNo: '',
             mobileNo: '',
             payFromBankCard: '',
+            Card_Amount: '',
         };
 
         if (editEntry) {
@@ -44,6 +45,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 passportNo: editEntry.passportNo || '',
                 mobileNo: editEntry.mobileNo || '',
                 payFromBankCard: editEntry.payFromBankCard || '',
+                Card_Amount: editEntry.Card_Amount || '',
             };
         }
         return base;
@@ -59,15 +61,12 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         passportNo: Yup.string().required('Passport No is required'),
         mobileNo: Yup.string().required('Mobile No is required'),
         payFromBankCard: Yup.string().required('Pay from bank card is required'),
+        Card_Amount: Yup.number().required('Card Amount is required').typeError('Card Amount must be a number'),
     });
 
     const bankOptions = [
-        { value: "UBL M.A.R", label: "UBL M.A.R" },
-        { value: "UBL F.Z", label: "UBL F.Z" },
-        { value: "HBL M.A.R", label: "HBL M.A.R" },
-        { value: "HBL F.Z", label: "HBL F.Z" },
-        { value: "JAZ C", label: "JAZ C" },
-        { value: "MCB FIT", label: "MCB FIT" },
+        { value: "Card Payment", label: "Card Payment" },
+      
     ];
 
     useEffect(() => {
@@ -153,6 +152,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Section 3: Payment Details
     const section3Fields = [
         { name: 'payFromBankCard', label: 'Pay from Bank Card', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank card', icon: 'credit-card' },
+        { name: 'Card_Amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
     ];
 
     const renderField = (field) => (

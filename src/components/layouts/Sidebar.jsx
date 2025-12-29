@@ -37,8 +37,8 @@ const Sidebar = ({ isAdmin }) => {
         { path: '/admin/gamcaToken', icon: 'fa-medkit', label: 'Gamca Token' },
         { path: '/admin/navtcc', icon: 'fa-graduation-cap', label: 'Navtcc' },
         { path: '/admin/e-number', icon: 'fa-hashtag', label: 'E-Number' },
+        { path: '/admin/Other_cp', label: 'Other' },
         { path: '/admin/banks-details', label: 'Banks Details' },
-        { path: '/admin/card-payment/other', label: 'Other' },
       ]
     },
     { path: '/admin/services', icon: 'fa-cogs', label: 'Services' },
@@ -68,6 +68,17 @@ const Sidebar = ({ isAdmin }) => {
     { path: '/refunded', icon: 'fa-undo', label: 'Refunded MCB' },
     { path: '/refundCustomer', icon: 'fa-undo', label: 'Refund Customer' },
     { path: '/agent', icon: 'fa-user-tie', label: 'Agent' },
+    {
+      label: 'Card Payment',
+      icon: 'fa-credit-card',
+      subLinks: [
+        { path: '/gamcaToken', icon: 'fa-medkit', label: 'Gamca Token' },
+        { path: '/navtcc', icon: 'fa-graduation-cap', label: 'Navtcc' },
+        { path: '/e-number', icon: 'fa-hashtag', label: 'E-Number' },
+        { path: '/Other_cp', label: 'Other' },
+        { path: '/banks-details', label: 'Banks Details' },
+      ]
+    },
     
   ];
 

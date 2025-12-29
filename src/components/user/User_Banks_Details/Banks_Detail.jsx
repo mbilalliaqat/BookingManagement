@@ -13,7 +13,6 @@ const Banks_Detail = () => {
     const [showForm, setShowForm] = useState(false);
     const [allData, setAllData] = useState([]); // Store all data
     const [filteredData, setFilteredData] = useState([]); // Store filtered data
-    const [selectedBank, setSelectedBank] = useState('all');
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [editingEntry, setEditingEntry] = useState(null);
@@ -37,13 +36,6 @@ const Banks_Detail = () => {
     }, []);
 
     const location = useLocation();
-
-    // Set initial selected bank from navigation state
-    useEffect(() => {
-        if (location.state?.selectedBank) {
-            setSelectedBank(location.state.selectedBank);
-        }
-    }, [location.state]);
 
     const formatDateForInput = useCallback((dateString) => {
         if (!dateString) return '';
@@ -106,63 +98,34 @@ const Banks_Detail = () => {
 
     // Filter data based on selected bank
     useEffect(() => {
-        if (selectedBank === 'all') {
-            // Show only unique banks (one entry per bank)
-            const uniqueBanks = [];
-            const seenBanks = new Set();
-
-            allData.forEach(item => {
-                if (!seenBanks.has(item.bank_name)) {
-                    seenBanks.add(item.bank_name);
-                    uniqueBanks.push(item);
-                }
-            });
-
-            setFilteredData(uniqueBanks);
-        } else {
-            // Show all entries for the selected bank
-            setFilteredData(allData.filter(item => item.bank_name === selectedBank));
-        }
-    }, [allData, selectedBank]);
+        setFilteredData(allData);
+    }, [allData]);
 
     const totals = useMemo(() => {
         let totalCredit = 0;
         let totalDebit = 0;
         let totalBalance = 0;
 
-        if (selectedBank === 'all') {
-            // For "All Banks", calculate the last balance of each bank
-            const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
+        // For "All Banks", calculate the last balance of each bank
+        const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
 
-            banks.forEach(bank => {
-                const bankEntries = allData.filter(item => item.bank_name === bank);
-                if (bankEntries.length > 0) {
-                    // Get the most recent entry's balance (since data is sorted by ID desc)
-                    const latestBalance = parseFloat(bankEntries[0].balance) || 0;
-                    totalBalance += latestBalance;
-                }
-            });
-
-            // Calculate total credit and debit from all entries
-            allData.forEach(item => {
-                totalCredit += parseFloat(item.credit) || 0;
-                totalDebit += parseFloat(item.debit) || 0;
-            });
-        } else {
-            // For specific bank, sum all entries
-            filteredData.forEach(item => {
-                totalCredit += parseFloat(item.credit) || 0;
-                totalDebit += parseFloat(item.debit) || 0;
-            });
-
-            // Get the latest balance (first entry since sorted by ID desc)
-            if (filteredData.length > 0) {
-                totalBalance = parseFloat(filteredData[0].balance) || 0;
+        banks.forEach(bank => {
+            const bankEntries = allData.filter(item => item.bank_name === bank);
+            if (bankEntries.length > 0) {
+                // Get the most recent entry's balance (since data is sorted by ID desc)
+                const latestBalance = parseFloat(bankEntries[0].balance) || 0;
+                totalBalance += latestBalance;
             }
-        }
+        });
+
+        // Calculate total credit and debit from all entries
+        allData.forEach(item => {
+            totalCredit += parseFloat(item.credit) || 0;
+            totalDebit += parseFloat(item.debit) || 0;
+        });
 
         return { credit: totalCredit, debit: totalDebit, balance: totalBalance };
-    }, [allData, filteredData, selectedBank]);
+    }, [allData]);
 
     const handleCancel = useCallback(() => {
         setShowForm(false);
@@ -196,7 +159,7 @@ const Banks_Detail = () => {
         console.log('Updating entry:', entry);
         const entryForEdit = {
             ...entry,
-            bank_name: entry.bank_name || selectedBank,
+            bank_name: entry.bank_name || 'all',
             date: entry.date ? formatDateForInput(entry.date) : '',
         };
         console.log('Prepared entry for edit:', entryForEdit);
@@ -207,7 +170,7 @@ const Banks_Detail = () => {
             setLoadingActionId(null);
         }, 500);
 
-    }, [selectedBank, formatDateForInput]);
+    }, [formatDateForInput]);
 
     const handleDelete = useCallback(async (id) => {
         const parsedId = typeof id === 'object' && id !== null ? id.id : id;
@@ -239,27 +202,7 @@ const Banks_Detail = () => {
         }
     }, [closeDeleteModal, fetchAllEntries, BASE_URL, user.name]);
 
-    // Handle clicking on a bank name in the table
-    const handleBankClick = useCallback((bankName) => {
-        setSelectedBank(bankName);
-    }, []);
-
     const columns = useMemo(() => [
-        {
-            header: 'BANK NAME',
-            accessor: 'bank_name',
-            render: (row, fullRow) => {
-                const bankName = fullRow?.bank_name || row?.bank_name || row;
-                return (
-                    <span
-                        className={selectedBank === 'all' ? 'cursor-pointer text-blue-600 hover:text-blue-800 hover:underline' : ''}
-                        onClick={() => selectedBank === 'all' && handleBankClick(bankName)}
-                    >
-                        {bankName}
-                    </span>
-                );
-            }
-        },
         { header: 'DATE', accessor: 'date' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'EMPLOYEE', accessor: 'employee' },
@@ -293,17 +236,7 @@ const Banks_Detail = () => {
                 },
             ]
             : []),
-    ], [user.role, loadingActionId, handleUpdate, openDeleteModal, selectedBank, handleBankClick]);
-
-    const bankOptions = useMemo(() => [
-        { value: "all", label: "All Banks" },
-        { value: "UBL M.A.R", label: "UBL M.A.R" },
-        { value: "UBL F.Z", label: "UBL F.Z" },
-        { value: "HBL M.A.R", label: "HBL M.A.R" },
-        { value: "HBL F.Z", label: "HBL F.Z" },
-        { value: "JAZ C", label: "JAZ C" },
-        { value: "MCB FIT", label: "MCB FIT" }
-    ], []);
+    ], [user.role, loadingActionId, handleUpdate, openDeleteModal]);
 
     return (
         <div className="h-full flex flex-col">
@@ -316,18 +249,6 @@ const Banks_Detail = () => {
             ) : (
                 <div className="flex flex-col h-full">
                     <div className="flex justify-between items-center mb-4 relative">
-                        <select
-                            value={selectedBank}
-                            onChange={(e) => setSelectedBank(e.target.value)}
-                            className="p-2 border border-gray-300 rounded-md"
-                        >
-                            {bankOptions.map(option => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-
                         <div className="flex items-center gap-4">
                             {/* Total Summary */}
                             <div className="flex gap-4 items-center bg-purple-50 border border-purple-200 rounded-md px-4 py-2">
@@ -345,7 +266,7 @@ const Banks_Detail = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium text-gray-600">
-                                        {selectedBank === 'all' ? 'Total Balance (All Banks):' : 'Current Balance:'}
+                                        Total Balance (All Banks):
                                     </span>
                                     <span className="text-sm font-bold text-blue-600">
                                         {totals.balance.toFixed(0)}

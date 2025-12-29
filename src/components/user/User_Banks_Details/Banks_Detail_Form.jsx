@@ -36,7 +36,7 @@ const Banks_Detail_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const initialValues = useMemo(() => {
         const base = {
-            bank_name: '',
+            
             date: new Date().toISOString().split('T')[0],
             entry: `BD ${entryNumber}/${totalEntries}`,
             employee: user?.username || '',
@@ -49,7 +49,7 @@ const Banks_Detail_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         if (editEntry) {
             return {
                 ...base,
-                bank_name: editEntry.bank_name || '',
+               
                 date: formatDate(editEntry.date) || new Date().toISOString().split('T')[0],
                 entry: editEntry.entry || `BD ${entryNumber}/${totalEntries}`,
                 employee: editEntry.employee || user?.username || '',
@@ -63,7 +63,7 @@ const Banks_Detail_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, [editEntry, user, entryNumber, totalEntries]);
 
     const validationSchema = Yup.object({
-        bank_name: Yup.string().required('Bank Name is required'),
+        
         date: Yup.date().required('Date is required').typeError('Invalid date'),
         entry: Yup.string().required('Entry is required'),
         employee: Yup.string().required('Employee is required'),
@@ -73,14 +73,7 @@ const Banks_Detail_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         balance: Yup.number().typeError('Balance must be a number').notRequired(),
     });
 
-    const bankOptions = [
-        { value: "UBL M.A.R", label: "UBL M.A.R" },
-        { value: "UBL F.Z", label: "UBL F.Z" },
-        { value: "HBL M.A.R", label: "HBL M.A.R" },
-        { value: "HBL F.Z", label: "HBL F.Z" },
-        { value: "JAZ C", label: "JAZ C" },
-        { value: "MCB FIT", label: "MCB FIT" },
-    ];
+    
 
     useEffect(() => {
         const getCounts = async () => {
@@ -102,7 +95,7 @@ const Banks_Detail_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         try {
             const requestData = {
-                bank_name: values.bank_name,
+               
                 date: values.date,
                 entry: values.entry,
                 employee: values.employee,
@@ -159,7 +152,6 @@ const Banks_Detail_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     // Section 1: Bank & Entry Information
     const section1Fields = [
-        { name: 'bank_name', label: 'Bank Name', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank name', icon: 'university' },
         { name: 'date', label: 'Date', type: 'date', placeholder: '', icon: 'calendar-check' },
         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
         { name: 'employee', label: 'Employee', type: 'text', placeholder: 'Employee name', icon: 'user', readOnly: true },

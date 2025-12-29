@@ -16,6 +16,7 @@ import RefundCustomer from '../user/refundCustomer/RefundCustomer';
 import Navtcc from '../user/navtcc/Navtcc';
 import E_Number from '../user/e_number/E_Number';
 import Banks_Detail from '../user/User_Banks_Details/Banks_Detail';
+import Other_Cp from '../user/Other_CardPay/Other_Cp';
 
 const UserRoutes = () => {
   return (
@@ -37,6 +38,7 @@ const UserRoutes = () => {
           <Route path='/agent' element={<Agent/>}/>
           <Route path='/e-number' element={<E_Number/>}/>
           <Route path='/banks-details' element={<Banks_Detail/>}/>
+          <Route path='/Other_cp' element={<Other_Cp/>}/>
         </Routes>
       </UserLayout>
     </div>
