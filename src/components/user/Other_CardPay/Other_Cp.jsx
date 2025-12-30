@@ -119,11 +119,18 @@ const Other_Cp = () => {
 
     const columns = [
         { header: 'DATE', accessor: 'date' },
-        { header: 'ENTRY', accessor: 'entry' },
-        { header: 'EMPLOYEE', accessor: 'employee' },
-        { header: 'DETAIL', accessor: 'detail' },
-        { header: 'CARD PAYMENT', accessor: 'card_payment' },
-        { header: 'CARD AMOUNT', accessor: 'card_amount' },
+    { header: 'ENTRY', accessor: 'entry' },
+    { header: 'EMPLOYEE', accessor: 'employee' },
+    { header: 'DETAIL', accessor: 'detail' },
+    { header: 'CARD PAYMENT', accessor: 'card_payment' },
+    { header: 'CARD AMOUNT', accessor: 'card_amount' },
+    { header: 'RECEIVABLE', accessor: 'receivable_amount' },
+    { header: 'PAID CASH', accessor: 'paid_cash' },
+    { header: 'BANK TITLE', accessor: 'paid_from_bank' },
+    { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
+    { header: 'AGENT NAME', accessor: 'agent_name' },
+    { header: 'PROFIT', accessor: 'profit' },
+    { header: 'REMAINING', accessor: 'remaining_amount' },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>

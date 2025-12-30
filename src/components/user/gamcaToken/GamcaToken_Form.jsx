@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
-import VenderNameModal from '../../ui/VenderNameModal';
 import axios from 'axios';
 
 // --- Auto-calculation component ---
@@ -17,144 +16,21 @@ const AutoCalculate = () => {
         const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
         
-        const totalPayableToVendors = values.vendors?.reduce((sum, vendor) => {
-            return sum + (parseFloat(vendor.payable_amount) || 0);
-        }, 0) || 0;
-        
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining.toFixed(2));
 
-        const profit = totalPayableToVendors > 0 ? receivable - totalPayableToVendors : '';
+        const profit = receivable;
         setFieldValue('profit', profit ? profit.toFixed(2) : '');
     }, [
         values.receivable_amount,
         values.paid_cash,
         values.paid_in_bank,
-        values.vendors,
         setFieldValue
     ]);
     
     return null;
 };
 
-// --- Vendor Selection Component ---
-const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendorModalOpen, editEntry }) => {
-    const addVendor = () => {
-        const newVendors = [...(values.vendors || []), { vendor_name: '', payable_amount: '' }];
-        setFieldValue('vendors', newVendors);
-    };
-
-    const removeVendor = (index) => {
-        const newVendors = values.vendors.filter((_, i) => i !== index);
-        setFieldValue('vendors', newVendors);
-    };
-
-    return (
-        <div className="col-span-2 border border-purple-200 rounded-lg p-4 bg-purple-50">
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-semibold text-purple-700 flex items-center">
-                    Vendor Details
-                </h4>
-                <button
-                    type="button"
-                    onClick={addVendor}
-                    className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 flex items-center text-sm"
-                >
-                    Add Vendor
-                </button>
-            </div>
-
-            {values.vendors && values.vendors.length > 0 ? (
-                <div className="space-y-4">
-                    {values.vendors.map((vendor, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-md border border-gray-200"
-                        >
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Vendor Name
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <Field
-                                        as="select"
-                                        name={`vendors[${index}].vendor_name`}
-                                        className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                        disabled={editEntry}
-                                    >
-                                        <option value="">Select vendor name</option>
-                                        {vendorNames.map((name) => (
-                                            <option key={name} value={name}>
-                                                {name}
-                                            </option>
-                                        ))}
-                                    </Field>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsVendorModalOpen(true)}
-                                        className="bg-purple-600 text-white px-3 py-2 rounded-md hover:bg-purple-700"
-                                    >
-                                    </button>
-                                </div>
-                                <ErrorMessage 
-                                    name={`vendors[${index}].vendor_name`} 
-                                    component="p" 
-                                    className="mt-1 text-sm text-red-500 flex items-center"
-                                >
-                                    {(msg) => (
-                                        <span className="flex items-center text-red-500">
-                                            {msg}
-                                        </span>
-                                    )}
-                                </ErrorMessage>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Payable Amount
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <Field
-                                        type="number"
-                                        name={`vendors[${index}].payable_amount`}
-                                        placeholder="Enter payable amount"
-                                        className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                        disabled={editEntry}
-                                    />
-                                    {values.vendors.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => removeVendor(index)}
-                                            className="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600"
-                                        >
-                                        </button>
-                                    )}
-                                </div>
-                                <ErrorMessage 
-                                    name={`vendors[${index}].payable_amount`} 
-                                    component="p" 
-                                    className="mt-1 text-sm text-red-500 flex items-center"
-                                >
-                                    {(msg) => (
-                                        <span className="flex items-center text-red-500">
-                                            {msg}
-                                        </span>
-                                    )}
-                                </ErrorMessage>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-4 text-gray-500">
-                    Click "Add Vendor" to add vendor details
-                </div>
-            )}
-        </div>
-    );
-};
 
 const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
@@ -163,8 +39,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
     const [agentNames, setAgentNames] = useState([]);
-    const [vendorNames, setVendorNames] = useState([]);
-    const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
 
     // Helper: format date string to YYYY-MM-DD
     const formatDate = (dateStr) => {
@@ -196,10 +70,11 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             paid_cash: '',
             paid_from_bank: '',
             paid_in_bank: '',
-            vendors: [{ vendor_name: '', payable_amount: '' }],
             agent_name: '',
             profit: '',
-            remaining_amount: '0'
+            remaining_amount: '0',
+            payFromBankCard: '',
+            card_amount: '',
         };
 
         if (editEntry) {
@@ -236,12 +111,11 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paid_cash: editEntry.paid_cash || '',
                 paid_from_bank: editEntry.paid_from_bank || '',
                 paid_in_bank: editEntry.paid_in_bank || '',
-                vendors: editEntry.vendors_detail 
-                    ? JSON.parse(editEntry.vendors_detail)
-                    : [{ vendor_name: '', payable_amount: '' }],
                 agent_name: editEntry.agent_name || '',
                 profit: editEntry.profit || '',
-                remaining_amount: editEntry.remaining_amount || '0'
+                remaining_amount: editEntry.remaining_amount || '0',
+                payFromBankCard: editEntry.payFromBankCard || '',
+                card_amount: editEntry.card_amount || '',
             };
         }
         return base;
@@ -267,15 +141,11 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_cash: Yup.number().notRequired().typeError('Must be a number'),
         paid_from_bank: Yup.string().notRequired(),
         paid_in_bank: Yup.number().notRequired().typeError('Must be a number'),
-        vendors: Yup.array().of(
-            Yup.object().shape({
-                vendor_name: Yup.string().notRequired('Vendor name is required'),
-                payable_amount: Yup.number().notRequired('Payable amount is required').min(0, 'Amount must be positive'),
-            })
-        ).min(1, 'At least one vendor is required'),
         agent_name: Yup.string().notRequired(),
         profit: Yup.number().typeError('Profit must be a number').notRequired(),
-        remaining_amount: Yup.number().typeError('Remaining Amount must be a number').notRequired()
+        remaining_amount: Yup.number().typeError('Remaining Amount must be a number').notRequired(),
+        payFromBankCard: Yup.string().notRequired(),
+        card_amount: Yup.number().notRequired().typeError('Must be a number'),
     });
 
     const bankOptions = [
@@ -287,14 +157,17 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { value: "MCB FIT", label: "MCB FIT" },
     ];
 
+    const cardBankOptions = [
+        { value: "Card Payment", label: "Card Payment" },
+    ];
+
     // Fetch agent & vendor names
    useEffect(() => {
     const loadInitialData = async () => {
         try {
-            const [countsRes, agentRes, vendorRes] = await Promise.all([
+            const [countsRes, agentRes] = await Promise.all([
                 fetchEntryCounts(),
                 axios.get(`${BASE_URL}/agent-names/existing`),
-                axios.get(`${BASE_URL}/vender-names/existing`)
             ]);
 
             const gamcaCounts = countsRes.find(c => c.form_type === 'gamca');
@@ -304,7 +177,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             }
 
             if (agentRes.data.status === 'success') setAgentNames(agentRes.data.agentNames || []);
-            if (vendorRes.data.status === 'success') setVendorNames(vendorRes.data.vendorNames || []);
         } catch (error) {
             console.error('Error loading initial data:', error);
         }
@@ -312,12 +184,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     loadInitialData();
 }, [BASE_URL]);
-
-    const handleVendorAdded = (newVendorName) => {
-        if (newVendorName && !vendorNames.includes(newVendorName)) {
-            setVendorNames(prev => [...prev, newVendorName].sort());
-        }
-    };
 
     // Fetch entry counts
     useEffect(() => {
@@ -352,7 +218,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         issueCountry: values.documentIssueCountry,
     });
 
-    const totalPayableToVendor = values.vendors.reduce((sum, v) => sum + (parseFloat(v.payable_amount) || 0), 0);
 
     const requestData = {
         employee_name: values.employee_name,
@@ -367,9 +232,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         paid_cash: parseFloat(values.paid_cash) || 0,
         paid_from_bank: values.paid_from_bank || null,
         paid_in_bank: parseFloat(values.paid_in_bank) || 0,
-        payable_to_vendor: totalPayableToVendor,
-        vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
-        vendors_detail: JSON.stringify(values.vendors),
         agent_name: values.agent_name || null,
         profit: parseFloat(values.profit) || 0,
         remaining_amount: parseFloat(values.remaining_amount) || 0
@@ -390,14 +252,44 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
+        const counts = await fetchEntryCounts();
+
+        // Card payment transaction
+        if (parseFloat(values.card_amount) > 0 && values.payFromBankCard) {
+            const bankCounts = counts.find(c => c.form_type === 'bank-detail');
+            const bankEntryNumber = bankCounts ? bankCounts.current_count + 1 : 1;
+            const bankTotalEntries = bankCounts ? bankCounts.global_count + 1 : 1;
+
+            const bankDetailData = {
+                date: values.booking_date,
+                entry: `BD ${bankEntryNumber}/${bankTotalEntries}`,
+                employee: values.employee_name,
+                detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
+                credit: 0,
+                debit: parseFloat(values.card_amount) || 0,
+            };
+
+            const bankDetailResponse = await fetch(`${BASE_URL}/bank-details`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bankDetailData),
+            });
+
+            if (!bankDetailResponse.ok) {
+                const errorData = await bankDetailResponse.json();
+                throw new Error(`Failed to create bank detail entry: ${errorData.message || 'Unknown error'}`);
+            }
+        }
+
         // ✅ UPDATED: Removed manual increment call - backend handles it automatically
         if (!editEntry) {
             // Just refresh the entry counts to get the updated numbers
-            const counts = await fetchEntryCounts();
-            const gamcaCounts = counts.find(c => c.form_type === 'gamca');
-            if (gamcaCounts) {
-                setEntryNumber(gamcaCounts.current_count + 1);
-                setTotalEntries(gamcaCounts.global_count);
+            if (counts) {
+                const gamcaCounts = counts.find(c => c.form_type === 'gamca');
+                if (gamcaCounts) {
+                    setEntryNumber(gamcaCounts.current_count + 1);
+                    setTotalEntries(gamcaCounts.global_count);
+                }
             }
         }
 
@@ -412,21 +304,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 date: new Date().toISOString().split('T')[0],
                 entry: values.entry,
             });
-        }
-
-        // Vendor transactions
-        for (const vendor of values.vendors) {
-            if (vendor.vendor_name && parseFloat(vendor.payable_amount) > 0) {
-                await axios.post(`${BASE_URL}/vender`, {
-                    vender_name: vendor.vendor_name,
-                    detail: `GAMCA - ${values.reference} - ${values.customer_add}`,
-                    credit: parseFloat(vendor.payable_amount),
-                    date: new Date().toISOString().split('T')[0],
-                    entry: values.entry,
-                    bank_title: values.paid_from_bank || null,
-                    debit: null
-                });
-            }
         }
 
         // Agent transaction
@@ -491,9 +368,13 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave', readOnly: !!editEntry },
         { name: 'paid_from_bank', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment', icon: 'university', readOnly: !!editEntry },
+        { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Auto-calculated', icon: 'chart-line', readOnly: !!editEntry },
-        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Auto-calculated', icon: 'balance-scale', readOnly: true }
+        { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Auto-calculated', icon: 'balance-scale', readOnly: true },
+        { name: 'payFromBankCard', label: 'Pay from Bank Card', type: 'select', options: cardBankOptions.map(opt => opt.label), placeholder: 'Select bank card', icon: 'credit-card' },
+        { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
+
     ];
 
     const renderField = (field) => (
@@ -582,13 +463,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 {activeSection === 3 && (
                                     <>
                                         {section3Fields.map(renderField)}
-                                        <VendorSelectionFields
-                                            values={values}
-                                            setFieldValue={setFieldValue}
-                                            vendorNames={vendorNames}
-                                            setIsVendorModalOpen={setIsVendorModalOpen}
-                                            editEntry={editEntry}
-                                        />
                                     </>
                                 )}
                             </motion.div>
@@ -629,11 +503,6 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </Formik>
             </div>
 
-            <VenderNameModal
-                isOpen={isVendorModalOpen}
-                onClose={() => setIsVendorModalOpen(false)}
-                onVenderAdded={handleVendorAdded}
-            />
         </div>
     );
 };

@@ -33,11 +33,7 @@ function Table({ data, columns, maxHeight = '430px',highlightEntry }) {
                   data?.map((row, rowIndex) => (
                     <tr
                       key={rowIndex}
-                      className={`transition-all duration-200 ease-in-out ${
-                        row.entry === highlightEntry 
-                         ? 'bg-yellow-200 animate-pulse' 
-                        :rowIndex % 2 === 0 ? 'bg-white' : 'bg-gradient-to-r from-cyan-50/40 via-blue-50/30 to-teal-50/40'
-                      } hover:bg-gradient-to-r hover:from-cyan-100/50 hover:via-blue-100/40 hover:to-teal-100/50 hover:shadow-sm`}
+                      className={`bg-white`}
                     >
                       {columns?.map((col, colIndex) => {
                         const value = row[col.accessor];

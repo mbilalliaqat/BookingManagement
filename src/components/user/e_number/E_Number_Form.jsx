@@ -30,7 +30,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             passportNo: '',
             mobileNo: '',
             payFromBankCard: '',
-            Card_Amount: '',
+            card_amount: '',
         };
 
         if (editEntry) {
@@ -45,7 +45,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 passportNo: editEntry.passportNo || '',
                 mobileNo: editEntry.mobileNo || '',
                 payFromBankCard: editEntry.payFromBankCard || '',
-                Card_Amount: editEntry.Card_Amount || '',
+                card_amount: editEntry.card_amount || '',
             };
         }
         return base;
@@ -61,12 +61,12 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         passportNo: Yup.string().required('Passport No is required'),
         mobileNo: Yup.string().required('Mobile No is required'),
         payFromBankCard: Yup.string().required('Pay from bank card is required'),
-        Card_Amount: Yup.number().required('Card Amount is required').typeError('Card Amount must be a number'),
+        card_amount: Yup.number().required('Card Amount is required').typeError('Card Amount must be a number'),
     });
 
     const bankOptions = [
         { value: "Card Payment", label: "Card Payment" },
-      
+
     ];
 
     useEffect(() => {
@@ -106,6 +106,35 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             if (!editEntry) {
                 const counts = await fetchEntryCounts();
+
+                if (parseFloat(values.card_amount) > 0) {
+                    // Create a bank detail entry when a new e-number is created
+                    const bankCounts = counts.find(c => c.form_type === 'bank-detail');
+                    const bankEntryNumber = bankCounts ? bankCounts.current_count + 1 : 1;
+                    const bankTotalEntries = bankCounts ? bankCounts.global_count + 1 : 1;
+
+                    const bankDetailData = {
+                        date: values.date,
+                        entry: `BD ${bankEntryNumber}/${bankTotalEntries}`,
+                        employee: values.employee,
+                        detail: `E-Number payment for file ${values.fileNo}`,
+                        credit: 0,  // Change this: No money coming in
+                        debit: parseFloat(values.card_amount) || 0,  // Change this: Money going out
+                        // Remove the balance field entirely - backend calculates it
+                    };
+
+                    const bankDetailResponse = await fetch(`${BASE_URL}/bank-details`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bankDetailData),
+                    });
+
+                    if (!bankDetailResponse.ok) {
+                        const errorData = await bankDetailResponse.json();
+                        throw new Error(`Failed to create bank detail entry: ${errorData.message || 'Unknown error'}`);
+                    }
+                }
+
                 const eNumberCounts = counts.find(c => c.form_type === 'e-number');
                 if (eNumberCounts) {
                     setEntryNumber(eNumberCounts.current_count + 1);
@@ -152,7 +181,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     // Section 3: Payment Details
     const section3Fields = [
         { name: 'payFromBankCard', label: 'Pay from Bank Card', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank card', icon: 'credit-card' },
-        { name: 'Card_Amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
+        { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
     ];
 
     const renderField = (field) => (
@@ -194,18 +223,18 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
-                        <motion.h2 
-                            className="text-2xl font-bold text-black flex items-center" 
-                            initial={{ opacity: 0, y: -20 }} 
+                        <motion.h2
+                            className="text-2xl font-bold text-black flex items-center"
+                            initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                         >
                             {editEntry ? 'Update E-Number' : 'New E-Number'}
                         </motion.h2>
                         <motion.p className="text-indigo-600 mt-1">Please fill in the details</motion.p>
                     </div>
-                    <button 
-                        type="button" 
-                        onClick={onCancel} 
+                    <button
+                        type="button"
+                        onClick={onCancel}
                         className="text-black hover:text-gray-600 ml-4"
                     >
                         ✕
@@ -216,9 +245,9 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             <div className="px-8 pt-6">
                 <div className="flex justify-between mb-8">
                     {[1, 2, 3].map((step) => (
-                        <button 
-                            key={step} 
-                            onClick={() => setActiveSection(step)} 
+                        <button
+                            key={step}
+                            onClick={() => setActiveSection(step)}
                             className={`flex-1 ${step === activeSection ? 'text-purple-600' : 'text-gray-400'}`}
                         >
                             <div className="flex flex-col items-center">
@@ -264,9 +293,9 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             <div className="flex justify-between mt-8 pt-4 border-t">
                                 <div>
                                     {activeSection > 1 && (
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setActiveSection(activeSection - 1)} 
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveSection(activeSection - 1)}
                                             className="px-4 py-2 text-indigo-600"
                                         >
                                             Back
@@ -274,27 +303,27 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                     )}
                                 </div>
                                 <div className="flex space-x-3">
-                                    <button 
-                                        type="button" 
-                                        onClick={onCancel} 
-                                        className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50" 
+                                    <button
+                                        type="button"
+                                        onClick={onCancel}
+                                        className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
                                         disabled={isSubmitting}
                                     >
                                         Cancel
                                     </button>
                                     {activeSection < 3 && (
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setActiveSection(activeSection + 1)} 
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveSection(activeSection + 1)}
                                             className="px-5 py-2 bg-indigo-600 text-white rounded-lg"
                                         >
                                             Next
                                         </button>
                                     )}
                                     {activeSection === 3 && (
-                                        <button 
-                                            type="submit" 
-                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg" 
+                                        <button
+                                            type="submit"
+                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg"
                                             disabled={isSubmitting}
                                         >
                                             {isSubmitting && <ButtonSpinner />}

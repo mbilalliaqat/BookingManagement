@@ -55,34 +55,35 @@ const Banks_Detail = () => {
     }, []);
 
     // Fetch all entries from all banks
+    // Replace your fetchAllEntries function with this:
+
     const fetchAllEntries = useCallback(async () => {
         setIsLoading(true);
 
         try {
-            // Fetch from all banks
-            const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
-            const promises = banks.map(bank =>
-                fetch(`${BASE_URL}/bank-details/${bank}`)
-                    .then(res => res.ok ? res.json() : [])
-                    .catch(() => [])
-            );
+            const response = await fetch(`${BASE_URL}/bank-details`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const responseData = await response.json();
 
-            const results = await Promise.all(promises);
+            // Extract the bankDetails array from the response
+            let data = responseData.bankDetails || [];
 
-            // Combine all data and add bank_name to each entry
-            const combinedData = results.flatMap((data, index) =>
-                (data || []).map(entry => ({
-                    ...entry,
-                    bank_name: banks[index],
-                    date: formatDate(entry.date),
-                    originalDate: entry.date, // Keep original date for sorting
-                }))
-            );
+            // Ensure data is an array
+            if (!Array.isArray(data)) {
+                console.error('Fetched data is not an array:', data);
+                data = [];
+            }
 
             // Sort by ID in descending order (latest first)
-            combinedData.sort((a, b) => b.id - a.id);
+            const sortedData = data.sort((a, b) => b.id - a.id).map(entry => ({
+                ...entry,
+                date: formatDate(entry.date),
+                originalDate: entry.date, // Keep original date for sorting
+            }));
 
-            setAllData(combinedData);
+            setAllData(sortedData);
         } catch (error) {
             console.error('Error fetching entries:', error);
             setError(error.message);
@@ -101,31 +102,7 @@ const Banks_Detail = () => {
         setFilteredData(allData);
     }, [allData]);
 
-    const totals = useMemo(() => {
-        let totalCredit = 0;
-        let totalDebit = 0;
-        let totalBalance = 0;
-
-        // For "All Banks", calculate the last balance of each bank
-        const banks = ["UBL M.A.R", "UBL F.Z", "HBL M.A.R", "HBL F.Z", "JAZ C", "MCB FIT"];
-
-        banks.forEach(bank => {
-            const bankEntries = allData.filter(item => item.bank_name === bank);
-            if (bankEntries.length > 0) {
-                // Get the most recent entry's balance (since data is sorted by ID desc)
-                const latestBalance = parseFloat(bankEntries[0].balance) || 0;
-                totalBalance += latestBalance;
-            }
-        });
-
-        // Calculate total credit and debit from all entries
-        allData.forEach(item => {
-            totalCredit += parseFloat(item.credit) || 0;
-            totalDebit += parseFloat(item.debit) || 0;
-        });
-
-        return { credit: totalCredit, debit: totalDebit, balance: totalBalance };
-    }, [allData]);
+   
 
     const handleCancel = useCallback(() => {
         setShowForm(false);
@@ -159,7 +136,7 @@ const Banks_Detail = () => {
         console.log('Updating entry:', entry);
         const entryForEdit = {
             ...entry,
-            bank_name: entry.bank_name || 'all',
+            bank_name: entry.bank_name,
             date: entry.date ? formatDateForInput(entry.date) : '',
         };
         console.log('Prepared entry for edit:', entryForEdit);
@@ -183,7 +160,12 @@ const Banks_Detail = () => {
         setLoadingActionId(parsedId);
 
         try {
-            const response = await axios.delete(`${BASE_URL}/bank-details/${parsedId}`, {
+            const entryToDelete = allData.find(entry => entry.id === parsedId);
+            if (!entryToDelete) {
+                throw new Error('Entry not found');
+            }
+
+            const response = await axios.delete(`${BASE_URL}/bank-details/${entryToDelete.bank_name}/${parsedId}`, {
                 data: { user_name: user.name }
             });
             if (response.status === 200) {
@@ -200,9 +182,10 @@ const Banks_Detail = () => {
             setLoadingActionId(null);
             closeDeleteModal();
         }
-    }, [closeDeleteModal, fetchAllEntries, BASE_URL, user.name]);
+    }, [closeDeleteModal, fetchAllEntries, BASE_URL, user.name, allData]);
 
     const columns = useMemo(() => [
+      
         { header: 'DATE', accessor: 'date' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'EMPLOYEE', accessor: 'employee' },
@@ -251,28 +234,7 @@ const Banks_Detail = () => {
                     <div className="flex justify-between items-center mb-4 relative">
                         <div className="flex items-center gap-4">
                             {/* Total Summary */}
-                            <div className="flex gap-4 items-center bg-purple-50 border border-purple-200 rounded-md px-4 py-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-600">Total Credit:</span>
-                                    <span className="text-sm font-bold text-green-600">
-                                        {totals.credit.toFixed(0)}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-600">Total Debit:</span>
-                                    <span className="text-sm font-bold text-red-600">
-                                        {totals.debit.toFixed(0)}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-600">
-                                        Total Balance (All Banks):
-                                    </span>
-                                    <span className="text-sm font-bold text-blue-600">
-                                        {totals.balance.toFixed(0)}
-                                    </span>
-                                </div>
-                            </div>
+                            
                         </div>
 
                         <button
