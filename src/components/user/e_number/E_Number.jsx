@@ -1,370 +1,316 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
-import { motion } from 'framer-motion';
-import ButtonSpinner from '../../ui/ButtonSpinner';
+import React, { useEffect, useState } from 'react';
+import Table from '../../ui/Table';
+import E_Number_Form from './E_Number_Form';
 import { useAppContext } from '../../contexts/AppContext';
-import { fetchEntryCounts } from '../../ui/api';
+import axios from 'axios';
+import TableSpinner from '../../ui/TableSpinner';
+import Modal from '../../ui/Modal';
+import ButtonSpinner from '../../ui/ButtonSpinner';
+import { useLocation } from 'react-router-dom';
 
-const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
-    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
+const E_Number = () => {
+    const [search, setSearch] = useState('');
+    const [showForm, setShowForm] = useState(false);
+    const [entries, setEntries] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [editEntry, setEditEntry] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteId, setDeleteId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const location = useLocation();
+    const [highlightEntry, setHighlightedEntry] = useState('');
+
+    // Date filter states
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
     const { user } = useAppContext();
-    const [activeSection, setActiveSection] = useState(1);
-    const [entryNumber, setEntryNumber] = useState(0);
-    const [totalEntries, setTotalEntries] = useState(0);
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
-    };
+    const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-    const initialValues = useMemo(() => {
-        const base = {
-            date: new Date().toISOString().split('T')[0],
-            employee: user?.username || '',
-            entryNo: `EN ${entryNumber}/${totalEntries}`,
-            fileNo: '',
-            visaId: '',
-            reference: '',
-            passportNo: '',
-            mobileNo: '',
-            payFromBankCard: '',
-            card_amount: '',
-        };
+    const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
 
-        if (editEntry) {
-            return {
-                ...base,
-                date: formatDate(editEntry.date) || new Date().toISOString().split('T')[0],
-                employee: editEntry.employee || user?.username || '',
-                entryNo: editEntry.entry_no || `EN ${entryNumber}/${totalEntries}`,
-                fileNo: editEntry.file_no || '',
-                visaId: editEntry.visa_id || '',
-                reference: editEntry.reference || '',
-                passportNo: editEntry.passport_no || '',
-                mobileNo: editEntry.mobile_no || '',
-                payFromBankCard: editEntry.pay_from_bank_card || '',
-                card_amount: editEntry.card_amount || '',
-            };
-        }
-        return base;
-    }, [editEntry, user, entryNumber, totalEntries]);
-
-    const validationSchema = Yup.object({
-        date: Yup.date().required('Date is required'),
-        employee: Yup.string().required('Employee is required'),
-        entryNo: Yup.string().required('Entry No is required'),
-        fileNo: Yup.string().required('File Number is required'),
-        visaId: Yup.string().required('Visa ID is required'),
-        reference: Yup.string().required('Reference is required'),
-        passportNo: Yup.string().required('Passport No is required'),
-        mobileNo: Yup.string().required('Mobile No is required'),
-        payFromBankCard: Yup.string().required('Pay from bank card is required'),
-        card_amount: Yup.number().required('Card Amount is required').typeError('Card Amount must be a number'),
-    });
-
-    const bankOptions = [
-        { value: "Card Payment", label: "Card Payment" },
-    ];
-
-    useEffect(() => {
-        const getCounts = async () => {
-            const counts = await fetchEntryCounts();
-            if (counts) {
-                const eNumberCounts = counts.find(c => c.form_type === 'e-number');
-                if (eNumberCounts) {
-                    setEntryNumber(eNumberCounts.current_count + 1);
-                    setTotalEntries(eNumberCounts.global_count + 1);
-                } else {
-                    setEntryNumber(1);
-                    setTotalEntries(1);
-                }
-            }
-        };
-        getCounts();
-    }, []);
-
-    const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         try {
-            const url = editEntry ? `${BASE_URL}/e-numbers/${editEntry.id}` : `${BASE_URL}/e-numbers`;
-            const method = editEntry ? 'PUT' : 'POST';
+            if (!BASE_URL) {
+                throw new Error('API base URL is not defined. Please check your environment configuration.');
+            }
 
-            const response = await fetch(url, {
-                method,
+            const apiUrl = `${BASE_URL}/e-numbers`;
+            console.log('Fetching E-Number data from:', apiUrl);
+
+            const response = await axios.get(apiUrl, {
                 headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(values),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            if (!response.data) {
+                throw new Error('Empty response received from server');
             }
 
-            // Only create bank detail entry for NEW e-numbers (not updates)
-            if (!editEntry && parseFloat(values.card_amount) > 0) {
-                try {
-                    // Get the latest bank detail entry to calculate the new balance
-                    const bankDetailsResponse = await fetch(`${BASE_URL}/bank-details`);
-                    if (!bankDetailsResponse.ok) {
-                        throw new Error('Failed to fetch bank details');
-                    }
-                    
-                    const bankDetailsData = await bankDetailsResponse.json();
-                    const bankDetails = bankDetailsData.bankDetails || [];
-                    
-                    // Get the most recent balance (sorted by id descending)
-                    const sortedDetails = bankDetails.sort((a, b) => b.id - a.id);
-                    const previousBalance = sortedDetails.length > 0 ? parseFloat(sortedDetails[0].balance) || 0 : 0;
-                    
-                    // Calculate new balance: previous balance + credit
-                    const creditAmount = parseFloat(values.card_amount);
-                    const newBalance = previousBalance + creditAmount;
+            const data = response.data.eNumbers;
 
-                    // Get entry counts for bank detail
-                    const counts = await fetchEntryCounts();
-                    const bankCounts = counts.find(c => c.form_type === 'bank-detail');
-                    const bankEntryNumber = bankCounts ? bankCounts.current_count + 1 : 1;
-                    const bankTotalEntries = bankCounts ? bankCounts.global_count + 1 : 1;
+            const formattedData = data.map((entry) => ({
+                ...entry,
+                date: new Date(entry.date).toLocaleDateString('en-GB'),
+                created_at: new Date(entry.created_at).toLocaleDateString('en-GB'),
+                created_at_raw: entry.created_at, // Store raw date for filtering
+            }));
 
-                    const bankDetailData = {
-                        date: values.date,
-                        entry: `BD ${bankEntryNumber}/${bankTotalEntries}`,
-                        employee: values.employee,
-                        detail: `E-Number payment for file ${values.fileNo} (Visa ID: ${values.visaId})`,
-                        credit: creditAmount,
-                        debit: 0,
-                        balance: newBalance,
-                    };
-
-                    const bankDetailResponse = await fetch(`${BASE_URL}/bank-details`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(bankDetailData),
-                    });
-
-                    if (!bankDetailResponse.ok) {
-                        const errorData = await bankDetailResponse.json();
-                        console.error('Failed to create bank detail:', errorData);
-                        throw new Error(`Failed to create bank detail entry: ${errorData.message || 'Unknown error'}`);
-                    }
-
-                    console.log('Bank detail entry created successfully');
-                } catch (bankError) {
-                    console.error('Error creating bank detail:', bankError);
-                    // Don't throw - E-Number was created successfully, just log the error
-                    setErrors({ general: `E-Number created but failed to create bank detail: ${bankError.message}` });
-                }
-            }
-
-            // Refresh entry counts
-            if (!editEntry) {
-                const counts = await fetchEntryCounts();
-                const eNumberCounts = counts.find(c => c.form_type === 'e-number');
-                if (eNumberCounts) {
-                    setEntryNumber(eNumberCounts.current_count + 1);
-                    setTotalEntries(eNumberCounts.global_count);
-                }
-            }
-
-            resetForm();
-            onSubmitSuccess();
+            setEntries(formattedData.reverse());
         } catch (error) {
-            console.error('Submission error:', error);
-            setErrors({ general: error.message || 'Failed to submit form.' });
+            console.error('Error fetching E-Number data:', error);
+            setError(`Failed to load data: ${error.message}`);
         } finally {
-            setSubmitting(false);
+            setIsLoading(false);
         }
     };
 
-    const formVariants = {
-        hidden: { opacity: 0 },
-        visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } }
-    };
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-    const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
-    };
+    useEffect(() => {
+        if (location.state?.highlightEntry) {
+            setHighlightedEntry(location.state.highlightEntry);
+            setSearch(location.state.highlightEntry)
 
-    // Section 1: Entry Details
-    const section1Fields = [
-        { name: 'date', label: 'Date', type: 'date', placeholder: '', icon: 'calendar-check' },
-        { name: 'employee', label: 'Employee', type: 'text', placeholder: 'Employee name', icon: 'user', readOnly: true },
-        { name: 'entryNo', label: 'Entry No', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
-        { name: 'fileNo', label: 'File Number', type: 'text', placeholder: 'Enter file number', icon: 'folder' },
-    ];
+            const timer = setTimeout(() => {
+                setHighlightedEntry(null)
+            }, 5000);
 
-    // Section 2: Applicant Details
-    const section2Fields = [
-        { name: 'visaId', label: 'Visa ID', type: 'text', placeholder: 'Enter visa ID', icon: 'id-card' },
-        { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
-        { name: 'passportNo', label: 'Passport No', type: 'text', placeholder: 'Enter passport number', icon: 'passport' },
-        { name: 'mobileNo', label: 'Mobile No', type: 'text', placeholder: 'Enter mobile number', icon: 'phone' },
-    ];
+            return () => clearTimeout(timer)
+        }
+    }, [location.state])
 
-    // Section 3: Payment Details
-    const section3Fields = [
-        { name: 'payFromBankCard', label: 'Pay from Bank Card', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank card', icon: 'credit-card' },
-        { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
-    ];
-
-    const renderField = (field) => (
-        <motion.div key={field.name} className="mb-4" variants={itemVariants}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-                {field.label} <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-                {field.type === 'select' ? (
-                    <Field
-                        as="select"
-                        name={field.name}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        disabled={field.readOnly}
+    const columns = [
+        { header: 'DATE', accessor: 'date' },
+        { header: 'EMPLOYEE', accessor: 'employee' },
+        { header: 'ENTRY NO', accessor: 'entry_no' },
+        { header: 'FILE NUMBER', accessor: 'file_no' },
+        { header: 'VISA ID', accessor: 'visa_id' },
+        { header: 'REFERENCE', accessor: 'reference' },
+        { header: 'PASSPORT NO', accessor: 'passport_no' },
+        { header: 'MOBILE NO', accessor: 'mobile_no' },
+        { header: 'PAY FROM BANK CARD', accessor: 'pay_from_bank_card' },
+        { header: 'CARD AMOUNT', accessor: 'card_amount' },
+        ...(user.role === 'admin' ? [{
+            header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
+                <>
+                    <button
+                        className="text-blue-500 hover:text-blue-700 mr-1 text-[13px]"
+                        onClick={() => handleUpdate(index)}
                     >
-                        <option value="">Select {field.label}</option>
-                        {field.options?.map(option => (
-                            <option key={option} value={option}>{option}</option>
-                        ))}
-                    </Field>
-                ) : (
-                    <Field
-                        type={field.type}
-                        name={field.name}
-                        placeholder={field.placeholder}
-                        className={`w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 ${field.readOnly ? 'bg-gray-100' : ''}`}
-                        readOnly={field.readOnly}
-                    />
-                )}
-                <ErrorMessage name={field.name} component="p" className="mt-1 text-sm text-red-500">
-                    {(msg) => <span>{msg}</span>}
-                </ErrorMessage>
-            </div>
-        </motion.div>
-    );
+                        <i className="fas fa-edit"></i>
+                    </button>
+                    <button
+                        className="text-red-500 hover:text-red-700 text-[13px]"
+                        onClick={() => openDeleteModal(row.id)}
+                    >
+                        <i className="fas fa-trash"></i>
+                    </button>
+                </>
+            )
+        }] : [])
+    ];
+
+    const filteredData = entries?.filter((entry) => {
+        const matchesSearch = Object.values(entry).some((value) =>
+            String(value).toLowerCase().includes(search.toLowerCase())
+        );
+
+        let matchesDateRange = true;
+        if (startDate || endDate) {
+            const createdDate = entry.created_at_raw ? new Date(entry.created_at_raw) : null;
+
+            if (createdDate) {
+                if (startDate && endDate) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    matchesDateRange = createdDate >= start && createdDate <= end;
+                } else if (startDate) {
+                    const start = new Date(startDate);
+                    matchesDateRange = createdDate >= start;
+                } else if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    matchesDateRange = createdDate <= end;
+                }
+            } else {
+                matchesDateRange = false;
+            }
+        }
+
+        return matchesSearch && matchesDateRange;
+    });
+
+    const handleCancel = () => {
+        setShowForm(false);
+        setEditEntry(null);
+    };
+
+    const handleFormSubmit = () => {
+        fetchData();
+        setShowForm(false);
+        setEditEntry(null);
+    };
+
+    const handleUpdate = (entry) => {
+        setEditEntry(entry);
+        setShowForm(true);
+    };
+
+    const openDeleteModal = (id) => {
+        setDeleteId(id);
+        setShowDeleteModal(true);
+    };
+
+    const closeDeleteModal = () => {
+        setShowDeleteModal(false);
+        setDeleteId(null);
+    };
+
+    const handleDelete = async (id) => {
+        setIsDeleting(true);
+        try {
+            await axios.delete(`${BASE_URL}/e-numbers/${id}`);
+            setEntries(entries?.filter(entry => entry.id !== id));
+        } catch (error) {
+            console.error('Error deleting E-Number:', error);
+            setError('Failed to delete E-Number. Please try again later.');
+        } finally {
+            setIsDeleting(false);
+            closeDeleteModal();
+        }
+    };
+
+    const clearDateFilter = () => {
+        setStartDate('');
+        setEndDate('');
+    };
 
     return (
-        <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
-                <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                        <motion.h2 
-                            className="text-2xl font-bold text-black flex items-center" 
-                            initial={{ opacity: 0, y: -20 }} 
-                            animate={{ opacity: 1, y: 0 }}
+        <div className="h-full flex flex-col">
+            {showForm ? (
+                <E_Number_Form
+                    onCancel={handleCancel}
+                    onSubmitSuccess={handleFormSubmit}
+                    editEntry={editEntry}
+                />
+            ) : (
+                <div className="flex flex-col h-full">
+                    <div className="flex justify-between items-center mb-4 relative">
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-40 p-2 border border-gray-300 pr-8 rounded-md bg-white/90"
+                                />
+                                <i className="fas fa-search absolute right-3 top-7 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="Start Date"
+                                    />
+                                </div>
+                                <span className="text-gray-500">to</span>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="p-2 border border-gray-300 rounded-md bg-white/90 text-sm"
+                                        placeholder="End Date"
+                                    />
+                                </div>
+                                {(startDate || endDate) && (
+                                    <button
+                                        onClick={clearDateFilter}
+                                        className="text-red-500 hover:text-red-700 px-2"
+                                        title="Clear date filter"
+                                    >
+                                        <i className="fas fa-times"></i>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <button
+                            className="font-semibold text-sm bg-white rounded-md shadow px-4 py-2 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+                            onClick={() => setShowForm(true)}
                         >
-                            {editEntry ? 'Update E-Number' : 'New E-Number'}
-                        </motion.h2>
-                        <motion.p className="text-indigo-600 mt-1">Please fill in the details</motion.p>
+                            <i className="fas fa-plus mr-1"></i> Add New
+                        </button>
                     </div>
-                    <button 
-                        type="button" 
-                        onClick={onCancel} 
-                        className="text-black hover:text-gray-600 ml-4"
+
+                    {(startDate || endDate) && (
+                        <div className="mb-2 text-sm text-gray-600">
+                            Showing {filteredData?.length || 0} of {entries?.length || 0} E-Numbers
+                            {startDate && ` from ${new Date(startDate).toLocaleDateString('en-GB')}`}
+                            {endDate && ` to ${new Date(endDate).toLocaleDateString('en-GB')}`}
+                        </div>
+                    )}
+
+                    <div className="flex-1 overflow-hidden bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl">
+                        {isLoading ? (
+                            <TableSpinner />
+                        ) : error ? (
+                            <div className="flex items-center justify-center w-full h-64">
+                                <div className="text-red-500">
+                                    <i className="fas fa-exclamation-circle mr-2"></i>
+                                    {error}
+                                </div>
+                            </div>
+                        ) : (
+                            <Table data={filteredData} columns={columns} />
+                        )}
+                    </div>
+                </div>
+            )}
+            <Modal
+                isOpen={showDeleteModal}
+                onClose={closeDeleteModal}
+                title="Delete Confirmation"
+            >
+                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
+                    <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                </div>
+                <p className="text-sm text-center text-white mb-6">
+                    Are you sure you want to delete this E-Number entry?
+                </p>
+                <div className="flex items-center justify-center space-x-4">
+                    <button
+                        onClick={closeDeleteModal}
+                        className="px-4 py-2 text-sm font-medium text-black bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
                     >
-                        ✕
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => handleDelete(deleteId)}
+                        disabled={isDeleting}
+                        className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
+                    >
+                        {isDeleting ? <ButtonSpinner /> : null}
+                        Delete
                     </button>
                 </div>
-            </div>
-
-            <div className="px-8 pt-6">
-                <div className="flex justify-between mb-8">
-                    {[1, 2, 3].map((step) => (
-                        <button 
-                            key={step} 
-                            onClick={() => setActiveSection(step)} 
-                            className={`flex-1 ${step === activeSection ? 'text-purple-600' : 'text-gray-400'}`}
-                        >
-                            <div className="flex flex-col items-center">
-                                <div className={`w-10 h-10 rounded-full mb-2 flex items-center justify-center ${step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}`}>
-                                    {step < activeSection ? '✓' : <span className="font-medium">{step}</span>}
-                                </div>
-                                <span className="text-sm">
-                                    {step === 1 ? 'Entry Details' : step === 2 ? 'Applicant Details' : 'Payment Details'}
-                                </span>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="px-8 pb-8">
-                <Formik
-                    initialValues={initialValues}
-                    validationSchema={validationSchema}
-                    onSubmit={handleSubmit}
-                    enableReinitialize={true}
-                >
-                    {({ isSubmitting, errors }) => (
-                        <Form>
-                            <motion.div
-                                key={`section-${activeSection}`}
-                                variants={formVariants}
-                                initial="hidden"
-                                animate="visible"
-                                className="grid grid-cols-1 md:grid-cols-2 gap-x-6"
-                            >
-                                {activeSection === 1 && section1Fields.map(renderField)}
-                                {activeSection === 2 && section2Fields.map(renderField)}
-                                {activeSection === 3 && section3Fields.map(renderField)}
-                            </motion.div>
-
-                            {errors.general && (
-                                <div className="text-red-600 mt-4 p-3 bg-red-100 border border-red-200 rounded-md">
-                                    {errors.general}
-                                </div>
-                            )}
-
-                            <div className="flex justify-between mt-8 pt-4 border-t">
-                                <div>
-                                    {activeSection > 1 && (
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setActiveSection(activeSection - 1)} 
-                                            className="px-4 py-2 text-indigo-600"
-                                        >
-                                            Back
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex space-x-3">
-                                    <button 
-                                        type="button" 
-                                        onClick={onCancel} 
-                                        className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50" 
-                                        disabled={isSubmitting}
-                                    >
-                                        Cancel
-                                    </button>
-                                    {activeSection < 3 && (
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setActiveSection(activeSection + 1)} 
-                                            className="px-5 py-2 bg-indigo-600 text-white rounded-lg"
-                                        >
-                                            Next
-                                        </button>
-                                    )}
-                                    {activeSection === 3 && (
-                                        <button 
-                                            type="submit" 
-                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg" 
-                                            disabled={isSubmitting}
-                                        >
-                                            {isSubmitting && <ButtonSpinner />}
-                                            {editEntry ? 'Update' : 'Submit'}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </Form>
-                    )}
-                </Formik>
-            </div>
+            </Modal>
         </div>
     );
 };
 
-export default E_Number_Form;
+export default E_Number;

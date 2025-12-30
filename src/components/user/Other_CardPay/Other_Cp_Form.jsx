@@ -101,11 +101,7 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     });
 
     const cardPaymentOptions = [
-        'Visa',
-        'Mastercard',
-        'American Express',
-        'Debit Card',
-        'Credit Card'
+        'Card Payment'
     ];
 
     const bankOptions = [
