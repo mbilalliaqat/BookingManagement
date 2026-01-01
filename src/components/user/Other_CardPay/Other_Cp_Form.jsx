@@ -10,16 +10,17 @@ import axios from 'axios';
 // --- Auto-calculation component ---
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
-    
+
     useEffect(() => {
         const receivable = parseFloat(values.receivable_amount) || 0;
         const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
-        
+        const cardAmount = parseFloat(values.card_amount) || 0;
+
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining.toFixed(2));
 
-        const profit = receivable;
+        const profit = receivable - cardAmount;
         setFieldValue('profit', profit ? profit.toFixed(2) : '');
     }, [
         values.receivable_amount,
@@ -27,16 +28,17 @@ const AutoCalculate = () => {
         values.paid_in_bank,
         setFieldValue
     ]);
-    
+
     return null;
 };
 
 const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
-    const [entryNumber, setEntryNumber] = useState(0);
-    const [totalEntries, setTotalEntries] = useState(0);
+    const [entryNumber, setEntryNumber] = useState(1);
+    const [totalEntries, setTotalEntries] = useState(1);
     const [agentNames, setAgentNames] = useState([]);
+    const [isLoadingCounts, setIsLoadingCounts] = useState(true);
 
     // Helper: format date string to YYYY-MM-DD
     const formatDate = (dateStr) => {
@@ -45,11 +47,92 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
     };
 
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setIsLoadingCounts(true);
+            try {
+                const [countsRes, agentRes] = await Promise.all([
+                    fetchEntryCounts(),
+                    axios.get(`${BASE_URL}/agent-names/existing`),
+                ]);
+
+                // Get Other CP counts for current_count
+                const otherCpCounts = countsRes?.find(c => c.form_type === 'other-cp');
+                // Get global counts for global_count (total across all forms)
+                const globalCounts = countsRes?.find(c => c.form_type === 'global');
+
+                console.log('Fetched counts:', countsRes);
+                console.log('Found other-cp counts:', otherCpCounts);
+                console.log('Found global counts:', globalCounts);
+
+                if (otherCpCounts && globalCounts) {
+                    console.log('Other CP counts:', {
+                        current_count: otherCpCounts.current_count,
+                        global_count: globalCounts.global_count,
+                        editEntry: !!editEntry
+                    });
+
+                    if (!editEntry) {
+                        // For new entry: other-cp current_count + 1 / global global_count + 1
+                        const newEntryNumber = otherCpCounts.current_count + 1;
+                        const newTotalEntries = globalCounts.global_count + 1;
+                        setEntryNumber(newEntryNumber);
+                        setTotalEntries(newTotalEntries);
+                        console.log('Setting new entry number:', newEntryNumber, '/', newTotalEntries);
+                    } else {
+                        // For edit mode, parse the existing entry number
+                        const match = editEntry.entry?.match(/OCP (\d+)\/(\d+)/);
+                        if (match) {
+                            const parsedEntryNum = parseInt(match[1]);
+                            const parsedTotalNum = parseInt(match[2]);
+                            setEntryNumber(parsedEntryNum);
+                            setTotalEntries(parsedTotalNum);
+                            console.log('Edit mode - parsed:', parsedEntryNum, '/', parsedTotalNum);
+                        } else {
+                            // Fallback for edit mode
+                            setEntryNumber(otherCpCounts.current_count);
+                            setTotalEntries(globalCounts.global_count);
+                        }
+                    }
+                } else {
+                    console.log('No counts found, using defaults');
+                    setEntryNumber(1);
+                    setTotalEntries(1);
+                }
+
+                // Load agent names
+                if (agentRes.data?.status === 'success') {
+                    setAgentNames(agentRes.data.agentNames || []);
+                }
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+                setEntryNumber(1);
+                setTotalEntries(1);
+            } finally {
+                setIsLoadingCounts(false);
+            }
+        };
+
+        loadInitialData();
+    }, [BASE_URL, editEntry]);
+
+    // Generate entry string based on entryNumber and totalEntries
+    const generateEntryString = () => {
+        return `OCP ${entryNumber}/${totalEntries}`;
+    };
+
     // Memoized initial values
     const initialValues = useMemo(() => {
+        console.log('Generating initial values with:', {
+            entryNumber,
+            totalEntries,
+            entryString: generateEntryString(),
+            editEntry: !!editEntry
+        });
+
         const base = {
             date: new Date().toISOString().split('T')[0],
-            entry: `OCP ${entryNumber}/${totalEntries}`,
+            entry: generateEntryString(),
             employee: user?.username || '',
             detail: '',
             card_payment: 'Card Payment',
@@ -67,10 +150,10 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             return {
                 ...base,
                 date: formatDate(editEntry.date) || new Date().toISOString().split('T')[0],
-                entry: editEntry.entry || `OCP ${entryNumber}/${totalEntries}`,
+                entry: editEntry.entry || generateEntryString(),
                 employee: editEntry.employee || user?.username || '',
                 detail: editEntry.detail || '',
-                card_payment: editEntry.card_payment || '',
+                card_payment: editEntry.card_payment || 'Card Payment',
                 card_amount: editEntry.card_amount || '',
                 receivable_amount: editEntry.receivable_amount || '',
                 paid_cash: editEntry.paid_cash || '',
@@ -113,51 +196,9 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { value: "MCB FIT", label: "MCB FIT" },
     ];
 
-    // Fetch agent names and entry counts
-    useEffect(() => {
-        const loadInitialData = async () => {
-            try {
-                const [countsRes, agentRes] = await Promise.all([
-                    fetchEntryCounts(),
-                    axios.get(`${BASE_URL}/agent-names/existing`),
-                ]);
-
-                const otherCpCounts = countsRes.find(c => c.form_type === 'other_cp');
-                if (otherCpCounts) {
-                    setEntryNumber(otherCpCounts.current_count + 1);
-                    setTotalEntries(otherCpCounts.global_count + 1);
-                }
-
-                if (agentRes.data.status === 'success') setAgentNames(agentRes.data.agentNames || []);
-            } catch (error) {
-                console.error('Error loading initial data:', error);
-            }
-        };
-
-        loadInitialData();
-    }, [BASE_URL]);
-
-    // Fetch entry counts
-    useEffect(() => {
-        let isMounted = true;
-        const getCounts = async () => {
-            const counts = await fetchEntryCounts();
-            if (isMounted && counts) {
-                const otherCpCounts = counts.find(c => c.form_type === 'other_cp');
-                if (otherCpCounts) {
-                    setEntryNumber(otherCpCounts.current_count + 1);
-                    setTotalEntries(otherCpCounts.global_count);
-                } else {
-                    setEntryNumber(1);
-                    setTotalEntries(1);
-                }
-            }
-        };
-        getCounts();
-        return () => { isMounted = false; };
-    }, []);
-
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
+        console.log('Submitting form with entry:', values.entry);
+
         const requestData = {
             date: values.date,
             entry: values.entry,
@@ -189,14 +230,15 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
 
+            // Refresh entry counts after successful submission
             const counts = await fetchEntryCounts();
-
-            // If not editing, refresh entry counts
-            if (!editEntry) {
-                const otherCpCounts = counts.find(c => c.form_type === 'other_cp');
+            if (!editEntry && counts) {
+                // FIXED: use 'other-cp' (with hyphen)
+                const otherCpCounts = counts.find(c => c.form_type === 'other-cp');
                 if (otherCpCounts) {
                     setEntryNumber(otherCpCounts.current_count + 1);
-                    setTotalEntries(otherCpCounts.global_count);
+                    setTotalEntries(otherCpCounts.global_count + 1);
+                    console.log('Updated entry numbers after submission:', otherCpCounts.current_count + 1, '/', otherCpCounts.global_count + 1);
                 }
             }
 
@@ -303,14 +345,28 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         </motion.div>
     );
 
+    // Show loading state while fetching entry counts
+    if (isLoadingCounts) {
+        return (
+            <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                        <i className="fas fa-spinner fa-spin text-2xl text-purple-600 mb-2"></i>
+                        <p>Loading entry number...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-xl">
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8 rounded-t-xl">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
-                        <motion.h2 
-                            className="text-2xl font-bold text-black flex items-center" 
-                            initial={{ opacity: 0, y: -20 }} 
+                        <motion.h2
+                            className="text-2xl font-bold text-black flex items-center"
+                            initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                         >
                             <i className="fas fa-credit-card mr-3"></i>
@@ -320,9 +376,9 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             Please fill in the card payment details
                         </motion.p>
                     </div>
-                    <button 
-                        type="button" 
-                        onClick={onCancel} 
+                    <button
+                        type="button"
+                        onClick={onCancel}
                         className="text-black hover:text-gray-600 ml-4"
                     >
                         <i className="fas fa-times text-2xl"></i>
@@ -337,7 +393,7 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     onSubmit={handleSubmit}
                     enableReinitialize={true}
                 >
-                    {({ isSubmitting, errors }) => (
+                    {({ isSubmitting, errors, values }) => (
                         <Form>
                             <AutoCalculate />
                             <motion.div
@@ -369,18 +425,18 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                             )}
 
                             <div className="flex justify-end space-x-3 mt-8 pt-4 border-t">
-                                <button 
-                                    type="button" 
-                                    onClick={onCancel} 
-                                    className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" 
+                                <button
+                                    type="button"
+                                    onClick={onCancel}
+                                    className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                                     disabled={isSubmitting}
                                 >
                                     <i className="fas fa-times mr-2"></i>
                                     Cancel
                                 </button>
-                                <button 
-                                    type="submit" 
-                                    className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center" 
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting && <ButtonSpinner />}
@@ -396,4 +452,4 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     );
 };
 
-export default Other_Cp_Form;
+export default Other_Cp_Form

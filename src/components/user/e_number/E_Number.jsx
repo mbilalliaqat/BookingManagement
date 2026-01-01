@@ -94,6 +94,7 @@ const E_Number = () => {
         { header: 'DATE', accessor: 'date' },
         { header: 'EMPLOYEE', accessor: 'employee' },
         { header: 'ENTRY NO', accessor: 'entry_no' },
+        { header: 'NAME', accessor: 'name' },
         { header: 'FILE NUMBER', accessor: 'file_no' },
         { header: 'VISA ID', accessor: 'visa_id' },
         { header: 'REFERENCE', accessor: 'reference' },
@@ -112,7 +113,7 @@ const E_Number = () => {
                     </button>
                     <button
                         className="text-red-500 hover:text-red-700 text-[13px]"
-                        onClick={() => openDeleteModal(row.id)}
+                        onClick={() => openDeleteModal(index.id)}
                     >
                         <i className="fas fa-trash"></i>
                     </button>

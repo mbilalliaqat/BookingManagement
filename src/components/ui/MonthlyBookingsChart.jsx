@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Tooltip, ResponsiveContainer 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Tooltip, ResponsiveContainer, LabelList
 } from 'recharts';
-import { Calendar, RotateCcw } from 'lucide-react'; 
+import { Calendar as CalendarIcon, RotateCcw } from 'lucide-react'; 
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
+import { format } from 'date-fns';
 import TableSpinner from '../ui/TableSpinner'; 
 
 // Premium, high-contrast color palette
@@ -14,11 +17,11 @@ const BAR_CHART_COLORS = {
   NAVTCC: '#8b5cf6',    // Purple
   Services: '#14b8a6',   // Turquoise
   Vendor: '#4b5563',    // Slate Gray
-  Banks: '#34d399',     // Fresh Green
+  Banks: '#285d1b',     // Fresh Green
 };
 
-// Function to render the custom tooltip for the bar chart
-const CustomBarTooltip = ({ active, payload, label }) => {
+// Function to render the custom tooltip for the chart
+const CustomChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const totalCount = payload.reduce((sum, entry) => sum + (entry.value || 0), 0);
 
@@ -46,9 +49,17 @@ const MonthlyBookingsChart = ({
   monthlySummaryData, 
   currentMonthName, 
   selectedMonth, 
+  selectedMonthEnd, // Added missing prop
   setSelectedMonth, 
   setSelectedMonthEnd 
 }) => {
+  const [isCalendarOpen, setCalendarOpen] = React.useState(false);
+  const [range, setRange] = React.useState({ from: selectedMonth, to: selectedMonthEnd });
+
+  React.useEffect(() => {
+    setRange({ from: selectedMonth, to: selectedMonthEnd });
+  }, [selectedMonth, selectedMonthEnd]);
+
   const showPartialData = !isLoading && monthlySummaryData.length > 0;
 
   // Create a complete dataset with all days 1-31
@@ -140,19 +151,47 @@ const MonthlyBookingsChart = ({
         
         {/* Professional Date Picker and Reset Button Group */}
         <div className='flex space-x-2 items-center mt-2 sm:mt-0'>
-          <Calendar size={16} className="text-indigo-600" />
-          <input 
-            type="month" 
-            value={`${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`} 
-            onChange={(e) => {
-              const [year, month] = e.target.value.split('-').map(Number);
-              const newStartDate = new Date(year, month - 1, 1);
-              const newEndDate = new Date(year, month, 0);
-              setSelectedMonth(newStartDate);
-              setSelectedMonthEnd(newEndDate);
-            }}
-            className="px-2 py-1 text-xs border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-150"
-          />
+          <div className="relative">
+            <button 
+              onClick={() => setCalendarOpen(!isCalendarOpen)}
+              className="px-3 py-1.5 text-xs border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-150 flex items-center"
+            >
+              <CalendarIcon size={16} className="text-indigo-600 mr-2" />
+              {range?.from ? (
+                <>
+                  {format(range.from, 'dd/MM/yyyy')}
+                  {range.to ? ` - ${format(range.to, 'dd/MM/yyyy')}` : ''}
+                </>
+              ) : (
+                <span>Select a date range</span>
+              )}
+            </button>
+            {isCalendarOpen && (
+              <div className="absolute z-10 top-full right-0 mt-2 bg-white border rounded-lg shadow-lg">
+                <DayPicker
+                  mode="range"
+                  selected={range}
+                  onSelect={(selectedRange) => {
+                    setRange(selectedRange);
+                    if (selectedRange?.from) {
+                      setSelectedMonth(selectedRange.from);
+                      setSelectedMonthEnd(selectedRange.to || selectedRange.from);
+                    } else {
+                      setSelectedMonth(undefined);
+                      setSelectedMonthEnd(undefined);
+                    }
+                    if (selectedRange?.from && selectedRange?.to) {
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  initialFocus
+                  captionLayout="dropdown-buttons"
+                  fromYear={2020}
+                  toYear={new Date().getFullYear()}
+                />
+              </div>
+            )}
+          </div>
           <button 
             onClick={() => { 
               setSelectedMonth(new Date()); 
@@ -175,9 +214,10 @@ const MonthlyBookingsChart = ({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={completeMonthData} 
-              margin={{ top: 10, right: 10, left: 10, bottom: 5 }} 
-              barGap={0} 
-              barCategoryGap="30%" 
+              margin={{ top: 20, right: 10, left: 10, bottom: 5 }} 
+              barGap={2} 
+              barCategoryGap="20%"
+               barSize={80}
             >
               {/* Extreme Minimalist Grid: Only faint horizontal lines */}
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} /> 
@@ -198,7 +238,7 @@ const MonthlyBookingsChart = ({
                 width={40} // Give space for numbers
               />
               
-              <Tooltip content={<CustomBarTooltip />} />
+              <Tooltip content={<CustomChartTooltip />} />
               
               {/* Clean Horizontal Legend at the bottom */}
               <Legend 
@@ -211,15 +251,31 @@ const MonthlyBookingsChart = ({
                 verticalAlign="bottom" 
               />
               
-              {/* Bars - Rounded top corners for modern aesthetics */}
-              <Bar dataKey="Ticket" stackId="a" fill={BAR_CHART_COLORS.Ticket} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Umrah" stackId="a" fill={BAR_CHART_COLORS.Umrah} />
-              <Bar dataKey="Visa" stackId="a" fill={BAR_CHART_COLORS.Visa} />
-              <Bar dataKey="Gamca" stackId="a" fill={BAR_CHART_COLORS.Gamca} />
-              <Bar dataKey="NAVTCC" stackId="a" fill={BAR_CHART_COLORS.NAVTCC} />
-              <Bar dataKey="Services" stackId="a" fill={BAR_CHART_COLORS.Services} />
-              <Bar dataKey="Vendor" stackId="a" fill={BAR_CHART_COLORS.Vendor} />
-              <Bar dataKey="Banks" stackId="a" fill={BAR_CHART_COLORS.Banks} />
+              {/* Bars - Grouped */}
+              <Bar dataKey="Ticket" fill={BAR_CHART_COLORS.Ticket} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Ticket" position="top" style={{ fontSize: '20px',fontWeight: 'bold', fill: '#1e40af' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
+              <Bar dataKey="Umrah" fill={BAR_CHART_COLORS.Umrah} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Umrah" position="top" style={{ fontSize: '20px',fontWeight: 'bold', fill: '#059669' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
+              <Bar dataKey="Visa" fill={BAR_CHART_COLORS.Visa} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Visa" position="top" style={{ fontSize: '20px',fontWeight: 'bold', fill: '#dc2626' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
+              <Bar dataKey="Gamca" fill={BAR_CHART_COLORS.Gamca} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Gamca" position="top" style={{fontSize: '20px',fontWeight: 'bold', fill: '#fb923c' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
+              <Bar dataKey="NAVTCC" fill={BAR_CHART_COLORS.NAVTCC} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="NAVTCC" position="top" style={{ fontSize: '20px',fontWeight: 'bold', fill: '#8b5cf6' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
+              <Bar dataKey="Services" fill={BAR_CHART_COLORS.Services} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Services" position="top" style={{ fontSize: '20px',fontWeight: 'bold', fill: '#14b8a6' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
+              <Bar dataKey="Vendor" fill={BAR_CHART_COLORS.Vendor} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Vendor" position="top" style={{ fontSize: '20px',fontWeight: 'bold', fill: '#4b5563' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
+              <Bar dataKey="Banks" fill={BAR_CHART_COLORS.Banks} radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="Banks" position="top" style={{ fontSize: '20px',fontWeight: 'bold', fill: '#285d1b' }} formatter={(value) => value > 0 ? value : ''} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

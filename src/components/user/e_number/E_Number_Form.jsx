@@ -75,10 +75,14 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         const getCounts = async () => {
             const counts = await fetchEntryCounts();
             if (counts) {
+                // Get e-number specific count for current_count
                 const eNumberCounts = counts.find(c => c.form_type === 'e-number');
-                if (eNumberCounts) {
+                // Get global count for total entries across all forms
+                const globalCounts = counts.find(c => c.form_type === 'global');
+
+                if (eNumberCounts && globalCounts) {
                     setEntryNumber(eNumberCounts.current_count + 1);
-                    setTotalEntries(eNumberCounts.global_count + 1);
+                    setTotalEntries(globalCounts.global_count + 1); // Use global count here
                 } else {
                     setEntryNumber(1);
                     setTotalEntries(1);
@@ -112,17 +116,18 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 if (parseFloat(values.card_amount) > 0) {
                     // Create a bank detail entry when a new e-number is created
                     const bankCounts = counts.find(c => c.form_type === 'bank-detail');
+                    const globalCounts = counts.find(c => c.form_type === 'global');
+
                     const bankEntryNumber = bankCounts ? bankCounts.current_count + 1 : 1;
-                    const bankTotalEntries = bankCounts ? bankCounts.global_count + 1 : 1;
+                    const bankTotalEntries = globalCounts ? globalCounts.global_count + 1 : 1;
 
                     const bankDetailData = {
                         date: values.date,
                         entry: `BD ${bankEntryNumber}/${bankTotalEntries}`,
                         employee: values.employee,
                         detail: `E-Number payment for file ${values.fileNo}`,
-                        credit: 0,  // Change this: No money coming in
-                        debit: parseFloat(values.card_amount) || 0,  // Change this: Money going out
-                        // Remove the balance field entirely - backend calculates it
+                        credit: 0,  // No money coming in
+                        debit: parseFloat(values.card_amount) || 0,  // Money going out
                     };
 
                     const bankDetailResponse = await fetch(`${BASE_URL}/bank-details`, {
@@ -137,10 +142,14 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     }
                 }
 
-                const eNumberCounts = counts.find(c => c.form_type === 'e-number');
-                if (eNumberCounts) {
+                // Refresh counts after submission
+                const updatedCounts = await fetchEntryCounts();
+                const eNumberCounts = updatedCounts.find(c => c.form_type === 'e-number');
+                const globalCounts = updatedCounts.find(c => c.form_type === 'global');
+
+                if (eNumberCounts && globalCounts) {
                     setEntryNumber(eNumberCounts.current_count + 1);
-                    setTotalEntries(eNumberCounts.global_count);
+                    setTotalEntries(globalCounts.global_count + 1);
                 }
             }
 

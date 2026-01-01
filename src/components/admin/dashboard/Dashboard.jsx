@@ -21,13 +21,14 @@ const COLOR_MAP = {
   rose: { border: 'border-[#e11d48]', bg: 'bg-[#e11d48]/10', text: 'text-[#e11d48]', textBold: 'text-[#e11d48]', gradient: 'bg-gradient-to-br from-[#e11d48]/5 to-[#e11d48]/10' },
   teal: { border: 'border-teal-600', bg: 'bg-teal-600/10', text: 'text-teal-600', textBold: 'text-teal-700', gradient: 'bg-gradient-to-br from-teal-50 to-teal-100' },
   indigo: { border: 'border-indigo-600', bg: 'bg-indigo-600/10', text: 'text-indigo-600', textBold: 'text-indigo-700', gradient: 'bg-gradient-to-br from-indigo-50 to-indigo-100' },
+  purple: { border: 'border-purple-600', bg: 'bg-purple-600/10', text: 'text-purple-600', textBold: 'text-purple-700', gradient: 'bg-gradient-to-br from-purple-50 to-purple-100' },
 };
 const ACCOUNT_COLORS = ['midnight', 'emerald', 'rose', 'teal', 'indigo', 'ivory'];
 
 // Create axios instance with base URL
 const api = axios.create({
   baseURL: import.meta.env.VITE_LIVE_API_BASE_URL
-  
+
 });
 
 // Add caching for responses
@@ -38,10 +39,10 @@ const getFromCache = () => {
   try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (!cached) return null;
-    
+
     const { data, timestamp } = JSON.parse(cached);
     const isExpired = Date.now() - timestamp > CACHE_TTL;
-    
+
     return isExpired ? null : data;
   } catch {
     return null;
@@ -79,23 +80,24 @@ export default function Dashboard() {
     totalVendorPaid: 0,
     totalAgentPayable: 0,
     totalAgentPaid: 0,
+    totalOtherCp: 0,
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
-  const [hoveredCard, setHoveredCard] = useState(null); 
+  const [hoveredCard, setHoveredCard] = useState(null);
   const [delayHandler, setDelayHandler] = useState(null);
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [cachedData, setCachedData] = useState(null);
   const [isFreshDataLoading, setIsFreshDataLoading] = useState(false);
-  
+
   const [selectedMonthEnd, setSelectedMonthEnd] = useState(new Date());
   const navigate = useNavigate();
- 
+
   const [errors, setErrors] = useState({
     dashboard: null, umrah: null, tickets: null, visa: null, gamcaToken: null, services: null,
-    navtcc: null, protector: null, expenses: null, refunded: null, vendor: null, agent: null, accounts: null,
+    navtcc: null, protector: null, expenses: null, refunded: null, vendor: null, agent: null, accounts: null, otherCp: null,
   });
 
   const handleMouseEnter = (cardName) => {
@@ -108,7 +110,7 @@ export default function Dashboard() {
   const handleMouseLeave = () => {
     const handler = setTimeout(() => {
       setHoveredCard(null);
-    }, 200); 
+    }, 200);
     setDelayHandler(handler);
   };
 
@@ -124,10 +126,10 @@ export default function Dashboard() {
     navigate('/admin/refunded');
   }, [navigate]);
 
-      const fetchWithCache = useCallback(async (endpoint) => {
-  const response = await api.get(endpoint);
-  return response.data;
-}, []);
+  const fetchWithCache = useCallback(async (endpoint) => {
+    const response = await api.get(endpoint);
+    return response.data;
+  }, []);
 
   const safeTimestamp = (dateValue) => {
     if (!dateValue) return 0;
@@ -135,161 +137,171 @@ export default function Dashboard() {
     return isNaN(date.getTime()) ? 0 : date.getTime();
   };
 
- const safeLocaleDateString = (dateValue) => {
+  const safeLocaleDateString = (dateValue) => {
     if (!dateValue) return '--';
     const date = new Date(dateValue);
     // Added 'en-GB' for DD/MM/YYYY format and 'UTC' to fix the previous day issue
     return isNaN(date.getTime()) ? '--' : date.toLocaleDateString('en-GB', { timeZone: 'UTC' });
   };
   // Calculate outstanding balances for vendors and agents
-const vendorOutstandingBalance = dashboardData.vendors.reduce((sum, vendor) => sum + (vendor.remaining_amount || 0), 0);
-const agentOutstandingBalance = dashboardData.agents.reduce((sum, agent) => sum + (agent.remaining_amount || 0), 0);
+  const vendorOutstandingBalance = dashboardData.vendors.reduce((sum, vendor) => sum + (vendor.remaining_amount || 0), 0);
+  const agentOutstandingBalance = dashboardData.agents.reduce((sum, agent) => sum + (agent.remaining_amount || 0), 0);
 
   const handleModuleClick = (moduleName) => {
     if (moduleName === 'Ticket') {
-      navigate('/admin/tickets'); 
+      navigate('/admin/tickets');
     }
     if (moduleName === 'Umrah') {
-      navigate('/admin/umrah'); 
+      navigate('/admin/umrah');
     }
     if (moduleName === 'Visa Processing') {
-      navigate('/admin/visa'); 
+      navigate('/admin/visa');
     }
     if (moduleName === 'GAMCA Token') {
-      navigate('/admin/gamcaToken'); 
+      navigate('/admin/gamcaToken');
     }
     if (moduleName === 'Navtcc') {
-      navigate('/admin/navtcc'); 
+      navigate('/admin/navtcc');
     }
     if (moduleName === 'Services') {
-      navigate('/admin/services'); 
+      navigate('/admin/services');
+    }
+    if (moduleName === 'Other CP') {
+      navigate('/admin/other-cp');
     }
   };
 
   const handleAccountClick = useCallback((account) => {
-    navigate('/admin/officeAccount', { 
-      state: { selectedBank: account.name } 
+    navigate('/admin/officeAccount', {
+      state: { selectedBank: account.name }
     });
   }, [navigate]);
 
   const handleVendorClick = useCallback((vendorName) => {
-    navigate('/admin/vender/', { 
-      state: { selectedVendor: vendorName } 
+    navigate('/admin/vender/', {
+      state: { selectedVendor: vendorName }
     });
   }, [navigate]);
 
   const handleAgentClick = useCallback((agentName) => {
-    navigate('/admin/agent', { 
-      state: { selectedAgent: agentName } 
+    navigate('/admin/agent', {
+      state: { selectedAgent: agentName }
     });
   }, [navigate]);
 
   const handleRemainingAmountClick = useCallback((typeName) => {
-    navigate('/admin/remaining-amounts', { 
-      state: { selectedType: typeName } 
+    navigate('/admin/remaining-amounts', {
+      state: { selectedType: typeName }
     });
   }, [navigate]);
 
-const handleDateRangeChange = useCallback((startDate, endDate) => {
-  setDateRange({ startDate: startDate || null, endDate: endDate || null });
-}, []);
+  const handleDateRangeChange = useCallback((startDate, endDate) => {
+    setDateRange({ startDate: startDate || null, endDate: endDate || null });
+  }, []);
 
-    const handleEntryClick = useCallback((booking) => {
-  const entryNumber = booking.entry;
-  
-  // Navigate based on booking type
-  switch(booking.type) {
-    case 'Ticket':
-    case 'RE Ticket Payment':
-      navigate('/admin/tickets', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Umrah':
-    case 'RE Umrah Payment':
-      navigate('/admin/umrah', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Visa Processing':
-    case 'RE Visa Payment':
-      navigate('/admin/visa', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'GAMCA Token':
-    case 'RE GAMCA Token Payment':
-      navigate('/admin/gamcaToken', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Services':
-      navigate('/admin/services', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Navtcc':
-      navigate('/admin/navtcc', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Protector':
-      navigate('/admin/protector', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Expenses':
-      navigate('/admin/expense', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Refunded':
-      navigate('/admin/refunded', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    case 'Vender':
-      navigate('/admin/vender', { 
-        state: { highlightEntry: entryNumber } 
-      });
-      break;
-    
-    default:
-      console.log('Unknown booking type:', booking.type);
-  }
-}, [navigate]);
+  const handleEntryClick = useCallback((booking) => {
+    const entryNumber = booking.entry;
+
+    // Navigate based on booking type
+    switch (booking.type) {
+      case 'Ticket':
+      case 'RE Ticket Payment':
+        navigate('/admin/tickets', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Umrah':
+      case 'RE Umrah Payment':
+        navigate('/admin/umrah', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Visa Processing':
+      case 'RE Visa Payment':
+        navigate('/admin/visa', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'GAMCA Token':
+      case 'RE GAMCA Token Payment':
+        navigate('/admin/gamcaToken', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Services':
+        navigate('/admin/services', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Navtcc':
+        navigate('/admin/navtcc', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Protector':
+        navigate('/admin/protector', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Expenses':
+        navigate('/admin/expense', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Refunded':
+        navigate('/admin/refunded', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Vender':
+        navigate('/admin/vender', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      case 'Other CP':
+      case 'RE Other CP Payment':
+        navigate('/admin/other-cp', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
+      default:
+        console.log('Unknown booking type:', booking.type);
+    }
+  }, [navigate]);
 
 
   const filterBookingsByDateRange = useCallback((bookings, startDate, endDate) => {
-  if (!startDate || !endDate) return bookings;
-  
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
-  const startTimestamp = start.getTime();
-  
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-  const endTimestamp = end.getTime();
-  
-  return bookings.filter(booking => {
-    return booking.timestamp >= startTimestamp && booking.timestamp <= endTimestamp;
-  });
-}, []);
+    if (!startDate || !endDate) return bookings;
+
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const startTimestamp = start.getTime();
+
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    const endTimestamp = end.getTime();
+
+    return bookings.filter(booking => {
+      return booking.timestamp >= startTimestamp && booking.timestamp <= endTimestamp;
+    });
+  }, []);
 
   // Update filtered bookings when date range or dashboard data changes
   useEffect(() => {
     const filtered = filterBookingsByDateRange(
-      dashboardData.combinedBookings, 
-      dateRange.startDate, 
+      dashboardData.combinedBookings,
+      dateRange.startDate,
       dateRange.endDate
     );
     setFilteredBookings(filtered);
@@ -315,140 +327,147 @@ const handleDateRangeChange = useCallback((startDate, endDate) => {
   }, []);
 
   // Calculate monthly summary data
-const calculateMonthlySummary = useCallback(() => {
-  const startDate = new Date(selectedMonth);
-  const endDate = new Date(selectedMonthEnd);
-  
-  startDate.setHours(0, 0, 0, 0);
-  endDate.setHours(23, 59, 59, 999);
+  const calculateMonthlySummary = useCallback(() => {
+    const startDate = new Date(selectedMonth);
+    const endDate = new Date(selectedMonthEnd);
 
-  const dateRangeBookings = dashboardData.combinedBookings.filter(booking => {
-    const bookingDate = new Date(booking.timestamp);
-    return bookingDate >= startDate && bookingDate <= endDate;
-  });
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
 
-  // Group bookings by date
-  const groupedByDate = {};
-  
-  dateRangeBookings.forEach(booking => {
-    const bookingDate = new Date(booking.timestamp);
-    const dateKey = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    
-    if (!groupedByDate[dateKey]) {
-      groupedByDate[dateKey] = {
-        date: dateKey,
-        Ticket: 0,
-        Umrah: 0,
-        Visa: 0,
-        Gamca: 0,
-        NAVTCC: 0,
-        Services: 0,
-        Vendor: 0,
-        Banks: 0,
-      };
-    }
-    
-    if (booking.type === 'Ticket' && booking.receivable_amount > 0) {
-      groupedByDate[dateKey].Ticket++;
-    } else if (booking.type === 'Umrah' && booking.receivable_amount > 0) {
-      groupedByDate[dateKey].Umrah++;
-    } else if (booking.type === 'Visa Processing') {
-      groupedByDate[dateKey].Visa++;
-    } else if (booking.type === 'GAMCA Token') {
-      groupedByDate[dateKey].Gamca++;
-    } else if (booking.type === 'Navtcc') {
-      groupedByDate[dateKey].NAVTCC++;
-    } else if (booking.type === 'Services') {
-      groupedByDate[dateKey].Services++;
-    } else if (booking.type === 'Vender') {
-      groupedByDate[dateKey].Vendor++;
-    }
-    
-    if (parseFloat(booking.paid_in_bank || 0) > 0) {
-      groupedByDate[dateKey].Banks++;
-    }
-  });
+    const dateRangeBookings = dashboardData.combinedBookings.filter(booking => {
+      const bookingDate = new Date(booking.timestamp);
+      return bookingDate >= startDate && bookingDate <= endDate;
+    });
 
-  return Object.values(groupedByDate);
-}, [dashboardData.combinedBookings, selectedMonth, selectedMonthEnd]);
+    // Group bookings by date
+    const groupedByDate = {};
+
+    dateRangeBookings.forEach(booking => {
+      const bookingDate = new Date(booking.timestamp);
+      const dateKey = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      if (!groupedByDate[dateKey]) {
+        groupedByDate[dateKey] = {
+          date: dateKey,
+          Ticket: 0,
+          Umrah: 0,
+          Visa: 0,
+          Gamca: 0,
+          NAVTCC: 0,
+          Services: 0,
+          Vendor: 0,
+          Banks: 0,
+          OtherCP: 0,
+        };
+      }
+
+      if (booking.type === 'Ticket' && booking.receivable_amount > 0) {
+        groupedByDate[dateKey].Ticket++;
+      } else if (booking.type === 'Umrah' && booking.receivable_amount > 0) {
+        groupedByDate[dateKey].Umrah++;
+      } else if (booking.type === 'Visa Processing') {
+        groupedByDate[dateKey].Visa++;
+      } else if (booking.type === 'GAMCA Token') {
+        groupedByDate[dateKey].Gamca++;
+      } else if (booking.type === 'Navtcc') {
+        groupedByDate[dateKey].NAVTCC++;
+      } else if (booking.type === 'Services') {
+        groupedByDate[dateKey].Services++;
+      } else if (booking.type === 'Vender') {
+        groupedByDate[dateKey].Vendor++;
+      } else if (booking.type === 'Other CP') {
+        groupedByDate[dateKey].OtherCP++;
+      }
+
+      if (parseFloat(booking.paid_in_bank || 0) > 0) {
+        groupedByDate[dateKey].Banks++;
+      }
+    });
+
+    return Object.values(groupedByDate);
+  }, [dashboardData.combinedBookings, selectedMonth, selectedMonthEnd]);
 
   // Get current table data and calculate totals
   const currentTableData = dateRange.startDate && dateRange.endDate ? filteredBookings : dashboardData.combinedBookings;
   const summaryTotals = calculateSummaryTotals(currentTableData);
   const monthlySummaryData = calculateMonthlySummary();
-  
-  const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth() && 
-                         selectedMonth.getFullYear() === selectedMonthEnd.getFullYear()
+
+  const currentMonthName = selectedMonth.getMonth() === selectedMonthEnd.getMonth() &&
+    selectedMonth.getFullYear() === selectedMonthEnd.getFullYear()
     ? selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : `${selectedMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${selectedMonthEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
-    
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
 
-        const cached = getFromCache();
-    
-    if (cached) {
-      // Show cached data immediately
-      setDashboardData(cached);
-      setIsLoading(false);
-      setIsFreshDataLoading(true); // Start loading fresh data in background
-    } else {
-      setIsLoading(true); // Only show full loading if no cache
-    }
-      
+      const cached = getFromCache();
+
+      if (cached) {
+        // Show cached data immediately
+        setDashboardData(cached);
+        setIsLoading(false);
+        setIsFreshDataLoading(true); // Start loading fresh data in background
+      } else {
+        setIsLoading(true); // Only show full loading if no cache
+      }
+
       try {
         const [
           dashboardStats, umrahData, ticketsData, visaData, gamcaTokenData, servicesData,
-          navtccData, protectorData, expensesData, refundedData, venderData, agentData,
+          navtccData, protectorData, expensesData, refundedData, venderData, agentData, otherCpData,
         ] = await Promise.all([
-          fetchWithCache('/dashboard').catch(err => { 
-            setErrors(prev => ({ ...prev, dashboard: 'Failed to load dashboard summary' })); 
-            return { data: { totalBookings: 0, bookingsByType: [], totalRevenue: 0 } }; 
+          fetchWithCache('/dashboard').catch(err => {
+            setErrors(prev => ({ ...prev, dashboard: 'Failed to load dashboard summary' }));
+            return { data: { totalBookings: 0, bookingsByType: [], totalRevenue: 0 } };
           }),
-          fetchWithCache('/umrah').catch(err => { 
-            setErrors(prev => ({ ...prev, umrah: 'Failed to load Umrah data' })); 
-            return { umrahBookings: [] }; 
+          fetchWithCache('/umrah').catch(err => {
+            setErrors(prev => ({ ...prev, umrah: 'Failed to load Umrah data' }));
+            return { umrahBookings: [] };
           }),
-          fetchWithCache('/ticket').catch(err => { 
-            setErrors(prev => ({ ...prev, tickets: 'Failed to load Tickets data' })); 
-            return { ticket: [] }; 
+          fetchWithCache('/ticket').catch(err => {
+            setErrors(prev => ({ ...prev, tickets: 'Failed to load Tickets data' }));
+            return { ticket: [] };
           }),
-          fetchWithCache('/visa-processing').catch(err => { 
-            setErrors(prev => ({ ...prev, visa: 'Failed to load Visa data' })); 
-            return { visa_processing: [] }; 
+          fetchWithCache('/visa-processing').catch(err => {
+            setErrors(prev => ({ ...prev, visa: 'Failed to load Visa data' }));
+            return { visa_processing: [] };
           }),
-          fetchWithCache('/gamca-token').catch(err => { 
-            setErrors(prev => ({ ...prev, gamcaToken: 'Failed to load Gamca Token data' })); 
-            return { gamcaTokens: [] }; 
+          fetchWithCache('/gamca-token').catch(err => {
+            setErrors(prev => ({ ...prev, gamcaToken: 'Failed to load Gamca Token data' }));
+            return { gamcaTokens: [] };
           }),
-          fetchWithCache('/services').catch(err => { 
-            setErrors(prev => ({ ...prev, services: 'Failed to load Services data' })); 
-            return { services: [] }; 
+          fetchWithCache('/services').catch(err => {
+            setErrors(prev => ({ ...prev, services: 'Failed to load Services data' }));
+            return { services: [] };
           }),
-          fetchWithCache('/navtcc').catch(err => { 
-            setErrors(prev => ({ ...prev, navtcc: 'Failed to load Navtcc data' })); 
-            return { navtcc: [] }; 
+          fetchWithCache('/navtcc').catch(err => {
+            setErrors(prev => ({ ...prev, navtcc: 'Failed to load Navtcc data' }));
+            return { navtcc: [] };
           }),
-          fetchWithCache('/protector').catch(err => { 
-            setErrors(prev => ({ ...prev, protector: 'Failed to load Protector data' })); 
-            return { protectors: [] }; 
+          fetchWithCache('/protector').catch(err => {
+            setErrors(prev => ({ ...prev, protector: 'Failed to load Protector data' }));
+            return { protectors: [] };
           }),
-          fetchWithCache('/expenses').catch(err => { 
-            setErrors(prev => ({ ...prev, expenses: 'Failed to load Expenses data' })); 
-            return { expenses: [] }; 
+          fetchWithCache('/expenses').catch(err => {
+            setErrors(prev => ({ ...prev, expenses: 'Failed to load Expenses data' }));
+            return { expenses: [] };
           }),
-          fetchWithCache('/refunded').catch(err => { 
-            setErrors(prev => ({ ...prev, refunded: 'Failed to load Refunded data' })); 
-            return { refunded: [] }; 
+          fetchWithCache('/refunded').catch(err => {
+            setErrors(prev => ({ ...prev, refunded: 'Failed to load Refunded data' }));
+            return { refunded: [] };
           }),
-          fetchWithCache('/vender').catch(err => { 
-            setErrors(prev => ({ ...prev, vendor: 'Failed to load Vendor data' })); 
-            return { vendors: [] }; 
+          fetchWithCache('/vender').catch(err => {
+            setErrors(prev => ({ ...prev, vendor: 'Failed to load Vendor data' }));
+            return { vendors: [] };
           }),
-          fetchWithCache('/agent').catch(err => { 
-            setErrors(prev => ({ ...prev, agent: 'Failed to load Agent data' })); 
-            return { agents: [] }; 
+          fetchWithCache('/agent').catch(err => {
+            setErrors(prev => ({ ...prev, agent: 'Failed to load Agent data' }));
+            return { agents: [] };
+          }),
+          fetchWithCache('/other-cp').catch(err => {
+            setErrors(prev => ({ ...prev, otherCp: 'Failed to load Other CP data' }));
+            return { otherCpEntries: [] };
           }),
         ]);
 
@@ -467,94 +486,95 @@ const calculateMonthlySummary = useCallback(() => {
         );
 
         const vendorsData = venderData.vendors?.map((entry, index) => ({
-          id: entry.id || index, 
-          vender_name: entry.vender_name || '', 
-          credit: Number(entry.credit) || 0, 
+          id: entry.id || index,
+          vender_name: entry.vender_name || '',
+          credit: Number(entry.credit) || 0,
           debit: Number(entry.debit) || 0,
         })) || [];
         const aggregatedVendors = vendorsData.reduce((acc, curr) => {
           const existing = acc.find(v => v.vender_name === curr.vender_name);
           if (existing) {
-            existing.credit += curr.credit; 
-            existing.debit += curr.debit; 
+            existing.credit += curr.credit;
+            existing.debit += curr.debit;
             existing.remaining_amount = existing.credit - existing.debit;
-          } else { 
-            acc.push({ 
-              vender_name: curr.vender_name, 
-              credit: curr.credit, 
-              debit: curr.debit, 
-              remaining_amount: curr.credit - curr.debit 
-            }); 
+          } else {
+            acc.push({
+              vender_name: curr.vender_name,
+              credit: curr.credit,
+              debit: curr.debit,
+              remaining_amount: curr.credit - curr.debit
+            });
           }
           return acc;
         }, []);
-        
+
         const totalVendorPayable = aggregatedVendors.reduce((sum, curr) => sum + curr.credit, 0);
         const totalVendorPaid = aggregatedVendors.reduce((sum, curr) => sum + curr.debit, 0);
 
         const agentsData = agentData.agents?.map((entry, index) => ({
-          id: entry.id || index, 
-          agent_name: entry.agent_name || '', 
-          credit: Number(entry.credit) || 0, 
+          id: entry.id || index,
+          agent_name: entry.agent_name || '',
+          credit: Number(entry.credit) || 0,
           debit: Number(entry.debit) || 0,
         })) || [];
         const aggregatedAgents = agentsData.reduce((acc, curr) => {
           const existing = acc.find(a => a.agent_name === curr.agent_name);
           if (existing) {
-            existing.credit += curr.credit; 
-            existing.debit += curr.debit; 
+            existing.credit += curr.credit;
+            existing.debit += curr.debit;
             existing.remaining_amount = existing.credit - existing.debit;
-          } else { 
-            acc.push({ 
-              agent_name: curr.agent_name, 
-              credit: curr.credit, 
-              debit: curr.debit, 
-              remaining_amount: curr.credit - curr.debit 
-            }); 
+          } else {
+            acc.push({
+              agent_name: curr.agent_name,
+              credit: curr.credit,
+              debit: curr.debit,
+              remaining_amount: curr.credit - curr.debit
+            });
           }
           return acc;
         }, []);
 
         const totalAgentPayable = aggregatedAgents.reduce((sum, curr) => sum + curr.credit, 0);
         const totalAgentPaid = aggregatedAgents.reduce((sum, curr) => sum + curr.debit, 0);
+        const totalOtherCp = otherCpData.otherCpEntries?.length || 0;
 
         const parsePassportDetail = (detail) => {
           try { return JSON.parse(detail); } catch { return {}; }
         };
 
         const umrahBookings = umrahData.umrahBookings.map(umrah => {
-  let firstPassengerName = null;
-  try {
-    let parsedDetails = [];
-    if (typeof umrah.passportDetail === 'string') {
-      parsedDetails = JSON.parse(umrah.passportDetail);
-    } else if (Array.isArray(umrah.passportDetail)) {
-      parsedDetails = umrah.passportDetail;
-    }
-    
-    if (parsedDetails.length > 0) {
-      const firstPassenger = parsedDetails[0];
-      firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
-    }
-  } catch (e) {
-    console.error("Error parsing Umrah passenger details:", e);
-  }
+          let firstPassengerName = null;
+          try {
+            let parsedDetails = [];
+            if (typeof umrah.passportDetail === 'string') {
+              parsedDetails = JSON.parse(umrah.passportDetail);
+            } else if (Array.isArray(umrah.passportDetail)) {
+              parsedDetails = umrah.passportDetail;
+            }
 
-  return {
-    type: 'Umrah', 
-    employee_name: umrah.userName, 
-    receivable_amount: umrah.receivableAmount, 
-    entry: umrah.entry, 
-    paid_cash: umrah.initial_paid_cash, 
-    paid_in_bank: umrah.initial_paid_in_bank, 
-    remaining_amount: umrah.initial_remaining_amount, 
-    booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt), 
-    timestamp: safeTimestamp(umrah.createdAt), 
-    withdraw: 0, 
-    passengerName: firstPassengerName || umrah.customerAdd || null,
-    profit: umrah.profit,
-  };
-});
+            if (parsedDetails.length > 0) {
+              const firstPassenger = parsedDetails[0];
+              firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+            }
+          } catch (e) {
+            console.error("Error parsing Umrah passenger details:", e);
+          }
+
+          return {
+            type: 'Umrah',
+            employee_name: umrah.userName,
+            receivable_amount: umrah.receivableAmount,
+            entry: umrah.entry,
+            paid_cash: umrah.initial_paid_cash,
+            paid_in_bank: umrah.initial_paid_in_bank,
+            remaining_amount: umrah.initial_remaining_amount,
+            booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt),
+            timestamp: safeTimestamp(umrah.createdAt),
+            withdraw: 0,
+            passengerName: firstPassengerName || umrah.customerAdd || null,
+            profit: umrah.profit,
+          };
+        });
 
         const allUmrahPayments = [];
         for (const umrah of umrahData.umrahBookings) {
@@ -575,43 +595,43 @@ const calculateMonthlySummary = useCallback(() => {
           }
         }
 
-       const umrahPaymentEntries = allUmrahPayments.map(payment => {
-  const originalUmrah = umrahData.umrahBookings.find(u => u.id === payment.umrah_id);
-  let passengerName = payment.customer_name;
-  
-  if (originalUmrah) {
-    try {
-      let parsedDetails = [];
-      if (typeof originalUmrah.passportDetail === 'string') {
-        parsedDetails = JSON.parse(originalUmrah.passportDetail);
-      } else if (Array.isArray(originalUmrah.passportDetail)) {
-        parsedDetails = originalUmrah.passportDetail;
-      }
-      
-      if (parsedDetails.length > 0) {
-        const firstPassenger = parsedDetails[0];
-        passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
-      }
-    } catch (e) {
-      console.error("Error parsing umrah payment passenger details:", e);
-    }
-  }
-  
-  return {
-    type: 'RE Umrah Payment',
-    employee_name: payment.employee_name,
-    receivable_amount: 0,
-    entry: payment.umrah_entry,
-    paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
-    paid_in_bank: parseFloat(payment.paid_bank || 0),
-    remaining_amount: payment.remaining_amount,
-    booking_date: safeLocaleDateString(payment.payment_date),
-    timestamp: safeTimestamp(payment.created_at),
-    withdraw: 0,
-    passengerName: passengerName || originalUmrah?.customerAdd || null,
-    profit: 0,
-  };
-});
+        const umrahPaymentEntries = allUmrahPayments.map(payment => {
+          const originalUmrah = umrahData.umrahBookings.find(u => u.id === payment.umrah_id);
+          let passengerName = payment.customer_name;
+
+          if (originalUmrah) {
+            try {
+              let parsedDetails = [];
+              if (typeof originalUmrah.passportDetail === 'string') {
+                parsedDetails = JSON.parse(originalUmrah.passportDetail);
+              } else if (Array.isArray(originalUmrah.passportDetail)) {
+                parsedDetails = originalUmrah.passportDetail;
+              }
+
+              if (parsedDetails.length > 0) {
+                const firstPassenger = parsedDetails[0];
+                passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing umrah payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE Umrah Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.umrah_entry,
+            paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: payment.remaining_amount,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalUmrah?.customerAdd || null,
+            profit: 0,
+          };
+        });
 
         console.log('Umrah payment entries:', umrahPaymentEntries);
 
@@ -624,7 +644,7 @@ const calculateMonthlySummary = useCallback(() => {
             } else if (Array.isArray(ticket.passport_detail)) {
               parsedDetails = ticket.passport_detail;
             }
-            
+
             if (parsedDetails.length > 0) {
               const firstPassenger = parsedDetails[0];
               firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
@@ -634,16 +654,16 @@ const calculateMonthlySummary = useCallback(() => {
           }
 
           return {
-            type: 'Ticket', 
-            employee_name: ticket.employee_name, 
-            receivable_amount: ticket.receivable_amount, 
-            entry: ticket.entry, 
-            paid_cash: ticket.initial_paid_cash, 
-            paid_in_bank: ticket.initial_paid_in_bank, 
-            remaining_amount: ticket.initial_remaining_amount, 
-            booking_date: safeLocaleDateString(ticket.booking_date || ticket.created_at), 
-            timestamp: safeTimestamp(ticket.created_at), 
-            withdraw: 0, 
+            type: 'Ticket',
+            employee_name: ticket.employee_name,
+            receivable_amount: ticket.receivable_amount,
+            entry: ticket.entry,
+            paid_cash: ticket.initial_paid_cash,
+            paid_in_bank: ticket.initial_paid_in_bank,
+            remaining_amount: ticket.initial_remaining_amount,
+            booking_date: safeLocaleDateString(ticket.booking_date || ticket.created_at),
+            timestamp: safeTimestamp(ticket.created_at),
+            withdraw: 0,
             passengerName: firstPassengerName || ticket.customer_add || null,
             profit: ticket.profit,
           };
@@ -671,60 +691,60 @@ const calculateMonthlySummary = useCallback(() => {
         }
 
         const ticketPaymentEntries = allTicketPayments.map(payment => {
-  // Find the original ticket to get passenger details
-  const originalTicket = ticketsData.ticket.find(t => t.id === payment.ticket_id);
-  let passengerName = payment.customer_name;
-  
-  if (originalTicket) {
-    try {
-      let parsedDetails = [];
-      if (typeof originalTicket.passport_detail === 'string') {
-        parsedDetails = JSON.parse(originalTicket.passport_detail);
-      } else if (Array.isArray(originalTicket.passport_detail)) {
-        parsedDetails = originalTicket.passport_detail;
-      }
-      
-      if (parsedDetails.length > 0) {
-        const firstPassenger = parsedDetails[0];
-        passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
-      }
-    } catch (e) {
-      console.error("Error parsing ticket payment passenger details:", e);
-    }
-  }
-  
-  return {
-    type: 'RE Ticket Payment',
-    employee_name: payment.employee_name,
-    receivable_amount: 0,
-    entry: payment.ticket_entry,
-    paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
-    paid_in_bank: parseFloat(payment.paid_bank || 0),
-    remaining_amount: payment.remaining_amount,
-    booking_date: safeLocaleDateString(payment.payment_date),
-    timestamp: safeTimestamp(payment.created_at),
-    withdraw: 0,
-    passengerName: passengerName || originalTicket?.customer_add || null,
-    profit: 0,
-  };
-});
+          // Find the original ticket to get passenger details
+          const originalTicket = ticketsData.ticket.find(t => t.id === payment.ticket_id);
+          let passengerName = payment.customer_name;
+
+          if (originalTicket) {
+            try {
+              let parsedDetails = [];
+              if (typeof originalTicket.passport_detail === 'string') {
+                parsedDetails = JSON.parse(originalTicket.passport_detail);
+              } else if (Array.isArray(originalTicket.passport_detail)) {
+                parsedDetails = originalTicket.passport_detail;
+              }
+
+              if (parsedDetails.length > 0) {
+                const firstPassenger = parsedDetails[0];
+                passengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing ticket payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE Ticket Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.ticket_entry,
+            paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: payment.remaining_amount,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalTicket?.customer_add || null,
+            profit: 0,
+          };
+        });
 
         console.log('Ticket payment entries:', ticketPaymentEntries);
 
         const visaBookings = visaData.visa_processing.map(visa => {
           const details = parsePassportDetail(visa.passport_detail);
-          return { 
-            type: 'Visa Processing', 
-            employee_name: visa.employee_name, 
-            receivable_amount: visa.receivable_amount, 
-            entry: visa.entry, 
-            paid_cash: visa.initial_paid_cash, 
-            paid_in_bank: visa.initial_paid_in_bank, 
-            remaining_amount: visa.initial_remaining_amount, 
-            booking_date: safeLocaleDateString(visa.created_at), 
-            timestamp: safeTimestamp(visa.created_at), 
+          return {
+            type: 'Visa Processing',
+            employee_name: visa.employee_name,
+            receivable_amount: visa.receivable_amount,
+            entry: visa.entry,
+            paid_cash: visa.initial_paid_cash,
+            paid_in_bank: visa.initial_paid_in_bank,
+            remaining_amount: visa.initial_remaining_amount,
+            booking_date: safeLocaleDateString(visa.created_at),
+            timestamp: safeTimestamp(visa.created_at),
             withdraw: 0,
-            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), 
+            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
             profit: visa.profit,
           };
         });
@@ -748,53 +768,53 @@ const calculateMonthlySummary = useCallback(() => {
           }
         }
 
-       const visaPaymentEntries = allVisaPayments.map(payment => {
-  const originalVisa = visaData.visa_processing.find(v => v.id === payment.visa_id);
-  let passengerName = payment.customer_name;
-  
-  if (originalVisa) {
-    try {
-      const details = parsePassportDetail(originalVisa.passport_detail);
-      if (details.firstName || details.lastName) {
-        passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
-      }
-    } catch (e) {
-      console.error("Error parsing visa payment passenger details:", e);
-    }
-  }
-  
-  return {
-    type: 'RE Visa Payment',
-    employee_name: payment.employee_name,
-    receivable_amount: 0,
-    entry: payment.visa_entry,
-    paid_cash: parseFloat(payment.payed_cash || 0),
-    paid_in_bank: parseFloat(payment.paid_bank || 0),
-    remaining_amount: 0,
-    booking_date: safeLocaleDateString(payment.payment_date),
-    timestamp: safeTimestamp(payment.created_at),
-    withdraw: 0,
-    passengerName: passengerName || originalVisa?.customer_add || null,
-    profit: 0,
-  };
-});
+        const visaPaymentEntries = allVisaPayments.map(payment => {
+          const originalVisa = visaData.visa_processing.find(v => v.id === payment.visa_id);
+          let passengerName = payment.customer_name;
+
+          if (originalVisa) {
+            try {
+              const details = parsePassportDetail(originalVisa.passport_detail);
+              if (details.firstName || details.lastName) {
+                passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing visa payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE Visa Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.visa_entry,
+            paid_cash: parseFloat(payment.payed_cash || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: 0,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalVisa?.customer_add || null,
+            profit: 0,
+          };
+        });
 
         console.log('Visa payment entries:', visaPaymentEntries);
 
         const gamcaTokenBookings = gamcaTokenData.gamcaTokens.map(token => {
           const details = parsePassportDetail(token.passport_detail);
-          return { 
-            type: 'GAMCA Token', 
-            employee_name: token.employee_name, 
-            receivable_amount: token.receivable_amount, 
-            entry: token.entry, 
-            paid_cash: token.initial_paid_cash, 
-            paid_in_bank: token.initial_paid_in_bank, 
-            remaining_amount: token.initial_remaining_amount, 
-            booking_date: safeLocaleDateString(token.created_at), 
-            timestamp: safeTimestamp(token.created_at), 
-            withdraw: 0, 
-            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), 
+          return {
+            type: 'GAMCA Token',
+            employee_name: token.employee_name,
+            receivable_amount: token.receivable_amount,
+            entry: token.entry,
+            paid_cash: token.initial_paid_cash,
+            paid_in_bank: token.initial_paid_in_bank,
+            remaining_amount: token.initial_remaining_amount,
+            booking_date: safeLocaleDateString(token.created_at),
+            timestamp: safeTimestamp(token.created_at),
+            withdraw: 0,
+            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
             profit: token.profit,
           };
         });
@@ -818,38 +838,76 @@ const calculateMonthlySummary = useCallback(() => {
           }
         }
 
-       const gamcaTokenPaymentEntries = allGamcaTokenPayments.map(payment => {
-  const originalGamca = gamcaTokenData.gamcaTokens.find(g => g.id === payment.gamca_token_id);
-  let passengerName = payment.customer_name;
-  
-  if (originalGamca) {
-    try {
-      const details = parsePassportDetail(originalGamca.passport_detail);
-      if (details.firstName || details.lastName) {
-        passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
-      }
-    } catch (e) {
-      console.error("Error parsing GAMCA payment passenger details:", e);
-    }
-  }
-  
-  return {
-    type: 'RE GAMCA Token Payment',
-    employee_name: payment.employee_name,
-    receivable_amount: 0,
-    entry: payment.gamca_entry,
-    paid_cash: parseFloat(payment.payed_cash || 0),
-    paid_in_bank: parseFloat(payment.paid_bank || 0),
-    remaining_amount: 0,
-    booking_date: safeLocaleDateString(payment.payment_date),
-    timestamp: safeTimestamp(payment.created_at),
-    withdraw: 0,
-    passengerName: passengerName || originalGamca?.customer_add || null,
-    profit: 0,
-  };
-});
+        const gamcaTokenPaymentEntries = allGamcaTokenPayments.map(payment => {
+          const originalGamca = gamcaTokenData.gamcaTokens.find(g => g.id === payment.gamca_token_id);
+          let passengerName = payment.customer_name;
+
+          if (originalGamca) {
+            try {
+              const details = parsePassportDetail(originalGamca.passport_detail);
+              if (details.firstName || details.lastName) {
+                passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+              }
+            } catch (e) {
+              console.error("Error parsing GAMCA payment passenger details:", e);
+            }
+          }
+
+          return {
+            type: 'RE GAMCA Token Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.gamca_entry,
+            paid_cash: parseFloat(payment.payed_cash || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: 0,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: passengerName || originalGamca?.customer_add || null,
+            profit: 0,
+          };
+        });
 
         console.log('GAMCA Token payment entries:', gamcaTokenPaymentEntries);
+
+        const allOtherCpPayments = [];
+        for (const ocp of otherCpData.otherCpEntries) {
+          try {
+            const paymentHistory = await fetchWithCache(`/other-cp/${ocp.id}/payments`);
+            if (paymentHistory.payments && paymentHistory.payments.length > 0) {
+              const paymentsWithOtherCpInfo = paymentHistory.payments.map(payment => ({
+                ...payment,
+                other_cp_id: ocp.id,
+                other_cp_entry: ocp.entry,
+                employee_name: payment.recorded_by || ocp.employee,
+              }));
+              allOtherCpPayments.push(...paymentsWithOtherCpInfo);
+            }
+          } catch (err) {
+            console.error(`Failed to load payments for Other CP ${ocp.id}:`, err);
+          }
+        }
+
+        const otherCpPaymentEntries = allOtherCpPayments.map(payment => {
+          const originalOcp = otherCpData.otherCpEntries.find(o => o.id === payment.other_cp_id);
+          return {
+            type: 'RE Other CP Payment',
+            employee_name: payment.employee_name,
+            receivable_amount: 0,
+            entry: payment.other_cp_entry,
+            paid_cash: parseFloat(payment.payed_cash || 0),
+            paid_in_bank: parseFloat(payment.paid_bank || 0),
+            remaining_amount: payment.remaining_amount,
+            booking_date: safeLocaleDateString(payment.payment_date),
+            timestamp: safeTimestamp(payment.created_at),
+            withdraw: 0,
+            passengerName: originalOcp?.detail || null,
+            profit: 0,
+          };
+        });
+
+        console.log('Other CP payment entries:', otherCpPaymentEntries);
 
         const servicesBookings = servicesData.services.map(services => {
           console.log('Service entry:', {
@@ -857,18 +915,18 @@ const calculateMonthlySummary = useCallback(() => {
             created_at: services.created_at,
             booking_date: services.booking_date
           });
-          
+
           return {
-            type: 'Services', 
-            employee_name: services.specific_detail, 
-            receivable_amount: services.receivable_amount, 
-            entry: services.entry, 
-            paid_cash: services.paid_cash, 
-            paid_in_bank: services.paid_in_bank, 
-            remaining_amount: services.remaining_amount, 
-            booking_date: safeLocaleDateString(services.booking_date), 
-            timestamp: safeTimestamp(services.createdAt), 
-            withdraw: 0, 
+            type: 'Services',
+            employee_name: services.specific_detail,
+            receivable_amount: services.receivable_amount,
+            entry: services.entry,
+            paid_cash: services.paid_cash,
+            paid_in_bank: services.paid_in_bank,
+            remaining_amount: services.remaining_amount,
+            booking_date: safeLocaleDateString(services.booking_date),
+            timestamp: safeTimestamp(services.createdAt),
+            withdraw: 0,
             passengerName: null,
             profit: services.profit,
           };
@@ -876,87 +934,102 @@ const calculateMonthlySummary = useCallback(() => {
 
         const navtccBookings = navtccData.navtcc.map(navtcc => {
           const details = parsePassportDetail(navtcc.passport_detail);
-          return { 
-            type: 'Navtcc', 
-            employee_name: navtcc.employee_name || navtcc.reference, 
-            receivable_amount: navtcc.receivable_amount, 
-            entry: navtcc.entry, 
-            paid_cash: navtcc.paid_cash, 
-            paid_in_bank: navtcc.paid_in_bank, 
-            remaining_amount: navtcc.remaining_amount, 
-            booking_date: safeLocaleDateString(navtcc.created_at), 
-            timestamp: safeTimestamp(navtcc.created_at), 
-            withdraw: 0, 
-            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(), 
+          return {
+            type: 'Navtcc',
+            employee_name: navtcc.employee_name || navtcc.reference,
+            receivable_amount: navtcc.receivable_amount,
+            entry: navtcc.entry,
+            paid_cash: navtcc.paid_cash,
+            paid_in_bank: navtcc.paid_in_bank,
+            remaining_amount: navtcc.remaining_amount,
+            booking_date: safeLocaleDateString(navtcc.created_at),
+            timestamp: safeTimestamp(navtcc.created_at),
+            withdraw: 0,
+            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
             profit: navtcc.profit,
           };
         });
 
         const protectorBookings = protectorData.protectors.map(protector => ({
-          type: 'Protector', 
-          employee_name: protector.employee, 
-          entry: protector.entry, 
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: safeLocaleDateString(protector.protector_date), 
-          timestamp: safeTimestamp(protector.createdAt), 
-          withdraw: parseFloat(protector.withdraw || 0), 
+          type: 'Protector',
+          employee_name: protector.employee,
+          entry: protector.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(protector.protector_date),
+          timestamp: safeTimestamp(protector.createdAt),
+          withdraw: parseFloat(protector.withdraw || 0),
           passengerName: protector.name || null,
           profit: 0,
         }));
 
         const expensesBookings = expensesData.expenses.map(expenses => ({
-          type: 'Expenses', 
-          employee_name: expenses.user_name, 
-          entry: expenses.entry, 
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: safeLocaleDateString(expenses.date), 
-          timestamp: safeTimestamp(expenses.createdAt), 
-          withdraw: parseFloat(expenses.withdraw || 0), 
+          type: 'Expenses',
+          employee_name: expenses.user_name,
+          entry: expenses.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(expenses.date),
+          timestamp: safeTimestamp(expenses.createdAt),
+          withdraw: parseFloat(expenses.withdraw || 0),
           passengerName: expenses.detail || null,
           profit: 0,
         }));
 
         const refundedBookings = (refundedData.refunded || []).map(refund => ({
-          type: 'Refunded', 
-          employee_name: refund.employee, 
-          entry: refund.entry, 
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: safeLocaleDateString(refund.date), 
-          timestamp: safeTimestamp(refund.created_at), 
-          withdraw: parseFloat(refund.withdraw || 0), 
+          type: 'Refunded',
+          employee_name: refund.employee,
+          entry: refund.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(refund.date),
+          timestamp: safeTimestamp(refund.created_at),
+          withdraw: parseFloat(refund.withdraw || 0),
           passengerName: refund.name || null,
           profit: 0,
         }));
 
         const venderBookings = (venderData.vendors || []).map(vender => ({
-          type: 'Vender', 
-          employee_name: vender.user_name, 
-          entry: vender.entry, 
-          receivable_amount: 0, 
-          paid_cash: 0, 
-          paid_in_bank: 0, 
-          remaining_amount: 0, 
-          booking_date: safeLocaleDateString(vender.date), 
-          timestamp: safeTimestamp(vender.created_at), 
-          withdraw: parseFloat(vender.withdraw || 0), 
+          type: 'Vender',
+          employee_name: vender.user_name,
+          entry: vender.entry,
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(vender.date),
+          timestamp: safeTimestamp(vender.created_at),
+          withdraw: parseFloat(vender.withdraw || 0),
           passengerName: null,
           profit: 0,
         }));
 
+        const otherCpBookings = (otherCpData.otherCpEntries || []).map(ocp => ({
+          type: 'Other CP',
+          employee_name: ocp.employee,
+          receivable_amount: ocp.receivable_amount,
+          entry: ocp.entry,
+          paid_cash: ocp.paid_cash,
+          paid_in_bank: ocp.paid_in_bank,
+          remaining_amount: ocp.remaining_amount,
+          booking_date: safeLocaleDateString(ocp.date || ocp.created_at),
+          timestamp: safeTimestamp(ocp.created_at || ocp.date),
+          withdraw: 0,
+          passengerName: ocp.detail,
+          profit: ocp.profit,
+        }));
+
         const combinedBookingsRaw = [
-          ...umrahBookings, ...ticketBookings, ...ticketPaymentEntries, ...visaBookings, 
+          ...umrahBookings, ...ticketBookings, ...ticketPaymentEntries, ...visaBookings,
           ...gamcaTokenBookings, ...servicesBookings, ...umrahPaymentEntries, ...visaPaymentEntries,
           ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings,
-          ...gamcaTokenPaymentEntries,
+          ...gamcaTokenPaymentEntries, ...otherCpBookings, ...otherCpPaymentEntries,
         ];
 
         const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));
@@ -986,37 +1059,38 @@ const calculateMonthlySummary = useCallback(() => {
         const totalVendorWithdraw = venderBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
         const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw;
 
-       const newData = {
-  combinedBookings: finalCombinedBookings,
-  totalBookings: dashboardStats.data.totalBookings,
-  bookingsByType: dashboardStats.data.bookingsByType,
-  totalRevenue: dashboardStats.data.totalRevenue,
-  totalProtectorWithdraw: totalProtectorWithdraw,
-  totalExpenseWithdraw: totalExpensesWithdraw,
-  totalRefundedWithdraw: totalRefundedWithdraw,
-  totalVendorWithdraw: totalVendorWithdraw,
-  TotalWithdraw: TotalWithdraw,
-  cashInOffice: runningCashInOffice,
-  accounts: accountsData,
-  vendors: aggregatedVendors,
-  agents: aggregatedAgents,
-  totalVendorPayable: totalVendorPayable,
-  totalVendorPaid: totalVendorPaid,
-  totalAgentPayable: totalAgentPayable,
-  totalAgentPaid: totalAgentPaid,
-};
+        const newData = {
+          combinedBookings: finalCombinedBookings,
+          totalBookings: dashboardStats.data.totalBookings,
+          bookingsByType: dashboardStats.data.bookingsByType,
+          totalRevenue: dashboardStats.data.totalRevenue,
+          totalProtectorWithdraw: totalProtectorWithdraw,
+          totalExpenseWithdraw: totalExpensesWithdraw,
+          totalRefundedWithdraw: totalRefundedWithdraw,
+          totalVendorWithdraw: totalVendorWithdraw,
+          TotalWithdraw: TotalWithdraw,
+          cashInOffice: runningCashInOffice,
+          accounts: accountsData,
+          vendors: aggregatedVendors,
+          agents: aggregatedAgents,
+          totalVendorPayable: totalVendorPayable,
+          totalVendorPaid: totalVendorPaid,
+          totalAgentPayable: totalAgentPayable,
+          totalAgentPaid: totalAgentPaid,
+          totalOtherCp,
+        };
 
-setDashboardData(newData);
-saveToCache(newData); // Save to cache
+        setDashboardData(newData);
+        saveToCache(newData); // Save to cache
 
-} catch (error) {
-  console.error('Final fetch error:', error);
-} finally {
-  setIsLoading(false);
-  setIsFreshDataLoading(false);
-}
+      } catch (error) {
+        console.error('Final fetch error:', error);
+      } finally {
+        setIsLoading(false);
+        setIsFreshDataLoading(false);
+      }
     };
-    
+
     fetchDashboardData();
   }, [fetchWithCache]);
 
@@ -1027,6 +1101,7 @@ saveToCache(newData); // Save to cache
   const gamcaTokenCount = booking.find(item => item.type === 'GAMCA Token')?.count || 0;
   const serviceCount = booking.find(item => item.type === 'Services')?.count || 0;
   const navtccCount = booking.find(item => item.type === 'Navtcc')?.count || 0;
+  const otherCpCount = dashboardData.totalOtherCp;
 
   const moduleBreakdown = [
     { name: 'Ticket', count: ticketCount, color: 'midnight', icon: Plane },
@@ -1035,6 +1110,7 @@ saveToCache(newData); // Save to cache
     { name: 'GAMCA Token', count: gamcaTokenCount, color: 'teal', icon: CreditCard },
     { name: 'Services', count: serviceCount, color: 'indigo', icon: CreditCard },
     { name: 'Navtcc', count: navtccCount, color: 'ivory', icon: Shield },
+    { name: 'Other CP', count: otherCpCount, color: 'purple', icon: MessageSquare },
   ];
 
   // Calculate profit breakdown by module (using profit field from data)
@@ -1054,10 +1130,10 @@ saveToCache(newData); // Save to cache
   const totalProfit = profitBreakdownArray.reduce((sum, item) => sum + item.amount, 0);
 
   const totalAccountsBalance = dashboardData.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-     const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
+  const totalRemainingAmount = dashboardData.combinedBookings.reduce((sum, booking) => {
     const val = Number(booking.remaining_amount);
     return sum + (Number.isFinite(val) ? val : 0);
-    }, 0);
+  }, 0);
 
   const totalVendorPayable = dashboardData.totalVendorPayable || 0;
   const totalVendorPaid = dashboardData.totalVendorPaid || 0;
@@ -1075,10 +1151,10 @@ saveToCache(newData); // Save to cache
     }
     return acc;
   }, {});
-  
+
   const remainingBreakdownArray = Object.keys(remainingBreakdown)
-    .map(type => ({ 
-      name: type, 
+    .map(type => ({
+      name: type,
       amount: remainingBreakdown[type],
       color: moduleBreakdown.find(m => m.name === type)?.color || 'ivory',
     }))
@@ -1086,14 +1162,14 @@ saveToCache(newData); // Save to cache
 
   // --- DERIVED DATA FOR CHARTS (Kept in Dashboard as it depends on main state) ---
   const financialOverviewData = [
-    { name: 'Receivable Amount', value: summaryTotals.receivable_amount, color: '#3b82f6' }, 
-    { name: 'Paid Cash', value: summaryTotals.paid_cash, color: '#10b981' }, 
-    { name: 'Paid In Bank', value: summaryTotals.paid_in_bank, color: '#f59e0b' }, 
-    { name: 'Remaining Amount', value: summaryTotals.remaining_amount, color: '#ef4444' }, 
-    { name: 'Total Withdraw', value: summaryTotals.withdraw, color: '#8b5cf6' }, 
+    { name: 'Receivable Amount', value: summaryTotals.receivable_amount, color: '#3b82f6' },
+    { name: 'Paid Cash', value: summaryTotals.paid_cash, color: '#10b981' },
+    { name: 'Paid In Bank', value: summaryTotals.paid_in_bank, color: '#f59e0b' },
+    { name: 'Remaining Amount', value: summaryTotals.remaining_amount, color: '#ef4444' },
+    { name: 'Total Withdraw', value: summaryTotals.withdraw, color: '#8b5cf6' },
   ].filter(item => item.value > 0);
   // -------------------------------------------------------------------------------
-  
+
   // Table Structure
   const columns = [
     { header: 'DATE', accessor: 'booking_date' },
@@ -1110,12 +1186,12 @@ saveToCache(newData); // Save to cache
 
   return (
     <div className=""> {/* Stats Cards Section - Adjusted for 8 columns */}
-    {isFreshDataLoading && (
-  <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2 animate-pulse">
-    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-    <span className="text-sm font-medium">Refreshing data...</span>
-  </div>
-)}
+      {isFreshDataLoading && (
+        <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2 animate-pulse">
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-medium">Refreshing data...</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
         {/* Total Bookings Card */}
         <div className="relative w-full" onMouseEnter={() => handleMouseEnter('bookings')} onMouseLeave={handleMouseLeave} >
@@ -1155,8 +1231,8 @@ saveToCache(newData); // Save to cache
             </div>
           )}
         </div>
-        
-       
+
+
 
         {/* Total Withdraw Card */}
         <div className="relative w-full" onMouseEnter={() => handleMouseEnter('withdraw')} onMouseLeave={handleMouseLeave} >
@@ -1194,7 +1270,7 @@ saveToCache(newData); // Save to cache
                     <span className="font-semibold text-fuchsia-700 hover:underline">Refunded</span>
                     <span className="font-bold text-fuchsia-600">{dashboardData.totalRefundedWithdraw.toLocaleString()}</span>
                   </div>
-                   <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" >
+                  <div className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between cursor-pointer" >
                     <span className="font-semibold text-fuchsia-700 hover:underline">Vendor</span>
                     <span className="font-bold text-fuchsia-600">{dashboardData.totalVendorWithdraw.toLocaleString()}</span>
                   </div>
@@ -1207,7 +1283,7 @@ saveToCache(newData); // Save to cache
             </div>
           )}
         </div>
-        
+
         {/* Cash in Office Card */}
         <div className="bg-red-500 p-3 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] relative overflow-hidden group cursor-pointer">
           <div className="relative z-10 w-full">
@@ -1219,7 +1295,7 @@ saveToCache(newData); // Save to cache
             </p>
           </div>
         </div>
-        
+
         {/* Accounts Card */}
         <div className="relative w-full" onMouseEnter={() => handleMouseEnter('accounts')} onMouseLeave={handleMouseLeave} >
           <div className="relative bg-blue-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Bank Accounts" >
@@ -1266,49 +1342,49 @@ saveToCache(newData); // Save to cache
         </div>
 
         {/* Vendor Card */}
-       {/* Vendor Card */}
-<div className="relative w-full" onMouseEnter={() => handleMouseEnter('vendors')} onMouseLeave={handleMouseLeave} >
-  <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Vendors" >
-    <div className="relative z-10">
-      <div className="flex justify-between items-center mb-1">
-        <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Vendors</h2>
-      </div>
-      {/* <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
+        {/* Vendor Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('vendors')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Vendors" >
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-1">
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Vendors</h2>
+              </div>
+              {/* <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
         {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalVendorPayable.toLocaleString()} / ${totalVendorPaid.toLocaleString()}`}
       </p> */}
-      <p className="text-[0.75rem] font-semibold text-black mt-1">
-         <span className={vendorOutstandingBalance >= 0 ? 'text-white' : 'text-red-200'}>{vendorOutstandingBalance >= 0 ? '+' : ''}{vendorOutstandingBalance.toLocaleString()}</span>
-      </p>
-    </div>
-  </div>
-  {hoveredCard === 'vendors' && (
-    <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
-      {isLoading && !showPartialData ? (
-        <div className="space-y-1">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
-              <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+              <p className="text-[0.75rem] font-semibold text-black mt-1">
+                <span className={vendorOutstandingBalance >= 0 ? 'text-white' : 'text-red-200'}>{vendorOutstandingBalance >= 0 ? '+' : ''}{vendorOutstandingBalance.toLocaleString()}</span>
+              </p>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {dashboardData.vendors.map((vendor) => (
-            <div key={vendor.vender_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleVendorClick(vendor.vender_name)} >
-              <span className="font-semibold text-red-700 truncate pr-2 hover:underline">
-                {vendor.vender_name}
-              </span>
-              <span className={`font-bold ${vendor.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
-                {vendor.remaining_amount.toLocaleString()}
-              </span>
-            </div>
-          ))}
-          {errors.vendor && (
-            <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
-              {errors.vendor}
-            </div>
-          )}
-          {/* <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+          </div>
+          {hoveredCard === 'vendors' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-50 p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {dashboardData.vendors.map((vendor) => (
+                    <div key={vendor.vender_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleVendorClick(vendor.vender_name)} >
+                      <span className="font-semibold text-red-700 truncate pr-2 hover:underline">
+                        {vendor.vender_name}
+                      </span>
+                      <span className={`font-bold ${vendor.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
+                        {vendor.remaining_amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                  {errors.vendor && (
+                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+                      {errors.vendor}
+                    </div>
+                  )}
+                  {/* <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
             <span>Total Payable:</span>
             <span className="text-emerald-600">{totalVendorPayable.toLocaleString()}</span>
           </div>
@@ -1316,65 +1392,65 @@ saveToCache(newData); // Save to cache
             <span>Total Paid:</span>
             <span className="text-red-600">{totalVendorPaid.toLocaleString()}</span>
           </div> */}
-          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between border-t border-gray-200 pt-2">
-            <span>Outstanding Balance:</span>
-            <span className={vendorOutstandingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-              {vendorOutstandingBalance >= 0 ? '+' : ''}{vendorOutstandingBalance.toLocaleString()}
-            </span>
-          </div>
-          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
-            Total Vendors: {dashboardData.vendors.length}
-          </div>
-        </div>
-      )}
-    </div>
-  )}
-</div>
-
-        
-        {/* Agents Card */}
-<div className="relative w-full" onMouseEnter={() => handleMouseEnter('agents')} onMouseLeave={handleMouseLeave} >
-  <div className="relative bg-blue-500  p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Agents" >
-    <div className="relative z-10">
-      <div className="flex justify-between items-center mb-1">
-        <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Agents</h2>
-      </div>
-      {/* <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
-         {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()} / ${totalAgentPaid.toLocaleString()}`}
-      </p> */}
-      <p className="text-[0.75rem] font-semibold text-black mt-1">
-         <span className={agentOutstandingBalance >= 0 ? 'text-white' : 'text-red-200'}>{agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}</span>
-      </p>
-    </div>
-  </div>
-  {hoveredCard === 'agents' && (
-    <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-[50] p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
-      {isLoading && !showPartialData ? (
-        <div className="space-y-1">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
-              <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {dashboardData.agents.map((agent, index) => (
-            <div key={agent.agent_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleAgentClick(agent.agent_name)} >
-              <span className="font-semibold text-cyan-700 truncate pr-2 hover:underline">
-                {agent.agent_name}
-              </span>
-              <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
-                {agent.remaining_amount.toLocaleString()}
-              </span>
-            </div>
-          ))}
-          {errors.agent && (
-            <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
-              {errors.agent}
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between border-t border-gray-200 pt-2">
+                    <span>Outstanding Balance:</span>
+                    <span className={vendorOutstandingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                      {vendorOutstandingBalance >= 0 ? '+' : ''}{vendorOutstandingBalance.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
+                    Total Vendors: {dashboardData.vendors.length}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          {/* <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
+        </div>
+
+
+        {/* Agents Card */}
+        <div className="relative w-full" onMouseEnter={() => handleMouseEnter('agents')} onMouseLeave={handleMouseLeave} >
+          <div className="relative bg-blue-500  p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Agents" >
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-1">
+                <h2 className="text-black text-[0.65rem] font-bold tracking-wide font-inter truncate">Agents</h2>
+              </div>
+              {/* <p className="text-[0.65rem] font-bold text-white mt-0 break-all">
+         {isLoading && !showPartialData ? <span className="text-white/60">--</span> : `${totalAgentPayable.toLocaleString()} / ${totalAgentPaid.toLocaleString()}`}
+      </p> */}
+              <p className="text-[0.75rem] font-semibold text-black mt-1">
+                <span className={agentOutstandingBalance >= 0 ? 'text-white' : 'text-red-200'}>{agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}</span>
+              </p>
+            </div>
+          </div>
+          {hoveredCard === 'agents' && (
+            <div className="absolute top-full left-0 mt-2 w-full min-w-[150px] bg-[#f9f9f9] rounded-xl shadow-2xl z-[50] p-2 border border-[#ddd] animate-in fade-in duration-300 max-h-64 overflow-y-auto">
+              {isLoading && !showPartialData ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-[#e0e0e0] p-1 rounded">
+                      <div className="h-3 bg-[#ddd] rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {dashboardData.agents.map((agent, index) => (
+                    <div key={agent.agent_name} className="list-item text-[0.65rem] text-[#333] hover:bg-[#e0e0e0] p-1 rounded-lg transition-colors duration-150 flex justify-between items-center cursor-pointer" onClick={() => handleAgentClick(agent.agent_name)} >
+                      <span className="font-semibold text-cyan-700 truncate pr-2 hover:underline">
+                        {agent.agent_name}
+                      </span>
+                      <span className={`font-bold ${agent.remaining_amount < 0 ? 'text-red-600' : 'text-emerald-600'} flex-shrink-0`}>
+                        {agent.remaining_amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                  {errors.agent && (
+                    <div className="text-rose-600 text-[0.65rem] text-center font-inter bg-rose-50 p-1 rounded-lg border border-rose-200 mt-1">
+                      {errors.agent}
+                    </div>
+                  )}
+                  {/* <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg border-t border-gray-200 mt-1 pt-2 flex justify-between">
             <span>Total Payable:</span>
             <span className="text-emerald-600">{totalAgentPayable.toLocaleString()}</span>
           </div>
@@ -1382,21 +1458,21 @@ saveToCache(newData); // Save to cache
             <span>Total Paid:</span>
             <span className="text-red-600">{totalAgentPaid.toLocaleString()}</span>
           </div> */}
-          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between border-t border-gray-200 pt-2">
-            <span>Outstanding Balance:</span>
-            <span className={agentOutstandingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-              {agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}
-            </span>
-          </div>
-          <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
-            Total Agents: {dashboardData.agents.length}
-          </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg flex justify-between border-t border-gray-200 pt-2">
+                    <span>Outstanding Balance:</span>
+                    <span className={agentOutstandingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                      {agentOutstandingBalance >= 0 ? '+' : ''}{agentOutstandingBalance.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="list-item text-[0.65rem] text-[#333] font-bold p-1 rounded-lg">
+                    Total Agents: {dashboardData.agents.length}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  )}
-</div>
-        
+
         {/* Remaining Amount Card */}
         <div className="relative w-full" onMouseEnter={() => handleMouseEnter('remaining')} onMouseLeave={handleMouseLeave} >
           <div className="relative bg-green-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Remaining Amount" >
@@ -1444,7 +1520,7 @@ saveToCache(newData); // Save to cache
             </div>
           )}
         </div>
-        
+
         {/* New Profit Card */}
         <div className="relative w-full" onMouseEnter={() => handleMouseEnter('profit')} onMouseLeave={handleMouseLeave} >
           <div className="relative bg-yellow-500 p-3 rounded-xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group cursor-pointer" title="Total Profit" >
@@ -1495,12 +1571,12 @@ saveToCache(newData); // Save to cache
       </div>
 
       {/* --- CHART SECTIONS: NOW USING SEPARATED COMPONENTS --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8"> 
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 mb-8">
         {/* Financial Overview Pie Chart */}
-        <FinancialOverviewChart
+        {/* <FinancialOverviewChart
           isLoading={isLoading}
           financialOverviewData={financialOverviewData}
-        />
+        /> */}
 
         {/* Monthly Bookings Bar Chart */}
         <MonthlyBookingsChart
@@ -1518,9 +1594,9 @@ saveToCache(newData); // Save to cache
       <div className="px-4 py-3 bg-white rounded-xl shadow-lg border border-indigo-100 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-800 font-inter">All Bookings</h2>
-         
+
         </div>
-        
+
         {/* Date Range Filter */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
           <div className="flex items-center space-x-2">
@@ -1528,28 +1604,28 @@ saveToCache(newData); // Save to cache
             <span className="text-sm text-gray-600 font-medium">Filter by Date:</span>
           </div>
           <div className="flex items-center space-x-2">
-            <input 
-              type="date" 
-              value={dateRange.startDate || ''} 
-              onChange={(e) => handleDateRangeChange(e.target.value, dateRange.endDate)} 
-              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
-              placeholder="Start Date" 
+            <input
+              type="date"
+              value={dateRange.startDate || ''}
+              onChange={(e) => handleDateRangeChange(e.target.value, dateRange.endDate)}
+              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Start Date"
             />
             <span className="text-sm font-medium text-gray-600">to</span>
-            <input 
-              type="date" 
-              value={dateRange.endDate || ''} 
-              onChange={(e) => handleDateRangeChange(dateRange.startDate, e.target.value)} 
-              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
-              placeholder="End Date" 
+            <input
+              type="date"
+              value={dateRange.endDate || ''}
+              onChange={(e) => handleDateRangeChange(dateRange.startDate, e.target.value)}
+              className="px-3 py-2 text-sm border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="End Date"
             />
           </div>
           {(dateRange.startDate || dateRange.endDate) && (
-            <button 
-              onClick={() => setDateRange({ startDate: null, endDate: null })} 
-              className="text-xs px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors self-start sm:self-auto" 
-            > 
-              Clear Filter 
+            <button
+              onClick={() => setDateRange({ startDate: null, endDate: null })}
+              className="text-xs px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 transition-colors self-start sm:self-auto"
+            >
+              Clear Filter
             </button>
           )}
         </div>
@@ -1604,10 +1680,10 @@ saveToCache(newData); // Save to cache
                       <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate">
                         {booking.booking_date}
                       </td>
-                      <td 
-                        className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate cursor-pointer hover:text-indigo-600 hover:underline" 
-                        title={booking.entry} 
-                        onClick={() => handleEntryClick(booking)} 
+                      <td
+                        className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate cursor-pointer hover:text-indigo-600 hover:underline"
+                        title={booking.entry}
+                        onClick={() => handleEntryClick(booking)}
                       >
                         {booking.entry ? booking.entry : <span className="text-slate-400">--</span>}
                       </td>
@@ -1629,44 +1705,44 @@ saveToCache(newData); // Save to cache
                         {booking.paid_in_bank.toLocaleString()}
                       </td>
                       <td className="px-1 py-2 text-[0.70rem] text-amber-600 font-bold font-large truncate">
-  {(() => {
-    // Get the entry number without the (Payment) suffix
-    const baseEntry = booking.entry.replace(' (Payment)', '');
-    
-    // Find all entries (original + payments) with the same entry number
-    const allRelatedEntries = currentTableData.filter(
-      b => b.entry === baseEntry || b.entry === `${baseEntry} (Payment)`
-    );
-    
-    // Sort by timestamp to get chronological order
-    const sortedEntries = allRelatedEntries.sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Find if there are any entries after this one
-    const hasLaterPayments = sortedEntries.some(
-      entry => entry.timestamp > booking.timestamp
-    );
-    
-    // If this is a payment entry, show it differently
-    if (booking.type.includes('RE ') && booking.type.includes('Payment')) {
-      return hasLaterPayments ? (
-        <span className="line-through text-red-500">
-          {booking.remaining_amount.toLocaleString()}
-        </span>
-      ) : (
-        <span className="text-green-600">{booking.remaining_amount.toLocaleString()}</span>
-      );
-    } else {
-      // For original entry
-      return hasLaterPayments ? (
-        <span className="line-through text-red-500">
-          {booking.remaining_amount.toLocaleString()}
-        </span>
-      ) : (
-        <span>{booking.remaining_amount.toLocaleString()}</span>
-      );
-    }
-  })()}
-</td>
+                        {(() => {
+                          // Get the entry number without the (Payment) suffix
+                          const baseEntry = booking.entry.replace(' (Payment)', '');
+
+                          // Find all entries (original + payments) with the same entry number
+                          const allRelatedEntries = currentTableData.filter(
+                            b => b.entry === baseEntry || b.entry === `${baseEntry} (Payment)`
+                          );
+
+                          // Sort by timestamp to get chronological order
+                          const sortedEntries = allRelatedEntries.sort((a, b) => a.timestamp - b.timestamp);
+
+                          // Find if there are any entries after this one
+                          const hasLaterPayments = sortedEntries.some(
+                            entry => entry.timestamp > booking.timestamp
+                          );
+
+                          // If this is a payment entry, show it differently
+                          if (booking.type.includes('RE ') && booking.type.includes('Payment')) {
+                            return hasLaterPayments ? (
+                              <span className="line-through text-red-500">
+                                {booking.remaining_amount.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-green-600">{booking.remaining_amount.toLocaleString()}</span>
+                            );
+                          } else {
+                            // For original entry
+                            return hasLaterPayments ? (
+                              <span className="line-through text-red-500">
+                                {booking.remaining_amount.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span>{booking.remaining_amount.toLocaleString()}</span>
+                            );
+                          }
+                        })()}
+                      </td>
                       <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate">
                         {booking.withdraw.toLocaleString()}
                       </td>
@@ -1694,8 +1770,8 @@ saveToCache(newData); // Save to cache
           </table>
         </div>
       </div>
-      
-     
+
+
     </div>
   );
 }
