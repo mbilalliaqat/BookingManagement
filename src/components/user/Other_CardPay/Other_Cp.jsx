@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Table from '../../ui/Table';
 import Other_Cp_Form from './Other_Cp_Form';
+import Other_Cp_Rp from './Other_Cp_Rp';
 import { useAppContext } from '../../contexts/AppContext';
 import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
@@ -18,6 +19,8 @@ const Other_Cp = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
+    const [selectedOtherCpForPay, setSelectedOtherCpForPay] = useState(null);
     const location = useLocation();
     const [highlightEntry, setHighlightedEntry] = useState('');
 
@@ -69,10 +72,21 @@ const Other_Cp = () => {
             console.log('Parsed Other CP entries:', data);
 
             const formattedData = data.map((entry) => {
+                const initialCash = entry.initial_paid_cash !== undefined
+                    ? parseFloat(entry.initial_paid_cash)
+                    : parseFloat(entry.paid_cash || 0);
+                const initialBank = entry.initial_paid_in_bank !== undefined
+                    ? parseFloat(entry.initial_paid_in_bank)
+                    : parseFloat(entry.paid_in_bank || 0);
+
                 return {
                     ...entry,
+                    initial_paid_cash: initialCash,
+                    initial_paid_in_bank: initialBank,
+                    paid_cash: parseFloat(entry.paid_cash || 0),
+                    paid_in_bank: parseFloat(entry.paid_in_bank || 0),
                     date: new Date(entry.date).toLocaleDateString('en-GB'),
-                    date_raw: entry.date, // Store raw date for filtering
+                    date_raw: entry.date,
                     created_at: new Date(entry.created_at).toLocaleDateString('en-GB'),
                     created_at_raw: entry.created_at
                 };
@@ -117,20 +131,82 @@ const Other_Cp = () => {
         }
     }, [location.state]);
 
+    const handleRemainingPay = (otherCp) => {
+        setSelectedOtherCpForPay(otherCp);
+        setShowRemainingPayModal(true);
+    };
+
+    const closeRemainingPayModal = () => {
+        setShowRemainingPayModal(false);
+        setSelectedOtherCpForPay(null);
+    };
+
+    const handlePaymentSuccess = (paymentData) => {
+        setEntries(prevEntries => prevEntries.map(entry => {
+            if (entry.id === paymentData.otherCpId) {
+                return {
+                    ...entry,
+                    initial_paid_cash: entry.initial_paid_cash || entry.paid_cash,
+                    initial_paid_in_bank: entry.initial_paid_in_bank || entry.paid_in_bank,
+                    paid_cash: parseFloat(entry.paid_cash || 0) + paymentData.cashAmount,
+                    paid_in_bank: parseFloat(entry.paid_in_bank || 0) + paymentData.bankAmount,
+                    remaining_amount: parseFloat(entry.remaining_amount || 0) - (paymentData.cashAmount + paymentData.bankAmount)
+                };
+            }
+            return entry;
+        }));
+
+        closeRemainingPayModal();
+        fetchData();
+    };
+
     const columns = [
         { header: 'DATE', accessor: 'date' },
-    { header: 'ENTRY', accessor: 'entry' },
-    { header: 'EMPLOYEE', accessor: 'employee' },
-    { header: 'DETAIL', accessor: 'detail' },
-    { header: 'CARD PAYMENT', accessor: 'card_payment' },
-    { header: 'CARD AMOUNT', accessor: 'card_amount' },
-    { header: 'RECEIVABLE', accessor: 'receivable_amount' },
-    { header: 'PAID CASH', accessor: 'paid_cash' },
-    { header: 'BANK TITLE', accessor: 'paid_from_bank' },
-    { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
-    { header: 'AGENT NAME', accessor: 'agent_name' },
-    { header: 'PROFIT', accessor: 'profit' },
-    { header: 'REMAINING', accessor: 'remaining_amount' },
+        { header: 'ENTRY', accessor: 'entry' },
+        { header: 'EMPLOYEE', accessor: 'employee' },
+        { header: 'DETAIL', accessor: 'detail' },
+        { header: 'CARD PAYMENT', accessor: 'card_payment' },
+        { header: 'CARD AMOUNT', accessor: 'card_amount' },
+        { header: 'RECEIVABLE', accessor: 'receivable_amount' },
+        {
+            header: 'PAID CASH',
+            accessor: 'paid_cash_details',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row.initial_paid_cash || '0'}</div>
+                    <div>{(row.paid_cash - row.initial_paid_cash) || '0'}</div>
+                </div>
+            )
+        },
+        {
+            header: 'BANK & PAID IN BANK',
+            accessor: 'bank_paid',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.paid_from_bank || ''}</div>
+                    <div>Initial: {row.initial_paid_in_bank || row.paid_in_bank}</div>
+                    <div>Total: {row.paid_in_bank}</div>
+                </div>
+            )
+        },
+        { header: 'AGENT NAME', accessor: 'agent_name' },
+        { header: 'PROFIT', accessor: 'profit' },
+        {
+            header: 'REMAINING AMOUNT',
+            accessor: 'remaining_amount',
+            render: (cellValue, row) => (
+                <div className="flex flex-col items-center">
+                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <button
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        onClick={() => handleRemainingPay(row)}
+                        title="Add Payment"
+                    >
+                        <i className="fas fa-plus"></i> Pay
+                    </button>
+                </div>
+            )
+        },
         ...(user.role === 'admin' ? [{
             header: 'ACTIONS', accessor: 'actions', render: (row, index) => (
                 <>
@@ -167,7 +243,7 @@ const Other_Cp = () => {
                 if (startDate && endDate) {
                     const start = new Date(startDate);
                     const end = new Date(endDate);
-                    end.setHours(23, 59, 59, 999); // Include the entire end date
+                    end.setHours(23, 59, 59, 999);
                     matchesDateRange = entryDate >= start && entryDate <= end;
                 } else if (startDate) {
                     const start = new Date(startDate);
@@ -241,6 +317,64 @@ const Other_Cp = () => {
     const clearDateFilter = () => {
         setStartDate('');
         setEndDate('');
+    };
+
+    const RemainingPayModal = () => {
+        if (!showRemainingPayModal || !selectedOtherCpForPay) return null;
+
+        return (
+            <div className="fixed inset-0 z-500 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold">Payment Details</h2>
+                        <button
+                            onClick={closeRemainingPayModal}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <i className="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div className="bg-gray-100 p-4 rounded mb-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <strong>ID:</strong> {selectedOtherCpForPay.id}
+                            </div>
+                            <div>
+                                <strong>Entry:</strong> {selectedOtherCpForPay.entry}
+                            </div>
+                            <div>
+                                <strong>Date:</strong> {selectedOtherCpForPay.date}
+                            </div>
+                            <div>
+                                <strong>Receivable Amount:</strong> {selectedOtherCpForPay.receivable_amount}
+                            </div>
+                            <div>
+                                <strong>Paid Cash:</strong> {selectedOtherCpForPay.initial_paid_cash}
+                            </div>
+                            <div>
+                                <strong>Paid in Bank:</strong> {selectedOtherCpForPay.initial_paid_in_bank}
+                            </div>
+                            <div>
+                                <strong>Remaining Amount:</strong> {selectedOtherCpForPay.remaining_amount || '0'}
+                            </div>
+                            <div>
+                                <strong>Initial Remaining:</strong>
+                                <span className="font-semibold text-purple-700">
+                                    {selectedOtherCpForPay.initial_remaining_amount || '0'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Other_Cp_Rp
+                        otherCpId={selectedOtherCpForPay.id}
+                        onClose={closeRemainingPayModal}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -330,6 +464,7 @@ const Other_Cp = () => {
                             <Table data={filteredData} columns={columns} />
                         )}
                     </div>
+                    <RemainingPayModal />
                 </div>
             )}
             <Modal

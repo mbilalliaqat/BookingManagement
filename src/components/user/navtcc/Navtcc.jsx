@@ -5,6 +5,7 @@ import axios from 'axios';
 import TableSpinner from '../../ui/TableSpinner';
 import ButtonSpinner from '../../ui/ButtonSpinner';
 import Navtcc_Form from './Navtcc_Form';
+import NavtccRemainingPay from './NavtccRemainingPay';
 import { useLocation } from 'react-router-dom';
 
 
@@ -18,6 +19,8 @@ const Navtcc = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showRemainingPayModal, setShowRemainingPayModal] = useState(false);
+    const [selectedNavtccForPay, setSelectedNavtccForPay] = useState(null);
     const location = useLocation();
     const [highlightEntry, setHighlightedEntry] = useState('');
 
@@ -68,8 +71,9 @@ const Navtcc = () => {
 
                 return {
                     ...navtcc,
+                    booking_date: navtcc.booking_date ? new Date(navtcc.booking_date).toLocaleDateString('en-GB') : '',
                     created_at: new Date(navtcc.created_at).toLocaleDateString('en-GB'),
-                    created_at_raw: navtcc.created_at, // Store raw date for filtering
+                    created_at_raw: navtcc.created_at,
                     passengerTitle: passportDetails.title || '',
                     remaining_date_raw: navtcc.remaining_date,
                     passengerFirstName: passportDetails.firstName || '',
@@ -81,7 +85,11 @@ const Navtcc = () => {
                     documentExpiry: passportDetails.documentExpiry ? new Date(passportDetails.documentExpiry).toLocaleDateString('en-GB') : '',
                     documentIssueCountry: passportDetails.issueCountry || '',
                     passport_detail: navtcc.passport_detail,
-                    vendors: vendorsList
+                    vendors: vendorsList,
+                    initial_paid_cash: navtcc.initial_paid_cash !== undefined ? parseFloat(navtcc.initial_paid_cash) : parseFloat(navtcc.paid_cash || 0),
+                    initial_paid_in_bank: navtcc.initial_paid_in_bank !== undefined ? parseFloat(navtcc.initial_paid_in_bank) : parseFloat(navtcc.paid_in_bank || 0),
+                    paid_cash: parseFloat(navtcc.paid_cash || 0),
+                    paid_in_bank: parseFloat(navtcc.paid_in_bank || 0)
                 };
             });
             setEntries(formattedData.reverse());
@@ -106,9 +114,38 @@ const Navtcc = () => {
                 setHighlightedEntry(null)
             }, 5000);
 
-            return clearTimeout(timer)
+            return () => clearTimeout(timer)
         }
     }, [location.state])
+
+    const handleRemainingPay = (navtcc) => {
+        setSelectedNavtccForPay(navtcc);
+        setShowRemainingPayModal(true);
+    };
+
+    const closeRemainingPayModal = () => {
+        setShowRemainingPayModal(false);
+        setSelectedNavtccForPay(null);
+    };
+
+    const handlePaymentSuccess = (paymentData) => {
+        setEntries(prevEntries => prevEntries.map(entry => {
+            if (entry.id === paymentData.navtccId) {
+                return {
+                    ...entry,
+                    initial_paid_cash: entry.initial_paid_cash || entry.paid_cash,
+                    initial_paid_in_bank: entry.initial_paid_in_bank || entry.paid_in_bank,
+                    paid_cash: parseFloat(entry.paid_cash || 0) + paymentData.cashAmount,
+                    paid_in_bank: parseFloat(entry.paid_in_bank || 0) + paymentData.bankAmount,
+                    remaining_amount: parseFloat(entry.remaining_amount || 0) - (paymentData.cashAmount + paymentData.bankAmount)
+                };
+            }
+            return entry;
+        }));
+
+        closeRemainingPayModal();
+        fetchTickets();
+    };
 
     const columns = [
         { header: 'BOOKING DATE', accessor: 'booking_date' },
@@ -121,38 +158,51 @@ const Navtcc = () => {
         { header: 'FIRST NAME', accessor: 'passengerFirstName' },
         { header: 'LAST NAME', accessor: 'passengerLastName' },
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-        // { header: 'NATIONALITY', accessor: 'passengerNationality' },
         { header: 'DOCUMENT TYPE', accessor: 'documentType' },
         { header: 'DOCUMENT NO', accessor: 'documentNo' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
-        // { header: 'ISSUE COUNTRY', accessor: 'documentIssueCountry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
-        { header: 'PAID CASH', accessor: 'paid_cash' },
+        {
+            header: 'PAID CASH',
+            accessor: 'paid_cash_details',
+            render: (cellValue, row) => (
+                <div>
+                    <div>Initial: {row.initial_paid_cash || '0'}</div>
+                    <div>Total: {row.paid_cash || '0'}</div>
+                </div>
+            )
+        },
         { header: 'PAID FROM BANK', accessor: 'paid_from_bank' },
         { header: 'PAYED TO BANK', accessor: 'payed_to_bank' },
-        { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
-        // {
-        //     header: 'VENDORS & PAYABLE',
-        //     accessor: 'vendors',
-        //     render: (cellValue, row) => (
-        //         <div className="space-y-1">
-        //             {row?.vendors && row.vendors.length > 0 ? (
-        //                 row.vendors.map((vendor, idx) => (
-        //                     <div key={idx} className="text-xs">
-        //                         <div className="font-medium">{vendor.vendor_name}</div>
-        //                         <div className="text-gray-600">{vendor.amount}</div>
-        //                     </div>
-        //                 ))
-        //             ) : (
-        //                 <span className="text-gray-400">-</span>
-        //             )}
-        //         </div>
-        //     )
-        // },
+        {
+            header: 'PAID IN BANK',
+            accessor: 'paid_in_bank_details',
+            render: (cellValue, row) => (
+                <div>
+                    <div>Initial: {row.initial_paid_in_bank || '0'}</div>
+                    <div>Total: {row.paid_in_bank || '0'}</div>
+                </div>
+            )
+        },
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PROFIT', accessor: 'profit' },
         { header: 'Card Amount', accessor: 'card_amount' },
-        { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
+        {
+            header: 'REMAINING AMOUNT',
+            accessor: 'remaining_amount',
+            render: (cellValue, row) => (
+                <div className="flex flex-col items-center">
+                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <button
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        onClick={() => handleRemainingPay(row)}
+                        title="Add Payment"
+                    >
+                        <i className="fas fa-plus"></i> Pay
+                    </button>
+                </div>
+            )
+        },
         {
             header: 'REMAINING DATE',
             accessor: 'remaining_date_raw',
@@ -194,7 +244,7 @@ const Navtcc = () => {
                 if (startDate && endDate) {
                     const start = new Date(startDate);
                     const end = new Date(endDate);
-                    end.setHours(23, 59, 59, 999); // Include the entire end date
+                    end.setHours(23, 59, 59, 999);
                     matchesDateRange = createdDate >= start && createdDate <= end;
                 } else if (startDate) {
                     const start = new Date(startDate);
@@ -316,6 +366,67 @@ const Navtcc = () => {
         );
     };
 
+    const RemainingPayModal = () => {
+        if (!showRemainingPayModal || !selectedNavtccForPay) return null;
+
+        return (
+            <div className="fixed inset-0 z-500 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold">Payment Details</h2>
+                        <button
+                            onClick={closeRemainingPayModal}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <i className="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div className="bg-gray-100 p-4 rounded mb-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <strong>ID:</strong> {selectedNavtccForPay.id}
+                            </div>
+                            <div>
+                                <strong>Entry:</strong> {selectedNavtccForPay.entry}
+                            </div>
+                            <div>
+                                <strong>Booking Date:</strong> {selectedNavtccForPay.booking_date}
+                            </div>
+                            <div>
+                                <strong>Passenger:</strong> {selectedNavtccForPay.passengerFirstName} {selectedNavtccForPay.passengerLastName}
+                            </div>
+                            <div>
+                                <strong>Receivable Amount:</strong> {selectedNavtccForPay.receivable_amount}
+                            </div>
+                            <div>
+                                <strong>Paid Cash:</strong> {selectedNavtccForPay.initial_paid_cash}
+                            </div>
+                            <div>
+                                <strong>Paid in Bank:</strong> {selectedNavtccForPay.initial_paid_in_bank}
+                            </div>
+                            <div>
+                                <strong>Remaining Amount:</strong> {selectedNavtccForPay.remaining_amount || '0'}
+                            </div>
+                            <div>
+                                <strong>Initial Remaining:</strong>
+                                <span className="font-semibold text-purple-700">
+                                    {selectedNavtccForPay.initial_remaining_amount || '0'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <NavtccRemainingPay
+                        navtccId={selectedNavtccForPay.id}
+                        onClose={closeRemainingPayModal}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className='h-full flex flex-col'>
             {showForm ? (
@@ -404,6 +515,7 @@ const Navtcc = () => {
                         )}
                     </div>
                     <DeleteConfirmationModal />
+                    <RemainingPayModal />
                 </div>
             )}
         </div>

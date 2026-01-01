@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
+const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -15,7 +15,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
         bank_title: '',
         recorded_by: ''
     });
-    const [navtccDetails, setNavtccDetails] = useState(null);
+    const [otherCpDetails, setOtherCpDetails] = useState(null);
 
     const BANK_OPTIONS = [
         { value: "UBL M.A.R", label: "UBL M.A.R" },
@@ -30,13 +30,13 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
 
     useEffect(() => {
         fetchPayments();
-        fetchNavtccDetails();
-    }, [navtccId]);
+        fetchOtherCpDetails();
+    }, [otherCpId]);
 
     const fetchPayments = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${BASE_URL}/navtcc/${navtccId}/payments`);
+            const response = await axios.get(`${BASE_URL}/other-cp/${otherCpId}/payments`);
             setPayments(response.data.payments || []);
         } catch (error) {
             console.error('Error fetching payments:', error);
@@ -46,23 +46,23 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    const fetchNavtccDetails = async () => {
+    const fetchOtherCpDetails = async () => {
         try {
-            const response = await axios.get(`${BASE_URL}/navtcc`);
-            console.log('Fetch navtcc response:', response.data);
+            const response = await axios.get(`${BASE_URL}/other-cp`);
+            console.log('Fetch other-cp response:', response.data);
 
-            if (response.data && response.data.navtcc) {
-                const specificEntry = response.data.navtcc.find(entry => entry.id === navtccId);
+            if (response.data && response.data.otherCpEntries) {
+                const specificEntry = response.data.otherCpEntries.find(entry => entry.id === otherCpId);
 
                 if (specificEntry) {
-                    setNavtccDetails(specificEntry);
-                    console.log('Fetched navtccDetails:', specificEntry);
+                    setOtherCpDetails(specificEntry);
+                    console.log('Fetched otherCpDetails:', specificEntry);
                 } else {
-                    console.log('NAVTCC entry not found with ID:', navtccId);
+                    console.log('Other CP entry not found with ID:', otherCpId);
                 }
             }
         } catch (error) {
-            console.error('Error fetching navtcc details:', error);
+            console.error('Error fetching other cp details:', error);
         }
     };
 
@@ -86,7 +86,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
         setIsSubmitting(true);
 
         try {
-            const response = await axios.post(`${BASE_URL}/navtcc/${navtccId}/payments`, {
+            const response = await axios.post(`${BASE_URL}/other-cp/${otherCpId}/payments`, {
                 payment_date: newPayment.payment_date,
                 payed_cash: cashAmount,
                 paid_bank: bankAmount,
@@ -99,14 +99,14 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                     await addBankAccountEntry();
                 }
 
-                if (navtccDetails && navtccDetails.agent_name) {
+                if (otherCpDetails && otherCpDetails.agent_name) {
                     await addAgentEntry();
                 }
 
                 setPayments([...payments, response.data.payment]);
 
                 const paymentData = {
-                    navtccId: navtccId,
+                    otherCpId: otherCpId,
                     cashAmount: cashAmount,
                     bankAmount: bankAmount,
                     paymentDate: newPayment.payment_date,
@@ -139,10 +139,10 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
     const addAgentEntry = async () => {
         try {
             console.log('Adding agent entry for remaining payment');
-            console.log('NavtccDetails:', navtccDetails);
+            console.log('OtherCpDetails:', otherCpDetails);
 
-            if (!navtccDetails) {
-                console.error('No navtcc details available for agent entry');
+            if (!otherCpDetails) {
+                console.error('No other cp details available for agent entry');
                 return;
             }
 
@@ -158,31 +158,14 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                 return `${day}-${month}-${year}`;
             };
 
-            // Parse passport details to get passenger name
-            let passportDetails = {};
-            try {
-                if (typeof navtccDetails.passport_detail === 'string') {
-                    passportDetails = JSON.parse(navtccDetails.passport_detail);
-                } else if (typeof navtccDetails.passport_detail === 'object' && navtccDetails.passport_detail !== null) {
-                    passportDetails = navtccDetails.passport_detail;
-                }
-            } catch (e) {
-                console.error("Error parsing passport details:", e);
-            }
-
-            const passengerName = [
-                passportDetails.firstName || '',
-                passportDetails.lastName || ''
-            ].filter(Boolean).join(' ') || 'N/A';
-
             const commonDetail = [
-                passengerName,
-                formatDate(navtccDetails.booking_date),
+                otherCpDetails.detail || '',
+                formatDate(otherCpDetails.date),
                 '(Remaining Payment)'
             ].filter(Boolean).join(',');
 
             const agentData = {
-                agent_name: navtccDetails.agent_name,
+                agent_name: otherCpDetails.agent_name,
                 employee: newPayment.recorded_by,
                 detail: commonDetail,
                 receivable_amount: 0,
@@ -191,7 +174,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                 credit: 0,
                 debit: cashAmount + bankAmount,
                 date: newPayment.payment_date,
-                entry: `${navtccDetails.entry || ''} (RP)`,
+                entry: `${otherCpDetails.entry || ''} (RP)`,
                 bank_title: newPayment.bank_title || null
             };
 
@@ -212,73 +195,39 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
 
     const addBankAccountEntry = async () => {
         try {
-            console.log('NavtccDetails in addBankAccountEntry:', navtccDetails);
-            console.log('NavtccId:', navtccId);
+            console.log('OtherCpDetails in addBankAccountEntry:', otherCpDetails);
+            console.log('OtherCpId:', otherCpId);
 
             let detailInfo = 'N/A';
             let entryInfo = 'N/A';
 
-            if (!navtccDetails) {
+            if (!otherCpDetails) {
                 try {
-                    const response = await axios.get(`${BASE_URL}/navtcc`);
-                    console.log('All navtcc response:', response.data);
+                    const response = await axios.get(`${BASE_URL}/other-cp`);
+                    console.log('All other-cp response:', response.data);
 
-                    if (response.data && response.data.navtcc) {
-                        const specificEntry = response.data.navtcc.find(entry => entry.id === navtccId);
+                    if (response.data && response.data.otherCpEntries) {
+                        const specificEntry = response.data.otherCpEntries.find(entry => entry.id === otherCpId);
                         console.log('Found specific entry:', specificEntry);
 
                         if (specificEntry) {
-                            // Parse passport details
-                            let passportDetails = {};
-                            try {
-                                if (typeof specificEntry.passport_detail === 'string') {
-                                    passportDetails = JSON.parse(specificEntry.passport_detail);
-                                } else if (typeof specificEntry.passport_detail === 'object') {
-                                    passportDetails = specificEntry.passport_detail;
-                                }
-                            } catch (e) {
-                                console.error("Error parsing passport details:", e);
-                            }
-
-                            const passengerName = [
-                                passportDetails.firstName || '',
-                                passportDetails.lastName || ''
-                            ].filter(Boolean).join(' ') || 'N/A';
-
-                            detailInfo = passengerName;
+                            detailInfo = specificEntry.detail || 'N/A';
                             entryInfo = specificEntry.entry || 'N/A';
                         }
                     }
                 } catch (error) {
-                    console.error('Error fetching navtcc for bank entry:', error);
+                    console.error('Error fetching other-cp for bank entry:', error);
                 }
             } else {
-                // Parse passport details
-                let passportDetails = {};
-                try {
-                    if (typeof navtccDetails.passport_detail === 'string') {
-                        passportDetails = JSON.parse(navtccDetails.passport_detail);
-                    } else if (typeof navtccDetails.passport_detail === 'object') {
-                        passportDetails = navtccDetails.passport_detail;
-                    }
-                } catch (e) {
-                    console.error("Error parsing passport details:", e);
-                }
-
-                const passengerName = [
-                    passportDetails.firstName || '',
-                    passportDetails.lastName || ''
-                ].filter(Boolean).join(' ') || 'N/A';
-
-                detailInfo = passengerName;
-                entryInfo = navtccDetails.entry || 'N/A';
+                detailInfo = otherCpDetails.detail || 'N/A';
+                entryInfo = otherCpDetails.entry || 'N/A';
             }
 
             const detailString = `Detail: ${detailInfo}, Entry: ${entryInfo}, Recorded by: ${newPayment.recorded_by}`;
 
             const officeAccountData = {
                 bank_name: newPayment.bank_title,
-                entry: navtccDetails?.entry || `NAVTCC Remaining_Payment ${navtccId}`,
+                entry: otherCpDetails?.entry || `Other CP Remaining_Payment ${otherCpId}`,
                 date: newPayment.payment_date,
                 detail: detailString,
                 credit: parseFloat(newPayment.paid_bank) || 0,
@@ -299,18 +248,18 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
     };
 
     const deletePayment = async (paymentId) => {
-        if (!confirm('Are you sure you want to delete this payment? This will also update the NAVTCC amounts.')) {
+        if (!confirm('Are you sure you want to delete this payment? This will also update the other cp amounts.')) {
             return;
         }
 
         setIsDeleting(paymentId);
         try {
-            await axios.delete(`${BASE_URL}/navtcc/payments/${paymentId}`);
+            await axios.delete(`${BASE_URL}/other-cp/payments/${paymentId}`);
 
             await fetchPayments();
 
             window.dispatchEvent(new CustomEvent('paymentUpdated', {
-                detail: { navtccId }
+                detail: { otherCpId }
             }));
 
             alert('Payment deleted successfully');
@@ -334,7 +283,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
         }
 
         try {
-            await axios.put(`${BASE_URL}/navtcc/payments/${paymentId}`, {
+            await axios.put(`${BASE_URL}/other-cp/payments/${paymentId}`, {
                 payment_date: editingPayment.payment_date,
                 payed_cash: cashAmount,
                 paid_bank: bankAmount,
@@ -346,7 +295,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
             setEditingPayment(null);
 
             window.dispatchEvent(new CustomEvent('paymentUpdated', {
-                detail: { navtccId }
+                detail: { otherCpId }
             }));
 
             alert('Payment updated successfully');
@@ -406,8 +355,8 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                                                 className="w-full border rounded px-2 py-1"
                                             />
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">{navtccDetails?.entry || payment.entry || ''}</td>
-                                        <td className="border border-gray-300 px-4 py-2">{navtccDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{otherCpDetails?.entry || payment.entry || ''}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{otherCpDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
                                         <td className="border border-gray-300 px-4 py-2">
                                             <input
                                                 type="text"
@@ -463,8 +412,8 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                                         <td className="border border-gray-300 px-4 py-2">
                                             {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">{navtccDetails?.entry || payment.entry || ''}</td>
-                                        <td className="border border-gray-300 px-4 py-2">{navtccDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{otherCpDetails?.entry || payment.entry || ''}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{otherCpDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
                                         <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
                                         <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
                                         <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || '0'}</td>
@@ -580,8 +529,8 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                             </button>
                             <button
                                 onClick={addPayment}
-                                disabled={!newPayment.payment_date || !newPayment.recorded_by || isSubmitting}
-                                className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${isSubmitting || !newPayment.payment_date || !newPayment.recorded_by
+                                disabled={!newPayment.payment_date || !newPayment.recorded_by}
+                                className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${isSubmitting
                                     ? 'bg-gray-400 cursor-not-allowed'
                                     : 'bg-blue-500 hover:bg-blue-600'
                                     }`}
@@ -602,8 +551,89 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                     </div>
                 </div>
             )}
+
+            {editingPayment && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-lg p-6 w-96">
+                        <h3 className="text-lg font-semibold mb-4">Edit Payment</h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Payment Date</label>
+                                <input
+                                    type="date"
+                                    value={editingPayment.payment_date}
+                                    onChange={(e) => setEditingPayment(prev => ({ ...prev, payment_date: e.target.value }))}
+                                    className="w-full border rounded px-3 py-2"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Cash Paid</label>
+                                <input
+                                    type="text"
+                                    value={editingPayment.payed_cash}
+                                    onChange={(e) => setEditingPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
+                                    className="w-full border rounded px-3 py-2"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Paid Bank</label>
+                                <input
+                                    type="text"
+                                    value={editingPayment.paid_bank}
+                                    onChange={(e) => setEditingPayment(prev => ({ ...prev, paid_bank: e.target.value }))}
+                                    className="w-full border rounded px-3 py-2"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Bank Title</label>
+                                <select
+                                    value={editingPayment.bank_title || ''}
+                                    onChange={(e) => setEditingPayment(prev => ({ ...prev, bank_title: e.target.value }))}
+                                    className="w-full border rounded px-3 py-2"
+                                >
+                                    <option value="">Select Bank (optional)</option>
+                                    {BANK_OPTIONS.map(option => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Recorded By</label>
+                                <input
+                                    type="text"
+                                    value={editingPayment.recorded_by}
+                                    onChange={(e) => setEditingPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
+                                    className="w-full border rounded px-3 py-2"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end space-x-3 mt-6">
+                            <button
+                                onClick={() => setEditingPayment(null)}
+                                className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => updatePayment(editingPayment.id)}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                Update Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-export default NavtccRemainingPay;
+export default Other_Cp_Rp;
