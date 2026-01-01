@@ -171,16 +171,16 @@ const GamcaToken = () => {
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
         { header: 'DOCUMENT TYPE', accessor: 'documentType' },
         { header: 'DOCUMENT NO', accessor: 'documentNo' },
-        {
-            header: 'VENDOR & PAYABLE',
-            accessor: 'vendor_payable',
-            render: (cellValue, row) => (
-                <div>
-                    <div>{row?.vendor_name || ''}</div>
-                    <div>{row?.payable_to_vendor || ''}</div>
-                </div>
-            )
-        },
+        // {
+        //     header: 'VENDOR & PAYABLE',
+        //     accessor: 'vendor_payable',
+        //     render: (cellValue, row) => (
+        //         <div>
+        //             <div>{row?.vendor_name || ''}</div>
+        //             <div>{row?.payable_to_vendor || ''}</div>
+        //         </div>
+        //     )
+        // },
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
@@ -196,6 +196,7 @@ const GamcaToken = () => {
             )
         },
         { header: 'PROFIT', accessor: 'profit' },
+        { header: 'Card Amount', accessor: 'card_amount' },
         {
             header: 'REMAINING AMOUNT',
             accessor: 'remaining_amount',

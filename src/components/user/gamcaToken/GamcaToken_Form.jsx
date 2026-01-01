@@ -10,24 +10,26 @@ import axios from 'axios';
 // --- Auto-calculation component ---
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
-    
+
     useEffect(() => {
         const receivable = parseFloat(values.receivable_amount) || 0;
         const cashPaid = parseFloat(values.paid_cash) || 0;
         const bankPaid = parseFloat(values.paid_in_bank) || 0;
-        
+        const cardAmount = parseFloat(values.card_amount) || 0;
+
         const remaining = receivable - cashPaid - bankPaid;
         setFieldValue('remaining_amount', remaining.toFixed(2));
 
-        const profit = receivable;
+        const profit = receivable - cardAmount;
         setFieldValue('profit', profit ? profit.toFixed(2) : '');
     }, [
         values.receivable_amount,
         values.paid_cash,
         values.paid_in_bank,
+        values.card_amount,
         setFieldValue
     ]);
-    
+
     return null;
 };
 
@@ -35,7 +37,6 @@ const AutoCalculate = () => {
 const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
-    const [activeSection, setActiveSection] = useState(1);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
     const [agentNames, setAgentNames] = useState([]);
@@ -73,7 +74,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             agent_name: '',
             profit: '',
             remaining_amount: '0',
-            payFromBankCard: '',
+            payFromBankCard: 'Card Payment',
             card_amount: '',
         };
 
@@ -162,28 +163,28 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     ];
 
     // Fetch agent & vendor names
-   useEffect(() => {
-    const loadInitialData = async () => {
-        try {
-            const [countsRes, agentRes] = await Promise.all([
-                fetchEntryCounts(),
-                axios.get(`${BASE_URL}/agent-names/existing`),
-            ]);
+    useEffect(() => {
+        const loadInitialData = async () => {
+            try {
+                const [countsRes, agentRes] = await Promise.all([
+                    fetchEntryCounts(),
+                    axios.get(`${BASE_URL}/agent-names/existing`),
+                ]);
 
-            const gamcaCounts = countsRes.find(c => c.form_type === 'gamca');
-            if (gamcaCounts) {
-                setEntryNumber(gamcaCounts.current_count + 1);
-                setTotalEntries(gamcaCounts.global_count + 1);  // +1 for the next entry
+                const gamcaCounts = countsRes.find(c => c.form_type === 'gamca');
+                if (gamcaCounts) {
+                    setEntryNumber(gamcaCounts.current_count + 1);
+                    setTotalEntries(gamcaCounts.global_count + 1);  // +1 for the next entry
+                }
+
+                if (agentRes.data.status === 'success') setAgentNames(agentRes.data.agentNames || []);
+            } catch (error) {
+                console.error('Error loading initial data:', error);
             }
+        };
 
-            if (agentRes.data.status === 'success') setAgentNames(agentRes.data.agentNames || []);
-        } catch (error) {
-            console.error('Error loading initial data:', error);
-        }
-    };
-
-    loadInitialData();
-}, [BASE_URL]);
+        loadInitialData();
+    }, [BASE_URL]);
 
     // Fetch entry counts
     useEffect(() => {
@@ -206,132 +207,134 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, []);
 
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
-    const passportDetail = JSON.stringify({
-        title: values.passengerTitle,
-        firstName: values.passengerFirstName,
-        lastName: values.passengerLastName,
-        dob: values.passengerDob,
-        nationality: values.passengerNationality,
-        documentType: values.documentType,
-        documentNo: values.documentNo,
-        documentExpiry: values.documentExpiry,
-        issueCountry: values.documentIssueCountry,
-    });
-
-
-    const requestData = {
-        employee_name: values.employee_name,
-        customer_add: values.customer_add,
-        entry: values.entry,
-        reference: values.reference,
-        country: values.country,
-        booking_date: values.booking_date,
-        remaining_date: values.remaining_date || null,
-        passport_detail: passportDetail,
-        receivable_amount: parseFloat(values.receivable_amount) || 0,
-        paid_cash: parseFloat(values.paid_cash) || 0,
-        paid_from_bank: values.paid_from_bank || null,
-        paid_in_bank: parseFloat(values.paid_in_bank) || 0,
-        agent_name: values.agent_name || null,
-        profit: parseFloat(values.profit) || 0,
-        remaining_amount: parseFloat(values.remaining_amount) || 0
-    };
-
-    try {
-        const url = editEntry ? `${BASE_URL}/gamca-token/${editEntry.id}` : `${BASE_URL}/gamca-token`;
-        const method = editEntry ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestData),
+        const passportDetail = JSON.stringify({
+            title: values.passengerTitle,
+            firstName: values.passengerFirstName,
+            lastName: values.passengerLastName,
+            dob: values.passengerDob,
+            nationality: values.passengerNationality,
+            documentType: values.documentType,
+            documentNo: values.documentNo,
+            documentExpiry: values.documentExpiry,
+            issueCountry: values.documentIssueCountry,
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
 
-        const counts = await fetchEntryCounts();
+        const requestData = {
+            employee_name: values.employee_name,
+            customer_add: values.customer_add,
+            entry: values.entry,
+            reference: values.reference,
+            country: values.country,
+            booking_date: values.booking_date,
+            remaining_date: values.remaining_date || null,
+            passport_detail: passportDetail,
+            receivable_amount: parseFloat(values.receivable_amount) || 0,
+            paid_cash: parseFloat(values.paid_cash) || 0,
+            paid_from_bank: values.paid_from_bank || null,
+            paid_in_bank: parseFloat(values.paid_in_bank) || 0,
+            agent_name: values.agent_name || null,
+            profit: parseFloat(values.profit) || 0,
+            remaining_amount: parseFloat(values.remaining_amount) || 0,
+            pay_from_bank_card: values.payFromBankCard || null,
+            card_amount: parseFloat(values.card_amount) || 0,
+        };
 
-        // Card payment transaction
-        if (parseFloat(values.card_amount) > 0 && values.payFromBankCard) {
-            const bankCounts = counts.find(c => c.form_type === 'bank-detail');
-            const bankEntryNumber = bankCounts ? bankCounts.current_count + 1 : 1;
-            const bankTotalEntries = bankCounts ? bankCounts.global_count + 1 : 1;
+        try {
+            const url = editEntry ? `${BASE_URL}/gamca-token/${editEntry.id}` : `${BASE_URL}/gamca-token`;
+            const method = editEntry ? 'PUT' : 'POST';
 
-            const bankDetailData = {
-                date: values.booking_date,
-                entry: `BD ${bankEntryNumber}/${bankTotalEntries}`,
-                employee: values.employee_name,
-                detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
-                credit: 0,
-                debit: parseFloat(values.card_amount) || 0,
-            };
-
-            const bankDetailResponse = await fetch(`${BASE_URL}/bank-details`, {
-                method: 'POST',
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bankDetailData),
+                body: JSON.stringify(requestData),
             });
 
-            if (!bankDetailResponse.ok) {
-                const errorData = await bankDetailResponse.json();
-                throw new Error(`Failed to create bank detail entry: ${errorData.message || 'Unknown error'}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
-        }
 
-        // ✅ UPDATED: Removed manual increment call - backend handles it automatically
-        if (!editEntry) {
-            // Just refresh the entry counts to get the updated numbers
-            if (counts) {
-                const gamcaCounts = counts.find(c => c.form_type === 'gamca');
-                if (gamcaCounts) {
-                    setEntryNumber(gamcaCounts.current_count + 1);
-                    setTotalEntries(gamcaCounts.global_count);
+            const counts = await fetchEntryCounts();
+
+            // Card payment transaction
+            if (parseFloat(values.card_amount) > 0 && values.payFromBankCard) {
+                const bankCounts = counts.find(c => c.form_type === 'bank-detail');
+                const bankEntryNumber = bankCounts ? bankCounts.current_count + 1 : 1;
+                const bankTotalEntries = bankCounts ? bankCounts.global_count + 1 : 1;
+
+                const bankDetailData = {
+                    date: values.booking_date,
+                    entry: `BD ${bankEntryNumber}/${bankTotalEntries}`,
+                    employee: values.employee_name,
+                    detail: `Gamca Sale - ${values.passengerFirstName} - ${values.passengerLastName}`,
+                    credit: 0,
+                    debit: parseFloat(values.card_amount) || 0,
+                };
+
+                const bankDetailResponse = await fetch(`${BASE_URL}/bank-details`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bankDetailData),
+                });
+
+                if (!bankDetailResponse.ok) {
+                    const errorData = await bankDetailResponse.json();
+                    throw new Error(`Failed to create bank detail entry: ${errorData.message || 'Unknown error'}`);
                 }
             }
-        }
 
-        // Bank transaction
-        if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
-            await axios.post(`${BASE_URL}/accounts`, {
-                bank_name: values.paid_from_bank,
-                employee_name: values.employee_name,
-                detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
-                credit: parseFloat(values.paid_in_bank),
-                debit: 0,
-                date: new Date().toISOString().split('T')[0],
-                entry: values.entry,
-            });
-        }
+            // ✅ UPDATED: Removed manual increment call - backend handles it automatically
+            if (!editEntry) {
+                // Just refresh the entry counts to get the updated numbers
+                if (counts) {
+                    const gamcaCounts = counts.find(c => c.form_type === 'gamca');
+                    if (gamcaCounts) {
+                        setEntryNumber(gamcaCounts.current_count + 1);
+                        setTotalEntries(gamcaCounts.global_count);
+                    }
+                }
+            }
 
-        // Agent transaction
-        if (values.agent_name) {
-            await axios.post(`${BASE_URL}/agent`, {
-                agent_name: values.agent_name,
-                employee: values.employee_name,
-                detail: `GAMCA - ${values.reference} - ${values.customer_add}`,
-                receivable_amount: parseFloat(values.receivable_amount),
-                paid_cash: parseFloat(values.paid_cash),
-                paid_bank: parseFloat(values.paid_in_bank),
-                credit: parseFloat(values.remaining_amount),
-                date: new Date().toISOString().split('T')[0],
-                entry: values.entry,
-                bank_title: values.paid_from_bank || null,
-                debit: null
-            });
-        }
+            // Bank transaction
+            if (parseFloat(values.paid_in_bank) > 0 && values.paid_from_bank) {
+                await axios.post(`${BASE_URL}/accounts`, {
+                    bank_name: values.paid_from_bank,
+                    employee_name: values.employee_name,
+                    detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
+                    credit: parseFloat(values.paid_in_bank),
+                    debit: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    entry: values.entry,
+                });
+            }
 
-        resetForm();
-        onSubmitSuccess();
-    } catch (error) {
-        console.error('Submission error:', error);
-        setErrors({ general: error.message || 'Failed to submit form.' });
-    } finally {
-        setSubmitting(false);
-    }
-};
+            // Agent transaction
+            if (values.agent_name) {
+                await axios.post(`${BASE_URL}/agent`, {
+                    agent_name: values.agent_name,
+                    employee: values.employee_name,
+                    detail: `GAMCA - ${values.reference} - ${values.customer_add}`,
+                    receivable_amount: parseFloat(values.receivable_amount),
+                    paid_cash: parseFloat(values.paid_cash),
+                    paid_bank: parseFloat(values.paid_in_bank),
+                    credit: parseFloat(values.remaining_amount),
+                    date: new Date().toISOString().split('T')[0],
+                    entry: values.entry,
+                    bank_title: values.paid_from_bank || null,
+                    debit: null
+                });
+            }
+
+            resetForm();
+            onSubmitSuccess();
+        } catch (error) {
+            console.error('Submission error:', error);
+            setErrors({ general: error.message || 'Failed to submit form.' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     const formVariants = {
         hidden: { opacity: 0 },
@@ -343,38 +346,32 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
     };
 
-    // Updated Section 1 with new date fields
-    const section1Fields = [
+    const formFields = [
+        // Basic Info
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
         { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'country', label: 'Country', type: 'text', placeholder: 'Enter country', icon: 'globe' },
         { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: '', icon: 'calendar-check' },
-        { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: '', icon: 'calendar-times' },
-    ];
-
-    const section2Fields = [
+        // Passport Details
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
         { name: 'passengerDob', label: 'Date of Birth', type: 'date', placeholder: 'Select date of birth', icon: 'calendar' },
         { name: 'documentNo', label: 'Passport No', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
         { name: 'documentExpiry', label: 'Expiry Date', type: 'date', placeholder: 'Select expiry date', icon: 'calendar-times' },
-    ];
-
-    const section3Fields = [
+        // Payment Details
         { name: 'receivable_amount', label: 'Receivable Amount', type: 'number', placeholder: 'Enter receivable amount', icon: 'hand-holding-usd', readOnly: !!editEntry },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave', readOnly: !!editEntry },
         { name: 'paid_from_bank', label: 'Bank Title', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank title', icon: 'university' },
         { name: 'paid_in_bank', label: 'Paid In Bank', type: 'number', placeholder: 'Enter bank payment', icon: 'university', readOnly: !!editEntry },
-        { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
         { name: 'agent_name', label: 'Agent Name', type: 'select', options: agentNames, placeholder: 'Select agent name', icon: 'user-tie' },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Auto-calculated', icon: 'chart-line', readOnly: !!editEntry },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Auto-calculated', icon: 'balance-scale', readOnly: true },
+        { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: '', icon: 'calendar-times' },
         { name: 'payFromBankCard', label: 'Pay from Bank Card', type: 'select', options: cardBankOptions.map(opt => opt.label), placeholder: 'Select bank card', icon: 'credit-card' },
         { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
-
     ];
 
     const renderField = (field) => (
@@ -426,20 +423,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
             </div>
 
-            <div className="px-8 pt-6">
-                <div className="flex justify-between mb-8">
-                    {[1, 2, 3].map((step) => (
-                        <button key={step} onClick={() => setActiveSection(step)} className={`flex-1 ${step === activeSection ? 'text-purple-600' : 'text-gray-400'}`}>
-                            <div className="flex flex-col items-center">
-                                <div className={`w-10 h-10 rounded-full mb-2 ${step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}`}>
-                                    {step < activeSection ? '' : <span className="font-medium">{step}</span>}
-                                </div>
-                                <span className="text-sm">{step === 1 ? 'Basic Info' : step === 2 ? 'Passport Details' : 'Payment Details'}</span>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
+
 
             <div className="px-8 pb-8">
                 <Formik
@@ -452,19 +436,12 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         <Form>
                             <AutoCalculate />
                             <motion.div
-                                key={`section-${activeSection}`}
                                 variants={formVariants}
                                 initial="hidden"
                                 animate="visible"
                                 className="grid grid-cols-1 md:grid-cols-2 gap-x-6"
                             >
-                                {activeSection === 1 && section1Fields.map(renderField)}
-                                {activeSection === 2 && section2Fields.map(renderField)}
-                                {activeSection === 3 && (
-                                    <>
-                                        {section3Fields.map(renderField)}
-                                    </>
-                                )}
+                                {formFields.map(renderField)}
                             </motion.div>
 
                             {errors.general && (
@@ -473,30 +450,14 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </div>
                             )}
 
-                            <div className="flex justify-between mt-8 pt-4 border-t">
-                                <div>
-                                    {activeSection > 1 && (
-                                        <button type="button" onClick={() => setActiveSection(activeSection - 1)} className="px-4 py-2 text-indigo-600">
-                                            Back
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex space-x-3">
-                                    <button type="button" onClick={onCancel} className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50" disabled={isSubmitting}>
-                                        Cancel
-                                    </button>
-                                    {activeSection < 3 && (
-                                        <button type="button" onClick={() => setActiveSection(activeSection + 1)} className="px-5 py-2 bg-indigo-600 text-white rounded-lg">
-                                            Next
-                                        </button>
-                                    )}
-                                    {activeSection === 3 && (
-                                        <button type="submit" className="px-5 py-2 bg-purple-600 text-white rounded-lg" disabled={isSubmitting}>
-                                            {isSubmitting && <ButtonSpinner />}
-                                            {editEntry ? 'Update' : 'Submit'}
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="flex justify-end mt-8 pt-4 border-t space-x-3">
+                                <button type="button" onClick={onCancel} className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50" disabled={isSubmitting}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="px-5 py-2 bg-purple-600 text-white rounded-lg" disabled={isSubmitting}>
+                                    {isSubmitting && <ButtonSpinner />}
+                                    {editEntry ? 'Update' : 'Submit'}
+                                </button>
                             </div>
                         </Form>
                     )}

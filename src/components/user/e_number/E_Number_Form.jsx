@@ -9,7 +9,6 @@ import { fetchEntryCounts } from '../../ui/api';
 const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
-    const [activeSection, setActiveSection] = useState(1);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
 
@@ -25,11 +24,12 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             employee: user?.username || '',
             entryNo: `EN ${entryNumber}/${totalEntries}`,
             fileNo: '',
+            name: '', // Add name to initial values
             visaId: '',
             reference: '',
             passportNo: '',
             mobileNo: '',
-            payFromBankCard: '',
+            payFromBankCard: 'Card Payment',
             card_amount: '',
         };
 
@@ -40,6 +40,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 employee: editEntry.employee || user?.username || '',
                 entryNo: editEntry.entryNo || `EN ${entryNumber}/${totalEntries}`,
                 fileNo: editEntry.fileNo || '',
+                name: editEntry.name || '', // Add name to editEntry
                 visaId: editEntry.visaId || '',
                 reference: editEntry.reference || '',
                 passportNo: editEntry.passportNo || '',
@@ -56,6 +57,7 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         employee: Yup.string().required('Employee is required'),
         entryNo: Yup.string().required('Entry No is required'),
         fileNo: Yup.string().required('File Number is required'),
+        name: Yup.string().required('Name is required'), // Add validation for name
         visaId: Yup.string().required('Visa ID is required'),
         reference: Yup.string().required('Reference is required'),
         passportNo: Yup.string().required('Passport No is required'),
@@ -162,24 +164,16 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
     };
 
-    // Section 1: Entry Details
-    const section1Fields = [
+    const formFields = [
         { name: 'date', label: 'Date', type: 'date', placeholder: '', icon: 'calendar-check' },
         { name: 'employee', label: 'Employee', type: 'text', placeholder: 'Employee name', icon: 'user', readOnly: true },
         { name: 'entryNo', label: 'Entry No', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
         { name: 'fileNo', label: 'File Number', type: 'text', placeholder: 'Enter file number', icon: 'folder' },
-    ];
-
-    // Section 2: Applicant Details
-    const section2Fields = [
+        { name: 'name', label: 'Name', type: 'text', placeholder: 'Enter name', icon: 'user' }, // Add name field
         { name: 'visaId', label: 'Visa ID', type: 'text', placeholder: 'Enter visa ID', icon: 'id-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'passportNo', label: 'Passport No', type: 'text', placeholder: 'Enter passport number', icon: 'passport' },
         { name: 'mobileNo', label: 'Mobile No', type: 'text', placeholder: 'Enter mobile number', icon: 'phone' },
-    ];
-
-    // Section 3: Payment Details
-    const section3Fields = [
         { name: 'payFromBankCard', label: 'Pay from Bank Card', type: 'select', options: bankOptions.map(opt => opt.label), placeholder: 'Select bank card', icon: 'credit-card' },
         { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
     ];
@@ -242,28 +236,9 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
             </div>
 
-            <div className="px-8 pt-6">
-                <div className="flex justify-between mb-8">
-                    {[1, 2, 3].map((step) => (
-                        <button
-                            key={step}
-                            onClick={() => setActiveSection(step)}
-                            className={`flex-1 ${step === activeSection ? 'text-purple-600' : 'text-gray-400'}`}
-                        >
-                            <div className="flex flex-col items-center">
-                                <div className={`w-10 h-10 rounded-full mb-2 flex items-center justify-center ${step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}`}>
-                                    {step < activeSection ? '✓' : <span className="font-medium">{step}</span>}
-                                </div>
-                                <span className="text-sm">
-                                    {step === 1 ? 'Entry Details' : step === 2 ? 'Applicant Details' : 'Payment Details'}
-                                </span>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
 
-            <div className="px-8 pb-8">
+
+            <div className="px-8 pb-8 pt-6">
                 <Formik
                     initialValues={initialValues}
                     validationSchema={validationSchema}
@@ -273,15 +248,12 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     {({ isSubmitting, errors }) => (
                         <Form>
                             <motion.div
-                                key={`section-${activeSection}`}
                                 variants={formVariants}
                                 initial="hidden"
                                 animate="visible"
                                 className="grid grid-cols-1 md:grid-cols-2 gap-x-6"
                             >
-                                {activeSection === 1 && section1Fields.map(renderField)}
-                                {activeSection === 2 && section2Fields.map(renderField)}
-                                {activeSection === 3 && section3Fields.map(renderField)}
+                                {formFields.map(renderField)}
                             </motion.div>
 
                             {errors.general && (
@@ -290,47 +262,23 @@ const E_Number_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </div>
                             )}
 
-                            <div className="flex justify-between mt-8 pt-4 border-t">
-                                <div>
-                                    {activeSection > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveSection(activeSection - 1)}
-                                            className="px-4 py-2 text-indigo-600"
-                                        >
-                                            Back
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex space-x-3">
-                                    <button
-                                        type="button"
-                                        onClick={onCancel}
-                                        className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
-                                        disabled={isSubmitting}
-                                    >
-                                        Cancel
-                                    </button>
-                                    {activeSection < 3 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveSection(activeSection + 1)}
-                                            className="px-5 py-2 bg-indigo-600 text-white rounded-lg"
-                                        >
-                                            Next
-                                        </button>
-                                    )}
-                                    {activeSection === 3 && (
-                                        <button
-                                            type="submit"
-                                            className="px-5 py-2 bg-purple-600 text-white rounded-lg"
-                                            disabled={isSubmitting}
-                                        >
-                                            {isSubmitting && <ButtonSpinner />}
-                                            {editEntry ? 'Update' : 'Submit'}
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="flex justify-end space-x-3 mt-8 pt-4 border-t">
+                                <button
+                                    type="button"
+                                    onClick={onCancel}
+                                    className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2 bg-purple-600 text-white rounded-lg"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting && <ButtonSpinner />}
+                                    {editEntry ? 'Update' : 'Submit'}
+                                </button>
                             </div>
                         </Form>
                     )}

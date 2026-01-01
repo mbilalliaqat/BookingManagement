@@ -52,7 +52,7 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             entry: `OCP ${entryNumber}/${totalEntries}`,
             employee: user?.username || '',
             detail: '',
-            card_payment: '',
+            card_payment: 'Card Payment',
             card_amount: '',
             receivable_amount: '',
             paid_cash: '',

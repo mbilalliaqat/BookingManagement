@@ -61,7 +61,10 @@ const E_Number = () => {
                 created_at_raw: entry.created_at, // Store raw date for filtering
             }));
 
-            setEntries(formattedData.reverse());
+            // Sort by creation date in descending order
+            formattedData.sort((a, b) => new Date(b.created_at_raw) - new Date(a.created_at_raw));
+
+            setEntries(formattedData);
         } catch (error) {
             console.error('Error fetching E-Number data:', error);
             setError(`Failed to load data: ${error.message}`);

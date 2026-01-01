@@ -11,6 +11,8 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalan
     const [vendorNames, setVendorNames] =useState([]);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
+    const [bankDetailEntryNumber, setBankDetailEntryNumber] = useState(0);
+    const [bankDetailTotalEntries, setBankDetailTotalEntries] = useState(0);
     
 
     const [data, setData] = useState({
@@ -23,6 +25,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalan
         credit: '',
         debit: '',
         balance: '',
+        payment_method: 'Cash',
     });
 
     const [prevError, setPrevError] = useState({
@@ -50,9 +53,19 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalan
                     setEntryNumber(1);
                     setTotalEntries(1);
                 }
+                const bankCounts = counts.find(c => c.form_type === 'bank-detail');
+                if (bankCounts) {
+                    setBankDetailEntryNumber(bankCounts.current_count + 1);
+                    setBankDetailTotalEntries(bankCounts.global_count + 1);
+                } else {
+                    setBankDetailEntryNumber(1);
+                    setBankDetailTotalEntries(1);
+                }
             } else {
                 setEntryNumber(1);
                 setTotalEntries(1);
+                setBankDetailEntryNumber(1);
+                setBankDetailTotalEntries(1);
             }
         };
         getCounts();
@@ -80,6 +93,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalan
                 credit: editingEntry.credit > 0 ? editingEntry.credit.toString() : '',
                 debit: editingEntry.debit > 0 ? editingEntry.debit.toString() : '',
                 balance: '',  // Balance is calculated on the server
+                payment_method: editingEntry.payment_method || 'Cash',
             });
         } else {
             const today = new Date();
@@ -183,6 +197,7 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalan
                 bank_name: data.bank_name,
                 employee_name: data.employee_name,
                 vendor_name:data.vendor_name,
+                payment_method: data.payment_method,
                 entry: data.entry,
                 date: data.date || new Date().toISOString().split('T')[0],
                 detail: data.detail,
@@ -228,6 +243,38 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalan
                 throw new Error(errorData.message || `Failed to ${isEditing ? 'update' : 'save'} entry`);
             }
 
+            if (!isEditing && data.payment_method === 'Card Payment') {
+                const credit = submitData.credit;
+                const debit = submitData.debit;
+            
+                const bankDetailData = {
+                    bank_name: data.bank_name,
+                    date: data.date,
+                    entry: `BD ${bankDetailEntryNumber}/${bankDetailTotalEntries}`,
+                    employee: data.employee_name,
+                    detail: `Recieve By ${data.bank_name}`,
+                    credit: debit,
+                    debit: credit,
+                    balance: credit - debit,
+                };
+            
+                try {
+                    const bankResponse = await fetch(`${BASE_URL}/bank-details`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bankDetailData),
+                    });
+            
+                    if (!bankResponse.ok) {
+                        const errorData = await bankResponse.json();
+                        throw new Error(errorData.message || 'Failed to save card payment to bank details');
+                    }
+                } catch (error) {
+                    console.error('Error saving to bank details:', error);
+                    alert(`Failed to save card payment to bank details: ${error.message}`);
+                }
+            }
+
             // Reset form
             setData({
                 bank_name: '',
@@ -238,6 +285,8 @@ const OfficeAccounts_Form = ({ onCancel, onSubmitSuccess, editingEntry,bankBalan
                 credit: '',
                 debit: '',
                 balance: '',
+                vendor_name: '',
+                payment_method: 'Cash',
             });
 
 if (data.vendor_name) {
@@ -330,6 +379,20 @@ if (data.vendor_name) {
             ))}
         </select>
         {prevError.vendor_name && <span className="text-red-500">{prevError.vendor_name}</span>}
+    </div>
+
+    <div className="w-full sm:w-[calc(50%-10px)]">
+        <label className="block font-medium mb-1">Payment Method</label>
+        <select
+            name="payment_method"
+            value={data.payment_method}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            disabled={isEditing}
+        >
+            <option value="Cash">Cash</option>
+            <option value="Card Payment">Card Payment</option>
+        </select>
     </div>
 
 

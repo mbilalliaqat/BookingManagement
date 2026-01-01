@@ -131,26 +131,27 @@ const Navtcc = () => {
         { header: 'PAID FROM BANK', accessor: 'paid_from_bank' },
         { header: 'PAYED TO BANK', accessor: 'payed_to_bank' },
         { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
-        {
-            header: 'VENDORS & PAYABLE',
-            accessor: 'vendors',
-            render: (cellValue, row) => (
-                <div className="space-y-1">
-                    {row?.vendors && row.vendors.length > 0 ? (
-                        row.vendors.map((vendor, idx) => (
-                            <div key={idx} className="text-xs">
-                                <div className="font-medium">{vendor.vendor_name}</div>
-                                <div className="text-gray-600">{vendor.amount}</div>
-                            </div>
-                        ))
-                    ) : (
-                        <span className="text-gray-400">-</span>
-                    )}
-                </div>
-            )
-        },
+        // {
+        //     header: 'VENDORS & PAYABLE',
+        //     accessor: 'vendors',
+        //     render: (cellValue, row) => (
+        //         <div className="space-y-1">
+        //             {row?.vendors && row.vendors.length > 0 ? (
+        //                 row.vendors.map((vendor, idx) => (
+        //                     <div key={idx} className="text-xs">
+        //                         <div className="font-medium">{vendor.vendor_name}</div>
+        //                         <div className="text-gray-600">{vendor.amount}</div>
+        //                     </div>
+        //                 ))
+        //             ) : (
+        //                 <span className="text-gray-400">-</span>
+        //             )}
+        //         </div>
+        //     )
+        // },
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'PROFIT', accessor: 'profit' },
+        { header: 'Card Amount', accessor: 'card_amount' },
         { header: 'REMAINING AMOUNT', accessor: 'remaining_amount' },
         {
             header: 'REMAINING DATE',

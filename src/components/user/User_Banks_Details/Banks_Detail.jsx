@@ -165,9 +165,7 @@ const Banks_Detail = () => {
                 throw new Error('Entry not found');
             }
 
-            const response = await axios.delete(`${BASE_URL}/bank-details/${entryToDelete.bank_name}/${parsedId}`, {
-                data: { user_name: user.name }
-            });
+            const response = await axios.delete(`${BASE_URL}/bank-details/${parsedId}`);
             if (response.status === 200) {
                 console.log('Entry deleted successfully');
                 fetchAllEntries();
@@ -193,6 +191,7 @@ const Banks_Detail = () => {
         { header: 'CREDIT', accessor: 'credit' },
         { header: 'DEBIT', accessor: 'debit' },
         { header: 'BALANCE', accessor: 'balance' },
+        
         ...(user.role === 'admin'
             ? [
                 {

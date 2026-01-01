@@ -10,38 +10,39 @@ import axios from 'axios';
 // Auto-calculation component for navtcc form
 const AutoCalculate = () => {
     const { values, setFieldValue } = useFormikContext();
-    
-    useEffect(() => {
-        const receivable = parseInt(values.receivable_amount) || 0;
-        const cashPaid = parseInt(values.paid_cash) || 0;
-        const bankPaid = parseFloat(values.paid_in_bank) || 0;
-        
-        const remaining = receivable - cashPaid - bankPaid;
-        setFieldValue('remaining_amount', remaining);
 
-        const profit = receivable;
-        setFieldValue('profit', profit);
+    useEffect(() => {
+        const receivable = parseFloat(values.receivable_amount) || 0;
+        const cashPaid = parseFloat(values.paid_cash) || 0;
+        const bankPaid = parseFloat(values.paid_in_bank) || 0;
+        const cardAmount = parseFloat(values.card_amount) || 0;
+
+        const remaining = receivable - cashPaid - bankPaid;
+        setFieldValue('remaining_amount', remaining.toFixed(2));
+
+        const profit = receivable - cardAmount;
+        setFieldValue('profit', profit ? profit.toFixed(2) : '');
     }, [
         values.receivable_amount,
         values.paid_cash,
         values.paid_in_bank,
+        values.card_amount,
         setFieldValue
     ]);
-    
+
     return null;
 };
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
 };
 
 
 const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
     const { user } = useAppContext();
-    const [activeSection, setActiveSection] = useState(1);
     const [entryNumber, setEntryNumber] = useState(0);
     const [totalEntries, setTotalEntries] = useState(0);
     const [agentNames, setAgentNames] = useState([]);
@@ -64,7 +65,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         documentIssueCountry: '',
         receivable_amount: '',
         paid_cash: '',
-        paid_from_bank:'',
+        paid_from_bank: '',
         paid_in_bank: '',
         payed_to_bank: '',
         agent_name: '',
@@ -72,7 +73,8 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         booking_date: new Date().toISOString().split('T')[0],  // Default today
         remaining_date: '',
         remaining_amount: '0',
-        payFromBankCard: '',
+
+        payFromBankCard: 'Card Payment',
         card_amount: '',
     });
 
@@ -109,7 +111,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 const [agentRes] = await Promise.all([
                     axios.get(`${BASE_URL}/agent-names/existing`),
                 ]);
-                
+
                 if (agentRes.data.status === 'success') {
                     setAgentNames(agentRes.data.agentNames || []);
                 }
@@ -148,7 +150,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 setCountsLoaded(true);
             }
         };
-        
+
         // Only fetch if not editing and counts not loaded
         if (!editEntry && !countsLoaded) {
             getCounts();
@@ -156,14 +158,14 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }, []); // Empty dependency array - run only once
 
     // Update form values when entry numbers or user changes
-        useEffect(() => {
-    if (countsLoaded || editEntry) {
-        setFormInitialValues(prev => ({
-            ...prev,
-            employee_name: user?.username || '',
-            entry: editEntry ? editEntry.entry : `NV ${entryNumber}/${totalEntries}`
-        }));
-    }
+    useEffect(() => {
+        if (countsLoaded || editEntry) {
+            setFormInitialValues(prev => ({
+                ...prev,
+                employee_name: user?.username || '',
+                entry: editEntry ? editEntry.entry : `NV ${entryNumber}/${totalEntries}`
+            }));
+        }
     }, [entryNumber, totalEntries, user, countsLoaded, editEntry]);
 
     useEffect(() => {
@@ -214,10 +216,11 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 booking_date: formatDate(editEntry.booking_date) || new Date().toISOString().split('T')[0],
                 remaining_date: formatDate(editEntry.remaining_date) || '',
                 remaining_amount: editEntry.remaining_amount || '',
+
                 payFromBankCard: editEntry.payFromBankCard || '',
                 card_amount: editEntry.card_amount || '',
             };
-            
+
             setFormInitialValues(newValues);
         }
     }, [editEntry, user, entryNumber, totalEntries]);
@@ -370,7 +373,7 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const formVariants = {
         hidden: { opacity: 0 },
-        visible: { 
+        visible: {
             opacity: 1,
             transition: { staggerChildren: 0.1, delayChildren: 0.2 }
         }
@@ -378,10 +381,10 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     const itemVariants = {
         hidden: { opacity: 0, y: 20 },
-        visible: { 
-            opacity: 1, 
+        visible: {
+            opacity: 1,
             y: 0,
-            transition: { 
+            transition: {
                 type: "spring",
                 stiffness: 260,
                 damping: 20
@@ -389,28 +392,20 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         }
     };
 
-    const section1Fields = [
+    const formFields = [
         { name: 'employee_name', label: 'Employee Name', type: 'text', placeholder: 'Enter employee name', icon: 'user', readOnly: true },
-       { name: 'booking_date', label: 'Booking Date', type: 'date' },
-        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true }, 
+        { name: 'booking_date', label: 'Booking Date', type: 'date' },
+        { name: 'entry', label: 'Entry', type: 'text', placeholder: '', icon: 'hashtag', readOnly: true },
         { name: 'customer_add', label: 'Customer Address', type: 'text', placeholder: 'Enter customer address', icon: 'address-card' },
         { name: 'reference', label: 'Reference', type: 'text', placeholder: 'Enter reference', icon: 'tag' },
         { name: 'profession_key', label: 'Profession Key', type: 'text', placeholder: 'Enter Profession key', icon: 'plane' },
-    ];
-
-    const section2Fields = [
         { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
         { name: 'passengerDob', label: 'Date of Birth', type: 'date', placeholder: 'Select date of birth', icon: 'calendar' },
-        // { name: 'passengerNationality', label: 'Nationality', type: 'text', placeholder: 'Enter nationality', icon: 'flag' },
         { name: 'documentType', label: 'Document Type', type: 'select', options: ['Passport'], placeholder: 'Select document type', icon: 'id-card' },
         { name: 'documentNo', label: 'Passport No', type: 'text', placeholder: 'Enter document number', icon: 'passport' },
         { name: 'documentExpiry', label: 'Expiry Date', type: 'date', placeholder: 'Select expiry date', icon: 'calendar-times' },
-        // { name: 'documentIssueCountry', label: 'Issue Country', type: 'text', placeholder: 'Enter issue country', icon: 'globe' },
-    ];
-
-    const section3Fields = [
         { name: 'receivable_amount', label: 'Total Receivable Amount', type: 'number', placeholder: 'Enter total receivable amount', icon: 'hand-holding-usd', readOnly: !!editEntry },
         { name: 'paid_cash', label: 'Paid Cash', type: 'number', placeholder: 'Enter paid cash', icon: 'money-bill-wave', readOnly: !!editEntry },
         { name: 'paid_from_bank', label: 'Bank Title', type: 'select', options: bankOptions.map(option => option.label), placeholder: 'Select bank title', icon: 'university' },
@@ -419,9 +414,10 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'payed_to_bank', label: 'Payed To Bank', type: 'number', placeholder: 'Enter amount paid to bank', icon: 'university', readOnly: !!editEntry },
         { name: 'profit', label: 'Profit', type: 'number', placeholder: 'Auto-calculated', icon: 'chart-line', readOnly: true },
         { name: 'remaining_amount', label: 'Remaining Amount', type: 'number', placeholder: 'Auto-calculated', icon: 'balance-scale', readOnly: true },
+        { name: 'remaining_date', label: 'Remaining Date', type: 'date', placeholder: '', icon: 'calendar-times' },
+
         { name: 'payFromBankCard', label: 'Pay from Bank Card', type: 'select', options: cardBankOptions.map(opt => opt.label), placeholder: 'Select bank card', icon: 'credit-card' },
         { name: 'card_amount', label: 'Card Amount', type: 'number', placeholder: 'Enter Card Amount', icon: 'dollar-sign' },
-   
     ];
 
     const renderField = (field) => (
@@ -474,21 +470,6 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 </div>
             </div>
 
-            <div className="px-8 pt-6">
-                <div className="flex justify-between mb-8">
-                    {[1, 2, 3].map((step) => (
-                        <button key={step} onClick={() => setActiveSection(step)} className={`flex-1 ${step === activeSection ? 'text-purple-600' : 'text-gray-400'}`}>
-                            <div className="flex flex-col items-center">
-                                <div className={`w-10 h-10 rounded-full mb-2 flex items-center justify-center ${step === activeSection ? 'bg-purple-100' : 'bg-gray-100'}`}>
-                                    {step < activeSection ? '✓' : <span className="font-medium">{step}</span>}
-                                </div>
-                                <span className="text-sm">{step === 1 ? 'Basic Info' : step === 2 ? 'Passport Details' : 'Payment Details'}</span>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             <div className="px-8 pb-8">
                 <Formik
                     initialValues={formInitialValues}
@@ -500,15 +481,12 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         <Form>
                             <AutoCalculate />
                             <motion.div
-                                key={`section-${activeSection}`}
                                 variants={formVariants}
                                 initial="hidden"
                                 animate="visible"
                                 className="grid grid-cols-1 md:grid-cols-2 gap-x-6"
                             >
-                                {activeSection === 1 && section1Fields.map(renderField)}
-                                {activeSection === 2 && section2Fields.map(renderField)}
-                                {activeSection === 3 && section3Fields.map(renderField)}
+                                {formFields.map(renderField)}
                             </motion.div>
 
                             {errors.general && (
@@ -517,29 +495,15 @@ const Navtcc_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 </div>
                             )}
 
-                            <div className="flex justify-between mt-8 pt-4 border-t">
-                                <div>
-                                    {activeSection > 1 && (
-                                        <button type="button" onClick={() => setActiveSection(activeSection - 1)} className="px-4 py-2 text-indigo-600">
-                                            Back
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="flex justify-end mt-8 pt-4 border-t">
                                 <div className="flex space-x-3">
                                     <button type="button" onClick={onCancel} className="px-5 py-2 border rounded-lg text-gray-700 hover:bg-gray-50" disabled={isSubmitting}>
                                         Cancel
                                     </button>
-                                    {activeSection < 3 && (
-                                        <button type="button" onClick={() => setActiveSection(activeSection + 1)} className="px-5 py-2 bg-indigo-600 text-white rounded-lg">
-                                            Next
-                                        </button>
-                                    )}
-                                    {activeSection === 3 && (
-                                        <button type="submit" className="px-5 py-2 bg-purple-600 text-white rounded-lg" disabled={isSubmitting}>
-                                            {isSubmitting && <ButtonSpinner />}
-                                            {editEntry ? 'Update' : 'Submit'}
-                                        </button>
-                                    )}
+                                    <button type="submit" className="px-5 py-2 bg-purple-600 text-white rounded-lg" disabled={isSubmitting}>
+                                        {isSubmitting && <ButtonSpinner />}
+                                        {editEntry ? 'Update' : 'Submit'}
+                                    </button>
                                 </div>
                             </div>
                         </Form>
