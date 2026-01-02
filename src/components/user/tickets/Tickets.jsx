@@ -238,7 +238,15 @@ const Tickets = () => {
                 </div>
             )
         },
-
+        {
+            header: 'PRN ',
+            accessor: 'prn',
+            render: (cellValue, row) => (
+                <div className="uppercase">
+                    <div>{row?.prn || ''}</div>
+                </div>
+            )
+        },
         {
             header: 'SECTOR',
             accessor: 'sector',
@@ -377,8 +385,9 @@ const Tickets = () => {
             accessor: 'paid_cash_details',
             render: (cellValue, row) => (
                 <div>
-                    <div>{row.initial_paid_cash || '0'}</div>
-                    <div>{row.paid_cash - row.initial_paid_cash || '0'}</div>
+                    <div>Initial:{row.initial_paid_cash || '0'}</div>
+
+                    <div>Total: {row.paid_cash}</div>
                 </div>
             )
         },

@@ -184,14 +184,25 @@ const GamcaToken = () => {
         { header: 'AGENT NAME', accessor: 'agent_name' },
         { header: 'EXPIRY DATE', accessor: 'documentExpiry' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
-        { header: 'PAID CASH', accessor: 'paid_cash' },
+        {
+            header: 'PAID CASH',
+            accessor: 'paid_cash_details',
+            render: (cellValue, row) => (
+                <div>
+                    <div>Initial:{row.initial_paid_cash || '0'}</div>
+
+                    <div>Total: {row.paid_cash}</div>
+                </div>
+            )
+        },
         {
             header: 'PAID FROM & IN BANK',
             accessor: 'paid_bank',
             render: (cellValue, row) => (
                 <div>
-                    <div>{row?.paid_from_bank || ''}</div>
-                    <div>{row?.paid_in_bank || ''}</div>
+                   <div>{row?.bank_title || ''}</div>
+                    <div>Initial: {row.initial_paid_in_bank || row.paid_in_bank}</div>
+                    <div>Total: {row.paid_in_bank}</div>
                 </div>
             )
         },

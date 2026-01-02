@@ -91,12 +91,12 @@ const Services = () => {
             render: (cellValue, row) => (
                 <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${row.status === 'Processing'
-                            ? 'bg-red-100 text-red-500'
-                            : row.status === 'Complete'
-                                ? 'bg-green-100 text-green-500'
-                                : row.status === 'Deliver'
-                                    ? 'bg-blue-100 text-blue-500'
-                                    : 'bg-gray-100 text-gray-500'
+                        ? 'bg-red-100 text-red-500'
+                        : row.status === 'Complete'
+                            ? 'bg-green-100 text-green-500'
+                            : row.status === 'Deliver'
+                                ? 'bg-blue-100 text-blue-500'
+                                : 'bg-gray-100 text-gray-500'
                         }`}
                 >
                     {row.status || 'N/A'}
@@ -119,8 +119,27 @@ const Services = () => {
             )
         },
         { header: 'AGENT NAME', accessor: 'agent_name' },
-        { header: 'PAID CASH', accessor: 'paid_cash' },
-        { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
+        {
+            header: 'PAID CASH',
+            accessor: 'paid_cash_details',
+            render: (cellValue, row) => (
+                <div>
+                    <div>Initial: {row.initial_paid_cash || '0'}</div>
+                    <div>Total: {row.paid_cash || '0'}</div>
+                </div>
+            )
+        },
+        {
+            header: 'BANK & PAID IN BANK',
+            accessor: 'bank_paid',
+            render: (cellValue, row) => (
+                <div>
+                    <div>{row?.paid_from_bank || ''}</div>
+                    <div>Initial: {row.initial_paid_in_bank || row.paid_in_bank}</div>
+                    <div>Total: {row.paid_in_bank}</div>
+                </div>
+            )
+        },
         { header: 'PROFIT', accessor: 'profit' },
         {
             header: 'REMAINING AMOUNT',

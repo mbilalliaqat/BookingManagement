@@ -92,7 +92,8 @@ const Other_Cp = () => {
                 };
             });
 
-            setEntries(formattedData.reverse());
+            const sortedData = formattedData.sort((a, b) => new Date(b.created_at_raw) - new Date(a.created_at_raw));
+            setEntries(sortedData);
 
             if (formattedData.length === 0) {
                 console.log('No Other CP entries found in the response');
@@ -173,8 +174,8 @@ const Other_Cp = () => {
             accessor: 'paid_cash_details',
             render: (cellValue, row) => (
                 <div>
-                    <div>{row.initial_paid_cash || '0'}</div>
-                    <div>{(row.paid_cash - row.initial_paid_cash) || '0'}</div>
+                    <div>Initial: {row.initial_paid_cash || '0'}</div>
+                    <div>Total: {row.paid_cash || '0'}</div>
                 </div>
             )
         },

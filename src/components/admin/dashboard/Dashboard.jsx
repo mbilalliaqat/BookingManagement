@@ -71,6 +71,7 @@ export default function Dashboard() {
     totalExpenseWithdraw: 0,
     totalRefundedWithdraw: 0,
     totalVendorWithdraw: 0,
+    totalENumberWithdraw: 0,
     TotalWithdraw: 0,
     cashInOffice: 0,
     accounts: [],
@@ -97,7 +98,7 @@ export default function Dashboard() {
 
   const [errors, setErrors] = useState({
     dashboard: null, umrah: null, tickets: null, visa: null, gamcaToken: null, services: null,
-    navtcc: null, protector: null, expenses: null, refunded: null, vendor: null, agent: null, accounts: null, otherCp: null,
+    navtcc: null, protector: null, expenses: null, refunded: null, vendor: null, agent: null, accounts: null, otherCp: null, eNumber: null,
   });
 
   const handleMouseEnter = (cardName) => {
@@ -275,6 +276,12 @@ export default function Dashboard() {
         });
         break;
 
+      case 'E-Number':
+        navigate('/admin/e-number', {
+          state: { highlightEntry: entryNumber }
+        });
+        break;
+
       default:
         console.log('Unknown booking type:', booking.type);
     }
@@ -415,7 +422,7 @@ export default function Dashboard() {
       try {
         const [
           dashboardStats, umrahData, ticketsData, visaData, gamcaTokenData, servicesData,
-          navtccData, protectorData, expensesData, refundedData, venderData, agentData, otherCpData,
+          navtccData, protectorData, expensesData, refundedData, venderData, agentData, otherCpData, eNumberData,
         ] = await Promise.all([
           fetchWithCache('/dashboard').catch(err => {
             setErrors(prev => ({ ...prev, dashboard: 'Failed to load dashboard summary' }));
@@ -468,6 +475,10 @@ export default function Dashboard() {
           fetchWithCache('/other-cp').catch(err => {
             setErrors(prev => ({ ...prev, otherCp: 'Failed to load Other CP data' }));
             return { otherCpEntries: [] };
+          }),
+          fetchWithCache('/e-numbers').catch(err => {
+            setErrors(prev => ({ ...prev, eNumber: 'Failed to load E-Number data' }));
+            return { eNumbers: [] };
           }),
         ]);
 
@@ -559,20 +570,24 @@ export default function Dashboard() {
           } catch (e) {
             console.error("Error parsing Umrah passenger details:", e);
           }
+          const receivableAmount = parseFloat(umrah.receivableAmount) || 0;
+          const initialPaidCash = parseFloat(umrah.initial_paid_cash) || 0;
+          const initialPaidInBank = parseFloat(umrah.initial_paid_in_bank) || 0;
+          const remainingAmount = receivableAmount - initialPaidCash - initialPaidInBank;
 
           return {
             type: 'Umrah',
             employee_name: umrah.userName,
-            receivable_amount: umrah.receivableAmount,
+            receivable_amount: receivableAmount,
             entry: umrah.entry,
-            paid_cash: umrah.initial_paid_cash,
-            paid_in_bank: umrah.initial_paid_in_bank,
-            remaining_amount: umrah.initial_remaining_amount,
+            paid_cash: initialPaidCash,
+            paid_in_bank: initialPaidInBank,
+            remaining_amount: remainingAmount,
             booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt),
             timestamp: safeTimestamp(umrah.createdAt),
             withdraw: 0,
             passengerName: firstPassengerName || umrah.customerAdd || null,
-            profit: umrah.profit,
+            profit: parseFloat(umrah.profit) || 0,
           };
         });
 
@@ -624,7 +639,7 @@ export default function Dashboard() {
             entry: payment.umrah_entry,
             paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
             paid_in_bank: parseFloat(payment.paid_bank || 0),
-            remaining_amount: payment.remaining_amount,
+            remaining_amount: parseFloat(payment.remaining_amount || 0),
             booking_date: safeLocaleDateString(payment.payment_date),
             timestamp: safeTimestamp(payment.created_at),
             withdraw: 0,
@@ -720,7 +735,7 @@ export default function Dashboard() {
             entry: payment.ticket_entry,
             paid_cash: parseFloat(payment.payed_cash || payment.payment_amount || 0),
             paid_in_bank: parseFloat(payment.paid_bank || 0),
-            remaining_amount: payment.remaining_amount,
+            remaining_amount: parseFloat(payment.remaining_amount || 0),
             booking_date: safeLocaleDateString(payment.payment_date),
             timestamp: safeTimestamp(payment.created_at),
             withdraw: 0,
@@ -790,7 +805,7 @@ export default function Dashboard() {
             entry: payment.visa_entry,
             paid_cash: parseFloat(payment.payed_cash || 0),
             paid_in_bank: parseFloat(payment.paid_bank || 0),
-            remaining_amount: 0,
+            remaining_amount: parseFloat(payment.remaining_amount || 0),
             booking_date: safeLocaleDateString(payment.payment_date),
             timestamp: safeTimestamp(payment.created_at),
             withdraw: 0,
@@ -860,7 +875,7 @@ export default function Dashboard() {
             entry: payment.gamca_entry,
             paid_cash: parseFloat(payment.payed_cash || 0),
             paid_in_bank: parseFloat(payment.paid_bank || 0),
-            remaining_amount: 0,
+            remaining_amount: parseFloat(payment.remaining_amount || 0),
             booking_date: safeLocaleDateString(payment.payment_date),
             timestamp: safeTimestamp(payment.created_at),
             withdraw: 0,
@@ -898,7 +913,7 @@ export default function Dashboard() {
             entry: payment.other_cp_entry,
             paid_cash: parseFloat(payment.payed_cash || 0),
             paid_in_bank: parseFloat(payment.paid_bank || 0),
-            remaining_amount: payment.remaining_amount,
+            remaining_amount: parseFloat(payment.remaining_amount || 0),
             booking_date: safeLocaleDateString(payment.payment_date),
             timestamp: safeTimestamp(payment.created_at),
             withdraw: 0,
@@ -1025,11 +1040,26 @@ export default function Dashboard() {
           profit: ocp.profit,
         }));
 
+        const eNumberBookings = (eNumberData.eNumbers || []).map(eNumber => ({
+          type: 'E-Number',
+          employee_name: eNumber.employee || 'N/A',
+          entry: eNumber.entry_no || 'N/A',
+          receivable_amount: 0,
+          paid_cash: 0,
+          paid_in_bank: 0,
+          remaining_amount: 0,
+          booking_date: safeLocaleDateString(eNumber.created_at),
+          timestamp: safeTimestamp(eNumber.created_at),
+          withdraw: 0,
+          passengerName: [eNumber.file_no, `${eNumber.name || ''}/ ${eNumber.reference || ''}`.trim()].filter(v => v).join(' / '),
+          profit: 0,
+        }));
+
         const combinedBookingsRaw = [
           ...umrahBookings, ...ticketBookings, ...ticketPaymentEntries, ...visaBookings,
           ...gamcaTokenBookings, ...servicesBookings, ...umrahPaymentEntries, ...visaPaymentEntries,
           ...navtccBookings, ...protectorBookings, ...expensesBookings, ...refundedBookings,
-          ...gamcaTokenPaymentEntries, ...otherCpBookings, ...otherCpPaymentEntries,
+          ...gamcaTokenPaymentEntries, ...otherCpBookings, ...otherCpPaymentEntries, ...eNumberBookings,
         ];
 
         const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));
@@ -1057,7 +1087,8 @@ export default function Dashboard() {
         const totalExpensesWithdraw = expensesBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
         const totalRefundedWithdraw = refundedBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
         const totalVendorWithdraw = venderBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
-        const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw;
+        const totalENumberWithdraw = eNumberBookings.reduce((sum, entry) => sum + entry.withdraw, 0);
+        const TotalWithdraw = totalProtectorWithdraw + totalExpensesWithdraw + totalRefundedWithdraw + totalVendorWithdraw + totalENumberWithdraw;
 
         const newData = {
           combinedBookings: finalCombinedBookings,
@@ -1068,6 +1099,7 @@ export default function Dashboard() {
           totalExpenseWithdraw: totalExpensesWithdraw,
           totalRefundedWithdraw: totalRefundedWithdraw,
           totalVendorWithdraw: totalVendorWithdraw,
+          totalENumberWithdraw: totalENumberWithdraw,
           TotalWithdraw: TotalWithdraw,
           cashInOffice: runningCashInOffice,
           accounts: accountsData,
@@ -1677,37 +1709,37 @@ export default function Dashboard() {
                 <>
                   {currentTableData.map((booking, index) => (
                     <tr key={index} className="hover:bg-indigo-50 transition-colors duration-150">
-                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate max-w-xs" title={booking.booking_date}>
                         {booking.booking_date}
                       </td>
                       <td
-                        className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate cursor-pointer hover:text-indigo-600 hover:underline"
+                        className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate cursor-pointer hover:text-indigo-600 hover:underline max-w-xs"
                         title={booking.entry}
                         onClick={() => handleEntryClick(booking)}
                       >
                         {booking.entry ? booking.entry : <span className="text-slate-400">--</span>}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] font-bold font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] font-bold font-large truncate max-w-xs" title={booking.type}>
                         <span className="px-1 py-0.5 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 text-[0.70rem] font-semibold">
                           {booking.type}
                         </span>
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate max-w-xs" title={booking.passengerName || booking.employee_name || '--'}>
                         {booking.passengerName || booking.employee_name || '--'}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] text-emerald-600 font-bold font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-emerald-600 font-bold font-large truncate max-w-xs" title={booking.receivable_amount.toLocaleString()}>
                         {booking.receivable_amount.toLocaleString()}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] text-teal-600 font-bold font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-teal-600 font-bold font-large truncate max-w-xs" title={booking.paid_cash.toLocaleString()}>
                         {booking.paid_cash.toLocaleString()}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] text-cyan-600 font-bold font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-cyan-600 font-bold font-large truncate max-w-xs" title={booking.paid_in_bank.toLocaleString()}>
                         {booking.paid_in_bank.toLocaleString()}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] text-amber-600 font-bold font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-amber-600 font-bold font-large truncate max-w-xs" title={booking.remaining_amount.toLocaleString()}>
                         {(() => {
                           // Get the entry number without the (Payment) suffix
-                          const baseEntry = booking.entry.replace(' (Payment)', '');
+                          const baseEntry = (booking.entry || '').replace(' (Payment)', '');
 
                           // Find all entries (original + payments) with the same entry number
                           const allRelatedEntries = currentTableData.filter(
@@ -1743,10 +1775,10 @@ export default function Dashboard() {
                           }
                         })()}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-bold font-large truncate max-w-xs" title={booking.withdraw.toLocaleString()}>
                         {booking.withdraw.toLocaleString()}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] text-indigo-600 font-bold font-large truncate">
+                      <td className="px-1 py-2 text-[0.70rem] text-indigo-600 font-bold font-large truncate max-w-xs" title={booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : '--'}>
                         {booking.cash_in_office_running !== undefined ? booking.cash_in_office_running.toLocaleString() : <span className="text-slate-400">--</span>}
                       </td>
                     </tr>

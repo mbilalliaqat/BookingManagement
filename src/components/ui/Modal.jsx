@@ -2,14 +2,14 @@
 
 import React from 'react';
 
-const Modal = ({ isOpen, onClose, title, children, actions, width }) => {
+const Modal = ({ isOpen, onClose, title, children, actions, width, zIndex = 'z-50' }) => {
   if (!isOpen) return null;
 
   // Determine the width class based on the prop
   const widthClass = width ? `max-w-${width}` : 'max-w-md';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto bg-gray-600 bg-opacity-70">
+    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center overflow-x-hidden overflow-y-auto bg-gray-600 bg-opacity-70`}>
       <div className={`relative w-full ${widthClass} mx-auto bg-[#161925] rounded-lg shadow-lg`}>
         <button
           onClick={onClose}

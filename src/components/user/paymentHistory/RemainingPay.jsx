@@ -235,35 +235,55 @@ const addAgentEntry = async () => {
             console.log('TicketDetails in addBankAccountEntry:', ticketDetails);
             console.log('TicketId:', ticketId);
 
-            // If ticketDetails is not available, fetch it from the tickets list
-            let customerInfo = 'N/A';
-            let referenceInfo = 'N/A';
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                return new Date(dateStr).toISOString().split('T')[0];
+            };
 
-            if (!ticketDetails) {
-                // Fetch all tickets and find the one we need
+            // If ticketDetails is not available, fetch it from the tickets list
+            let detailString = 'N/A';
+
+            const createDetailString = (ticket) => {
+                let passengerName = '';
+                try {
+                    const passengers = typeof ticket.passport_detail === 'string'
+                        ? JSON.parse(ticket.passport_detail)
+                        : ticket.passport_detail;
+
+                    if (passengers && passengers.length > 0) {
+                        passengerName = `${passengers[0]?.firstName || ''} ${passengers[0]?.lastName || ''}`.trim();
+                    }
+                } catch (e) {
+                    console.error('Error parsing passport_detail:', e);
+                }
+
+                return [
+                    passengerName,
+                    ticket.reference || '',
+                    ticket.agent_name || '',
+                    ticket.sector || 'N/A',
+                    ticket.airline || 'N/A',
+                    formatDate(ticket.depart_date),
+                    formatDate(ticket.return_date)
+                ].filter(Boolean).join(', ');
+            };
+
+            if (ticketDetails) {
+                detailString = createDetailString(ticketDetails);
+            } else {
+                // Fallback if ticketDetails is not available
                 try {
                     const response = await axios.get(`${BASE_URL}/ticket`);
-                    console.log('All tickets response:', response.data);
-
                     if (response.data && response.data.ticket) {
-                        // Find the specific ticket by ID
-                        const specificTicket = response.data.ticket.find(ticket => ticket.id === ticketId);
-                        console.log('Found specific ticket:', specificTicket);
-
+                        const specificTicket = response.data.ticket.find(t => t.id === ticketId);
                         if (specificTicket) {
-                            customerInfo = specificTicket.customer_add || 'N/A';
-                            referenceInfo = specificTicket.reference || 'N/A';
+                            detailString = createDetailString(specificTicket);
                         }
                     }
                 } catch (error) {
                     console.error('Error fetching tickets for bank entry:', error);
                 }
-            } else {
-                customerInfo = ticketDetails.customer_add || 'N/A';
-                referenceInfo = ticketDetails.reference || 'N/A';
             }
-
-            const detailString = `Customer: ${customerInfo}, Ref: ${referenceInfo}, Recorded by: ${newPayment.recorded_by}`;
 
             const officeAccountData = {
                 bank_name: newPayment.bank_title,

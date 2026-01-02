@@ -4,20 +4,17 @@ import ButtonSpinner from '../../ui/ButtonSpinner';
 import { useAppContext } from '../../contexts/AppContext';
 import { fetchEntryCounts } from '../../ui/api';
 
-const SEPARATOR = '|';               // <-- change if you need another separator
+const SEPARATOR = '|';
+
 const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
   const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
   const { user } = useAppContext();
 
-  /* ------------------------------------------------------------------ */
-  /*  1. ENTRY COUNTERS                                                 */
-  /* ------------------------------------------------------------------ */
+  /* ENTRY COUNTERS */
   const [entryNumber, setEntryNumber] = useState(0);
   const [totalEntries, setTotalEntries] = useState(0);
 
-  /* ------------------------------------------------------------------ */
-  /*  2. MAIN PERSON (single object – will be merged later)            */
-  /* ------------------------------------------------------------------ */
+  /* MAIN PERSON */
   const [main, setMain] = useState({
     name: '',
     passport: '',
@@ -33,14 +30,10 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     entry: '0/0',
   });
 
-  /* ------------------------------------------------------------------ */
-  /*  3. ADDITIONAL PEOPLE (array of objects)                           */
-  /* ------------------------------------------------------------------ */
+  /* ADDITIONAL PEOPLE */
   const [additionalPeople, setAdditionalPeople] = useState([]);
 
-  /* ------------------------------------------------------------------ */
-  /*  4. ERRORS                                                         */
-  /* ------------------------------------------------------------------ */
+  /* ERRORS */
   const [errors, setErrors] = useState({
     name: '',
     passport: '',
@@ -57,11 +50,9 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  /* ------------------------------------------------------------------ */
-  /*  5. HELPERS – merge / split                                        */
-  /* ------------------------------------------------------------------ */
+  /* HELPERS */
   const mergePeople = () => {
-    const all = [main, ...additionalPeople].filter(p => p.name); // ignore empty rows
+    const all = [main, ...additionalPeople].filter(p => p.name);
     const merged = {
       name: all.map(p => p.name).join(SEPARATOR),
       passport: all.map(p => p.passport).join(SEPARATOR),
@@ -74,34 +65,61 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
   const splitPeople = (str) => (str ? str.split(SEPARATOR).filter(Boolean) : []);
 
-  /* ------------------------------------------------------------------ */
-  /*  6. CALCULATE WITHDRAW                                             */
-  /* ------------------------------------------------------------------ */
+  /* CALCULATE WITHDRAW */
   useEffect(() => {
     const extra = parseInt(main.additional_charges) || 0;
-    const base = 13200;
-    const perExtra = additionalPeople.length * 13200;
-    const withdraw = base + extra + perExtra;
-    setMain((p) => ({ ...p, withdraw: withdraw.toString() }));
-    console.log('WITHDRAW →', { base, extra, perExtra, withdraw });
-  }, [main.additional_charges, additionalPeople.length]);
 
-  /* ------------------------------------------------------------------ */
-  /*  7. FETCH ENTRY COUNTS                                             */
-  /* ------------------------------------------------------------------ */
+    let fees = 0;
+    if (main.mcb_fee_6000_date) fees += 6000;
+    if (main.ncb_fee_6700_date) fees += 6700;
+    if (main.ncb_fee_500_date) fees += 500;
+
+    const perExtra = additionalPeople.length * 13200;
+    const withdraw = fees + extra + perExtra;
+    setMain((p) => ({ ...p, withdraw: withdraw.toString() }));
+    console.log('WITHDRAW →', { fees, extra, perExtra, withdraw });
+  }, [
+    main.mcb_fee_6000_date,
+    main.ncb_fee_6700_date,
+    main.ncb_fee_500_date,
+    main.additional_charges,
+    additionalPeople.length,
+  ]);
+
+  /* FETCH ENTRY COUNTS */
   useEffect(() => {
     const getCounts = async () => {
-      const counts = await fetchEntryCounts();
-      if (counts) {
-        const protector = counts.find((c) => c.form_type === 'protector');
-        if (protector) {
-          setEntryNumber(protector.current_count + 1);
-          setTotalEntries(protector.global_count + 1);
+      try {
+        const counts = await fetchEntryCounts();
+        console.log('Fetched counts:', counts);
+        
+        if (counts) {
+          const protector = counts.find((c) => c.form_type === 'protector');
+          if (protector) {
+            const newEntryNum = protector.current_count + 1;
+            const newTotalNum = protector.global_count + 1;
+            
+            setEntryNumber(newEntryNum);
+            setTotalEntries(newTotalNum);
+            
+            console.log('Protector counts:', {
+              current: protector.current_count,
+              global: protector.global_count,
+              newEntry: newEntryNum,
+              newTotal: newTotalNum
+            });
+          } else {
+            console.warn('Protector entry not found in counts');
+            setEntryNumber(1);
+            setTotalEntries(1);
+          }
         } else {
+          console.warn('No counts returned');
           setEntryNumber(1);
           setTotalEntries(1);
         }
-      } else {
+      } catch (error) {
+        console.error('Error fetching counts:', error);
         setEntryNumber(1);
         setTotalEntries(1);
       }
@@ -109,9 +127,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     getCounts();
   }, []);
 
-  /* ------------------------------------------------------------------ */
-  /*  8. UPDATE ENTRY FIELD (new form)                                 */
-  /* ------------------------------------------------------------------ */
+  /* UPDATE ENTRY FIELD */
   useEffect(() => {
     if (!editEntry) {
       setMain((p) => ({
@@ -119,12 +135,11 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         employee: user?.username || '',
         entry: `PR ${entryNumber}/${totalEntries}`,
       }));
+      console.log('Entry updated:', `PR ${entryNumber}/${totalEntries}`);
     }
   }, [entryNumber, totalEntries, user, editEntry]);
 
-  /* ------------------------------------------------------------------ */
-  /*  9. EDIT MODE – split pipe-separated strings back into array      */
-  /* ------------------------------------------------------------------ */
+  /* EDIT MODE */
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return '';
     const m = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -137,13 +152,11 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     if (editEntry) {
       console.log('EDIT MODE – raw data →', editEntry);
 
-      // ---- MAIN (first person) ----
       const names = splitPeople(editEntry.name);
       const passports = splitPeople(editEntry.passport);
       const references = splitPeople(editEntry.reference);
       const fileNos = splitPeople(editEntry.file_no);
 
-      // Take first as main, the rest as additional
       setMain({
         name: names[0] || '',
         passport: passports[0] || '',
@@ -159,7 +172,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         entry: editEntry.entry || `PR ${entryNumber}/${totalEntries}`,
       });
 
-      // ---- ADDITIONAL PEOPLE ----
       const extra = [];
       const max = Math.max(names.length, passports.length, references.length, fileNos.length);
       for (let i = 1; i < max; i++) {
@@ -171,20 +183,17 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         });
       }
       setAdditionalPeople(extra);
-      console.log('SPLIT → main:', main, 'additional:', extra);
 
-      // ---- ENTRY NUMBERS ----
       if (editEntry.entry) {
-        const [cur, tot] = editEntry.entry.split('/').map(Number);
-        setEntryNumber(cur);
-        setTotalEntries(tot);
+        const cleanEntry = editEntry.entry.replace(/[^\d\/]/g, '');
+        const [cur, tot] = cleanEntry.split('/').map(Number);
+        if (!isNaN(cur)) setEntryNumber(cur);
+        if (!isNaN(tot)) setTotalEntries(tot);
       }
     }
-  }, [editEntry, user?.username, entryNumber, totalEntries]);
+  }, [editEntry, user?.username]);
 
-  /* ------------------------------------------------------------------ */
-  /* 10. HANDLERS                                                       */
-  /* ------------------------------------------------------------------ */
+  /* HANDLERS */
   const handleMainChange = (e) => {
     const { name, value } = e.target;
     setMain((p) => ({ ...p, [name]: value }));
@@ -195,7 +204,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const copy = [...additionalPeople];
     copy[idx] = { ...copy[idx], [field]: value };
     setAdditionalPeople(copy);
-    console.log(`Person ${idx + 2} – ${field} →`, value);
   };
 
   const addPerson = () => {
@@ -203,33 +211,22 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
       ...p,
       { name: '', passport: '', reference: '', file_no: '' },
     ]);
-    console.log('ADDED extra person → new length:', additionalPeople.length + 1);
   };
 
   const removePerson = (idx) => {
     setAdditionalPeople((p) => p.filter((_, i) => i !== idx));
-    console.log('REMOVED person at index', idx);
   };
 
-  /* ------------------------------------------------------------------ */
-  /* 11. VALIDATION                                                     */
-  /* ------------------------------------------------------------------ */
+  /* VALIDATION */
   const validate = () => {
     const err = {};
 
-    // ---- MAIN ----
     if (!main.name) err.name = 'Enter Name';
     if (!main.passport) err.passport = 'Enter Passport';
     if (!main.reference) err.reference = 'Enter Reference';
     if (!main.file_no) err.file_no = 'Enter File No';
     if (!main.employee) err.employee = 'Enter Employee';
-    if (!main.mcb_fee_6000_date) err.mcb_fee_6000_date = 'Enter Date';
-    if (!main.ncb_fee_6700_date) err.ncb_fee_6700_date = 'Enter Date';
-    if (!main.ncb_fee_500_date) err.ncb_fee_500_date = 'Enter Date';
-    if (!main.protector_date) err.protector_date = 'Enter Protector Date';
-    if (!main.additional_charges) err.additional_charges = 'Enter Additional Charges';
 
-    // ---- DATES ----
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     const checkDate = (val, field) => {
       if (!val) return;
@@ -244,14 +241,11 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
       }
       return true;
     };
-    [
-      'mcb_fee_6000_date',
-      'ncb_fee_6700_date',
-      'ncb_fee_500_date',
-      'protector_date',
-    ].forEach((f) => checkDate(main[f], f));
+    
+    ['mcb_fee_6000_date', 'ncb_fee_6700_date', 'ncb_fee_500_date', 'protector_date'].forEach((f) => 
+      checkDate(main[f], f)
+    );
 
-    // ---- ADDITIONAL PEOPLE ----
     additionalPeople.forEach((p, i) => {
       if (!p.name) err[`add_name_${i}`] = `Person ${i + 2}: Name required`;
       if (!p.passport) err[`add_passport_${i}`] = `Person ${i + 2}: Passport required`;
@@ -264,9 +258,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     return Object.keys(err).length === 0;
   };
 
-  /* ------------------------------------------------------------------ */
-  /* 12. SUBMIT – merge everything into the same columns                */
-  /* ------------------------------------------------------------------ */
+  /* SUBMIT */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -276,16 +268,19 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const merged = mergePeople();
 
     const payload = {
-      ...main,                     // dates, employee, entry, etc.
+      ...main,
       name: merged.name,
       passport: merged.passport,
       reference: merged.reference,
       file_no: merged.file_no,
       additional_charges: parseInt(main.additional_charges) || 0,
-      // **NO** additional_people field – everything is now in the main columns
+      mcb_fee_6000_date: main.mcb_fee_6000_date || null,
+      ncb_fee_6700_date: main.ncb_fee_6700_date || null,
+      ncb_fee_500_date: main.ncb_fee_500_date || null,
+      protector_date: main.protector_date || null,
     };
 
-    console.log('FINAL PAYLOAD (merged into main columns) →', payload);
+    console.log('FINAL PAYLOAD →', payload);
 
     try {
       const url = editEntry
@@ -307,7 +302,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
       const json = await res.json();
       console.log('SERVER RESPONSE →', json);
 
-      // ---- RESET ----
+      // Reset form
       setMain({
         name: '',
         passport: '',
@@ -320,9 +315,10 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ncb_fee_500_date: '',
         protector_date: '',
         additional_charges: '',
-        entry: `PR ${entryNumber}/${totalEntries}`,
+        entry: `PR ${entryNumber + 1}/${totalEntries + 1}`,
       });
       setAdditionalPeople([]);
+      setErrors({});
 
       onSubmitSuccess?.(json);
     } catch (err) {
@@ -333,13 +329,10 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     }
   };
 
-  /* ------------------------------------------------------------------ */
-  /* 13. RENDER                                                         */
-  /* ------------------------------------------------------------------ */
+  /* RENDER */
   return (
     <div className="flex items-center justify-center bg-white p-4 min-h-screen">
       <div className="w-full max-w-3xl p-8 bg-white rounded-md shadow-lg">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="relative inline-block text-2xl font-semibold">
             PROTECTOR FORM
@@ -351,9 +344,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* ---------- MAIN FIELDS ---------- */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Employee */}
             <div>
               <label className="block font-medium mb-1">Employee</label>
               <input
@@ -367,7 +358,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
               {errors.employee && <span className="text-red-500 text-sm">{errors.employee}</span>}
             </div>
 
-            {/* Entry */}
             <div>
               <label className="block font-medium mb-1">Entry</label>
               <input
@@ -378,7 +368,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
               />
             </div>
 
-            {/* Name, Passport, Reference, File No (MAIN) */}
             {['name', 'passport', 'reference', 'file_no'].map((field) => (
               <div key={field}>
                 <label className="block font-medium mb-1 capitalize">
@@ -395,7 +384,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
               </div>
             ))}
 
-            {/* Withdraw */}
             <div>
               <label className="block font-medium mb-1">Withdraw</label>
               <input
@@ -406,7 +394,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
               />
             </div>
 
-            {/* Dates */}
             {[
               { key: 'mcb_fee_6000_date', label: 'MCB FEE / 6000 DATE' },
               { key: 'ncb_fee_6700_date', label: 'NCB FEE / 6700 DATE' },
@@ -426,7 +413,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
               </div>
             ))}
 
-            {/* Additional Charges */}
             <div>
               <label className="block font-medium mb-1">Additional Charges</label>
               <input
@@ -442,7 +428,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             </div>
           </div>
 
-          {/* ---------- ADDITIONAL PEOPLE ---------- */}
           <div className="mt-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Additional People</h3>
@@ -494,19 +479,16 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             ))}
           </div>
 
-          {/* ---------- GENERAL ERROR ---------- */}
           {errors.general && (
             <div className="text-red-500 text-center">{errors.general}</div>
           )}
 
-          {/* ---------- SUBMIT / CANCEL ---------- */}
           <div className="mt-10 flex justify-center gap-4">
             <button
               type="submit"
               disabled={isLoading}
-              className="px-8 py-3 bg-gray-300 text-black font-medium rounded-md hover:bg-gray-400 transition-all"
+              className="px-8 py-3 bg-gray-300 text-black font-medium rounded-md hover:bg-gray-400 transition-all disabled:opacity-50"
             >
-              
               {isLoading && <ButtonSpinner />}
               {editEntry ? 'Update' : 'Submit'}
             </button>
@@ -515,7 +497,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
               type="button"
               onClick={onCancel}
               disabled={isLoading}
-              className="px-8 py-3 bg-gray-300 text-black font-medium rounded-md hover:bg-gray-400 transition-all"
+              className="px-8 py-3 bg-gray-300 text-black font-medium rounded-md hover:bg-gray-400 transition-all disabled:opacity-50"
             >
               Cancel
             </button>

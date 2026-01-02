@@ -100,10 +100,20 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     useEffect(() => {
         if (editEntry) {
+            // Function to convert dd/mm/yyyy to yyyy-mm-dd
+            const formatDate = (dateString) => {
+                if (!dateString) return '';
+                const parts = dateString.split('/');
+                if (parts.length === 3) {
+                    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+                return dateString; // Return original if not in expected format
+            };
+
             setData({
                 user_name: editEntry.user_name || user?.username || '',
                 entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
-                date: editEntry.date ? new Date(editEntry.date).toISOString().split('T')[0] : '',
+                date: editEntry.date ? formatDate(editEntry.date) : '',
                 detail: editEntry.detail || '',
                 total_amount: editEntry.total_amount || '',
                 selection: editEntry.selection || '',

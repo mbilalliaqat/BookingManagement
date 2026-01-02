@@ -179,6 +179,7 @@ const Navtcc = () => {
             accessor: 'paid_in_bank_details',
             render: (cellValue, row) => (
                 <div>
+                    <div>{row?.bank_title || ''}</div>
                     <div>Initial: {row.initial_paid_in_bank || '0'}</div>
                     <div>Total: {row.paid_in_bank || '0'}</div>
                 </div>
