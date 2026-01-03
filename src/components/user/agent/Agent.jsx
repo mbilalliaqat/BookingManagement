@@ -244,8 +244,8 @@ const Agent = () => {
         { header: 'EMPLOYEE', accessor: 'employee' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'DETAIL', accessor: 'detail' },
-        { header: 'REMAINING', accessor: 'credit' },
-        { header: 'PAYED CASH', accessor: 'debit' },
+        // { header: 'REMAINING', accessor: 'credit' },
+        // { header: 'PAYED CASH', accessor: 'debit' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         { header: 'PAID CASH', accessor: 'paid_cash' },
         { header: 'PAID BANK', accessor: 'paid_bank' },
@@ -279,7 +279,7 @@ const Agent = () => {
     ], [user.role, loadingActionId, handleUpdate, openDeleteModal, selectedAgent, handleAgentClick]);
 
     return (
-        <div className='flex flex-col h-full'>
+        <div className='flex flex-col h-full uppercase'>
             {showForm ? (
                 <AgentForm
                     onCancel={handleCancel}

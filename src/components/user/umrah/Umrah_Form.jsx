@@ -387,7 +387,7 @@ const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendor
                 </div>
             )}
         </div>
-    );
+    ); 
 };
 
 const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
@@ -1023,12 +1023,13 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                                 {activeSection === 3 && (
                                     <>
                                         {section3Fields.map(field => renderField(field, values, setFieldValue))}
-                                        <VendorSelectionFields 
-                                            values={values} 
-                                            setFieldValue={setFieldValue} 
+                                        <VendorSelectionFields
+                                            values={values}
+                                            setFieldValue={setFieldValue}
                                             vendorNames={vendorNames}
                                             setIsVendorModalOpen={setIsVendorModalOpen}
                                             editEntry={editEntry}
+                                            user={user}
                                         />
                                     </>
                                 )}

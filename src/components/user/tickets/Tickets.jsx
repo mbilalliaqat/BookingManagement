@@ -239,7 +239,7 @@ const Tickets = () => {
             )
         },
         {
-            header: 'PRN ',
+            header: 'PNR ',
             accessor: 'prn',
             render: (cellValue, row) => (
                 <div className="uppercase">

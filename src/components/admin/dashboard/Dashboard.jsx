@@ -554,22 +554,37 @@ export default function Dashboard() {
         };
 
         const umrahBookings = umrahData.umrahBookings.map(umrah => {
-          let firstPassengerName = null;
-          try {
-            let parsedDetails = [];
-            if (typeof umrah.passportDetail === 'string') {
-              parsedDetails = JSON.parse(umrah.passportDetail);
-            } else if (Array.isArray(umrah.passportDetail)) {
-              parsedDetails = umrah.passportDetail;
+          let firstPassengerName = '';
+          let passengerCount = 0;
+          if (umrah.passportDetail) {
+            try {
+              const parsedDetails = JSON.parse(umrah.passportDetail);
+              if (Array.isArray(parsedDetails) && parsedDetails.length > 0) {
+                const firstPassenger = parsedDetails[0];
+                firstPassengerName = `${firstPassenger.given_name || ''} ${firstPassenger.sur_name || ''}`.trim();
+                passengerCount = parsedDetails.length;
+              }
+            } catch (e) {
+              console.error("Failed to parse passportDetail for Umrah:", umrah.passportDetail, e);
             }
-
-            if (parsedDetails.length > 0) {
-              const firstPassenger = parsedDetails[0];
-              firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
-            }
-          } catch (e) {
-            console.error("Error parsing Umrah passenger details:", e);
           }
+
+          const agentName = umrah.agent_name ? `(AG,${umrah.agent_name})` : '';
+          const passengerCountDisplay = passengerCount > 0 ? `(${passengerCount})` : '';
+
+          const departDateStr = umrah.depart_date ? safeLocaleDateString(umrah.depart_date) : null;
+          const returnDateStr = umrah.return_date ? safeLocaleDateString(umrah.return_date) : null;
+
+          const passengerNameDetails = [
+            agentName,
+            passengerCountDisplay,
+            firstPassengerName,
+            umrah.sector || '',
+            umrah.airline || '',
+            departDateStr,
+            returnDateStr,
+          ].filter(item => item && item !== '--').join('/');
+
           const receivableAmount = parseFloat(umrah.receivableAmount) || 0;
           const initialPaidCash = parseFloat(umrah.initial_paid_cash) || 0;
           const initialPaidInBank = parseFloat(umrah.initial_paid_in_bank) || 0;
@@ -586,7 +601,7 @@ export default function Dashboard() {
             booking_date: safeLocaleDateString(umrah.booking_date || umrah.createdAt),
             timestamp: safeTimestamp(umrah.createdAt),
             withdraw: 0,
-            passengerName: firstPassengerName || umrah.customerAdd || null,
+            passengerName: passengerNameDetails || firstPassengerName || umrah.customerAdd || null,
             profit: parseFloat(umrah.profit) || 0,
           };
         });
@@ -652,6 +667,7 @@ export default function Dashboard() {
 
         const ticketBookings = ticketsData.ticket.map(ticket => {
           let firstPassengerName = null;
+          let passengerCount = 0;
           try {
             let parsedDetails = [];
             if (typeof ticket.passport_detail === 'string') {
@@ -660,6 +676,8 @@ export default function Dashboard() {
               parsedDetails = ticket.passport_detail;
             }
 
+            passengerCount = parsedDetails.length;
+
             if (parsedDetails.length > 0) {
               const firstPassenger = parsedDetails[0];
               firstPassengerName = `${firstPassenger.title || ''} ${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
@@ -667,6 +685,21 @@ export default function Dashboard() {
           } catch (e) {
             console.error("Error parsing passenger details:", e);
           }
+
+          const departDateStr = ticket.depart_date ? safeLocaleDateString(ticket.depart_date) : null;
+          const returnDateStr = ticket.return_date ? safeLocaleDateString(ticket.return_date) : null;
+          const agentName = ticket.agent_name ? `(AG,${ticket.agent_name})` : '';
+          const passengerCountDisplay = passengerCount > 0 ? `(${passengerCount})` : null;
+
+          const passengerNameDetails = [
+            agentName,
+            passengerCountDisplay,
+            firstPassengerName,
+            ticket.sector,
+            ticket.airline,
+            departDateStr,
+            returnDateStr
+          ].filter(item => item && item !== '--').join('/');
 
           return {
             type: 'Ticket',
@@ -679,7 +712,7 @@ export default function Dashboard() {
             booking_date: safeLocaleDateString(ticket.booking_date || ticket.created_at),
             timestamp: safeTimestamp(ticket.created_at),
             withdraw: 0,
-            passengerName: firstPassengerName || ticket.customer_add || null,
+            passengerName: passengerNameDetails || firstPassengerName || null,
             profit: ticket.profit,
           };
         });
@@ -748,6 +781,19 @@ export default function Dashboard() {
 
         const visaBookings = visaData.visa_processing.map(visa => {
           const details = parsePassportDetail(visa.passport_detail);
+          const passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+
+          const agentName = visa.agent_name ? `(AG,${visa.agent_name})` : '';
+
+          const passengerNameDetails = [
+            agentName,
+            visa.file_number,
+            passengerName,
+            visa.reference,
+            visa.embassy,
+            visa.status
+          ].filter(Boolean).join(' / ');
+
           return {
             type: 'Visa Processing',
             employee_name: visa.employee_name,
@@ -759,7 +805,7 @@ export default function Dashboard() {
             booking_date: safeLocaleDateString(visa.created_at),
             timestamp: safeTimestamp(visa.created_at),
             withdraw: 0,
-            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
+            passengerName: passengerNameDetails,
             profit: visa.profit,
           };
         });
@@ -818,6 +864,18 @@ export default function Dashboard() {
 
         const gamcaTokenBookings = gamcaTokenData.gamcaTokens.map(token => {
           const details = parsePassportDetail(token.passport_detail);
+          const passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+          
+          const agentNameMatch = token.agent_name ? token.agent_name.match(/^(.*?)\s*\((?:Agent|Direct)\)/) : null;
+          const agentName = agentNameMatch ? agentNameMatch[1].trim() : (token.agent_name || '').trim();
+
+          const passengerNameDetails = [
+            agentName,
+            passengerName,
+            details.documentNo,
+            token.reference
+          ].filter(Boolean).join(' / ');
+
           return {
             type: 'GAMCA Token',
             employee_name: token.employee_name,
@@ -829,7 +887,7 @@ export default function Dashboard() {
             booking_date: safeLocaleDateString(token.created_at),
             timestamp: safeTimestamp(token.created_at),
             withdraw: 0,
-            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
+            passengerName: passengerNameDetails,
             profit: token.profit,
           };
         });
@@ -949,6 +1007,18 @@ export default function Dashboard() {
 
         const navtccBookings = navtccData.navtcc.map(navtcc => {
           const details = parsePassportDetail(navtcc.passport_detail);
+          const passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+
+          const agentNameMatch = navtcc.agent_name ? navtcc.agent_name.match(/^(.*?)\s*\((?:Agent|Direct)\)/) : null;
+          const agentName = agentNameMatch ? agentNameMatch[1].trim() : (navtcc.agent_name || '').trim();
+
+          const passengerNameDetails = [
+            agentName,
+            passengerName,
+            details.documentNo,
+            navtcc.reference
+          ].filter(Boolean).join(' / ');
+
           return {
             type: 'Navtcc',
             employee_name: navtcc.employee_name || navtcc.reference,
@@ -960,7 +1030,7 @@ export default function Dashboard() {
             booking_date: safeLocaleDateString(navtcc.created_at),
             timestamp: safeTimestamp(navtcc.created_at),
             withdraw: 0,
-            passengerName: `${details.firstName || ''} ${details.lastName || ''}`.trim(),
+            passengerName: passengerNameDetails,
             profit: navtcc.profit,
           };
         });
@@ -1025,20 +1095,38 @@ export default function Dashboard() {
           profit: 0,
         }));
 
-        const otherCpBookings = (otherCpData.otherCpEntries || []).map(ocp => ({
-          type: 'Other CP',
-          employee_name: ocp.employee,
-          receivable_amount: ocp.receivable_amount,
-          entry: ocp.entry,
-          paid_cash: ocp.paid_cash,
-          paid_in_bank: ocp.paid_in_bank,
-          remaining_amount: ocp.remaining_amount,
-          booking_date: safeLocaleDateString(ocp.date || ocp.created_at),
-          timestamp: safeTimestamp(ocp.created_at || ocp.date),
-          withdraw: 0,
-          passengerName: ocp.detail,
-          profit: ocp.profit,
-        }));
+        const otherCpBookings = (otherCpData.otherCpEntries || []).map(ocp => {
+          const details = parsePassportDetail(ocp.passport_detail);
+          let passengerName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+          if (!passengerName) {
+            passengerName = ocp.detail;
+          }
+
+          const agentNameMatch = ocp.agent_name ? ocp.agent_name.match(/^(.*?)\s*\((?:Agent|Direct)\)/) : null;
+          const agentName = agentNameMatch ? agentNameMatch[1].trim() : (ocp.agent_name || '').trim();
+
+          const passengerNameDetails = [
+            agentName,
+            passengerName,
+            details.documentNo,
+            ocp.reference
+          ].filter(Boolean).join(' / ');
+
+          return {
+            type: 'Other CP',
+            employee_name: ocp.employee,
+            receivable_amount: ocp.receivable_amount,
+            entry: ocp.entry,
+            paid_cash: ocp.paid_cash,
+            paid_in_bank: ocp.paid_in_bank,
+            remaining_amount: ocp.remaining_amount,
+            booking_date: safeLocaleDateString(ocp.date || ocp.created_at),
+            timestamp: safeTimestamp(ocp.created_at || ocp.date),
+            withdraw: 0,
+            passengerName: passengerNameDetails || ocp.detail,
+            profit: ocp.profit,
+          };
+        });
 
         const eNumberBookings = (eNumberData.eNumbers || []).map(eNumber => ({
           type: 'E-Number',
@@ -1206,8 +1294,8 @@ export default function Dashboard() {
   const columns = [
     { header: 'DATE', accessor: 'booking_date' },
     { header: 'ENTRY', accessor: 'entry' },
-    { header: 'TYPE', accessor: 'type' },
-    { header: 'NAME', accessor: 'passengerName' },
+    // { header: 'TYPE', accessor: 'type' },
+    { header: 'DETAILS', accessor: 'passengerName' },
     { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
     { header: 'PAID CASH', accessor: 'paid_cash' },
     { header: 'PAID IN BANK', accessor: 'paid_in_bank' },
@@ -1688,7 +1776,7 @@ export default function Dashboard() {
 
         {/* Actual Table */}
         <div className="overflow-x-auto rounded-xl border border-gray-200 font-semibold shadow-md">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 uppercase">
             <thead className="bg-indigo-600 text-white">
               <tr>
                 {columns.map(column => (
@@ -1717,13 +1805,26 @@ export default function Dashboard() {
                         title={booking.entry}
                         onClick={() => handleEntryClick(booking)}
                       >
-                        {booking.entry ? booking.entry : <span className="text-slate-400">--</span>}
+                        {booking.entry ? (
+                          (booking.type.includes('RE ') && booking.type.includes('Payment')) ? (
+                            <span>
+                              {booking.entry.substring(0, 2)}
+                              <sub className="text-[0.5rem]">RE</sub>
+                              {booking.entry.substring(2)} /
+                              {booking.employee_name}
+                            </span>
+                          ) : (
+                            <span className="">{booking.entry}/{booking.employee_name}</span>
+                          )
+                        ) : (
+                          <span className="text-slate-400">--</span>
+                        )}
                       </td>
-                      <td className="px-1 py-2 text-[0.70rem] font-bold font-large truncate max-w-xs" title={booking.type}>
+                      {/* <td className="px-1 py-2 text-[0.70rem] font-bold font-large truncate max-w-xs" title={booking.type}>
                         <span className="px-1 py-0.5 rounded-md bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 text-[0.70rem] font-semibold">
                           {booking.type}
                         </span>
-                      </td>
+                      </td> */}
                       <td className="px-1 py-2 text-[0.70rem] text-slate-700 font-large truncate max-w-xs" title={booking.passengerName || booking.employee_name || '--'}>
                         {booking.passengerName || booking.employee_name || '--'}
                       </td>

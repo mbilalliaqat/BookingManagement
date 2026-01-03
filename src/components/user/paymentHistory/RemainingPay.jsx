@@ -409,37 +409,48 @@ const addAgentEntry = async () => {
                                 </td>
                             </tr>
                         ) : (
-                            payments.map((payment, index) => (
-                                <tr key={payment.id || index}>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">{ticketDetails?.entry || payment.entry || ''}</td>
-                                    
-                                    <td className="border border-gray-300 px-4 py-2">{ticketDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || ''}</td>
-                                    <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => setEditingPayment(payment)}
-                                                className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => deletePayment(payment.id)}
-                                                disabled={isDeleting === payment.id}
-                                                className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:bg-gray-400"
-                                            >
-                                                {isDeleting === payment.id ? 'Deleting...' : 'Delete'}
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
+                            payments.map((payment, index) => {
+                                const entry = ticketDetails?.entry || payment.entry || '';
+                                return (
+                                    <tr key={payment.id || index}>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : ''}
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {entry.startsWith('TK') ? (
+                                                <span>
+                                                    TK<sub className="text-xs">RP</sub>{entry.substring(2)}
+                                                </span>
+                                            ) : (
+                                                entry
+                                            )}
+                                        </td>
+                                        
+                                        <td className="border border-gray-300 px-4 py-2">{ticketDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{payment.paid_bank || ''}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{payment.remaining_amount || '0'}</td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setEditingPayment(payment)}
+                                                    className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => deletePayment(payment.id)}
+                                                    disabled={isDeleting === payment.id}
+                                                    className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:bg-gray-400"
+                                                >
+                                                    {isDeleting === payment.id ? 'Deleting...' : 'Delete'}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>

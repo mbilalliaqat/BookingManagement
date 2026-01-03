@@ -415,7 +415,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             { name: 'sector', label: 'Sector', type: 'text', placeholder: 'Enter sector', icon: 'map-marker-alt' },
             { name: 'airline', label: ' Airline',type: 'select', options: AIRLINE_OPTIONS, placeholder: 'Enter airline', icon: 'plane' },
             { name: 'airline_select', label: 'Other Airline ', type: 'text' , placeholder: 'Select airline', icon: 'plane-departure' },
-            { name: 'prn', label: 'PRN', type: 'text', placeholder: 'Enter PRN', icon: 'barcode' },
+            { name: 'prn', label: 'PNR', type: 'text', placeholder: 'Enter PNR', icon: 'barcode' },
 
         ],
         section2: [

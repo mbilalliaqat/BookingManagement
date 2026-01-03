@@ -169,8 +169,8 @@ const GamcaToken = () => {
             )
         },
         { header: 'DATE OF BIRTH', accessor: 'passengerDob' },
-        { header: 'DOCUMENT TYPE', accessor: 'documentType' },
-        { header: 'DOCUMENT NO', accessor: 'documentNo' },
+       
+        { header: 'PASSPORT NO', accessor: 'documentNo' },
         // {
         //     header: 'VENDOR & PAYABLE',
         //     accessor: 'vendor_payable',

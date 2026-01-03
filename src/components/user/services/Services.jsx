@@ -106,7 +106,7 @@ const Services = () => {
         { header: 'EMPLOYEE NAME', accessor: 'user_name' },
         { header: 'ENTRY', accessor: 'entry' },
         { header: 'CUSTOMER ADD', accessor: 'customer_add' },
-        { header: 'SPECIAL DETAIL', accessor: 'specific_detail' },
+        { header: 'SPECIFIC DETAIL', accessor: 'specific_detail' },
         { header: 'RECEIVABLE AMOUNT', accessor: 'receivable_amount' },
         {
             header: 'VENDOR & PAYABLE',
