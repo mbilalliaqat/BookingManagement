@@ -355,7 +355,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         { name: 'country', label: 'Country', type: 'text', placeholder: 'Enter country', icon: 'globe' },
         { name: 'booking_date', label: 'Booking Date', type: 'date', placeholder: '', icon: 'calendar-check' },
         // Passport Details
-        { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'Dr'], placeholder: 'Select title', icon: 'user-tag' },
+        { name: 'passengerTitle', label: 'Title', type: 'select', options: ['Mr', 'Mrs', 'Ms', 'CH','INF'], placeholder: 'Select title', icon: 'user-tag' },
         { name: 'passengerFirstName', label: 'First Name', type: 'text', placeholder: 'Enter first name', icon: 'user' },
         { name: 'passengerLastName', label: 'Last Name', type: 'text', placeholder: 'Enter last name', icon: 'user' },
         { name: 'passengerDob', label: 'Date of Birth', type: 'date', placeholder: 'Select date of birth', icon: 'calendar' },

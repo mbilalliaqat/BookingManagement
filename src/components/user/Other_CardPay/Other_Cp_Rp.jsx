@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAppContext } from '../../contexts/AppContext';
 
 const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
+    const { user } = useAppContext();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -13,7 +15,7 @@ const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
         payed_cash: '',
         paid_bank: '',
         bank_title: '',
-        recorded_by: ''
+        recorded_by: user?.username || ''
     });
     const [otherCpDetails, setOtherCpDetails] = useState(null);
 
@@ -32,6 +34,12 @@ const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
         fetchPayments();
         fetchOtherCpDetails();
     }, [otherCpId]);
+
+    useEffect(() => {
+        if (user?.username) {
+            setNewPayment(prev => ({ ...prev, recorded_by: user.username }));
+        }
+    }, [user?.username]);
 
     const fetchPayments = async () => {
         try {
@@ -122,7 +130,7 @@ const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
                     payed_cash: '',
                     paid_bank: '',
                     bank_title: '',
-                    recorded_by: ''
+                    recorded_by: user?.username || ''
                 });
                 setShowModal(false);
 
@@ -513,9 +521,8 @@ const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
                                 <input
                                     type="text"
                                     value={newPayment.recorded_by}
-                                    onChange={(e) => setNewPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
-                                    placeholder="Enter your name"
-                                    className="w-full border rounded px-3 py-2"
+                                    readOnly
+                                    className="w-full border rounded px-3 py-2 bg-gray-100"
                                 />
                             </div>
                         </div>
@@ -609,8 +616,8 @@ const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
                                 <input
                                     type="text"
                                     value={editingPayment.recorded_by}
-                                    onChange={(e) => setEditingPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
-                                    className="w-full border rounded px-3 py-2"
+                                    readOnly
+                                    className="w-full border rounded px-3 py-2 bg-gray-100"
                                 />
                             </div>
                         </div>

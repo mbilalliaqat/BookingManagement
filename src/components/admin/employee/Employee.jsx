@@ -8,19 +8,22 @@ const Employee = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'approved'
+  const [activeTab, setActiveTab] = useState('pending');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState({});
 
   const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
   useEffect(() => {
-    // Fetch users when component mounts
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      // Get token from localStorage
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -29,22 +32,14 @@ const Employee = () => {
         return;
       }
 
-      // Fetch pending users
       const pendingResponse = await axios.get(`${BASE_URL}/admin/pending-users`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
-
       setPendingUsers(pendingResponse.data.users || []);
       
-      // Fetch all approved employees
       const approvedResponse = await axios.get(`${BASE_URL}/admin/employees`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
-
       setApprovedEmployees(approvedResponse.data.users || []);
       setLoading(false);
     } catch (err) {
@@ -63,22 +58,15 @@ const Employee = () => {
         return;
       }
 
-      // Send approve request with the approved status
       const response = await axios.post(
         `${BASE_URL}/admin/approve-user`,
         { userId, approved },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.status === 'success') {
-        // Show success message
         setSuccessMessage(`User ${approved ? 'approved' : 'rejected'} successfully`);
         
-        // If approved, move the user to the approved list
         if (approved) {
           const approvedUser = pendingUsers.find(user => user.id === userId);
           if (approvedUser) {
@@ -86,26 +74,16 @@ const Employee = () => {
           }
         }
         
-        // Remove from pending list
         setPendingUsers(pendingUsers.filter(user => user.id !== userId));
         
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 3000);
+        setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (err) {
       setError(err.response?.data?.message || `Failed to ${approved ? 'approve' : 'reject'} user`);
-      console.error(`Error ${approved ? 'approving' : 'rejecting'} user:`, err);
-      
-      // Clear error message after 3 seconds
-      setTimeout(() => {
-        setError('');
-      }, 3000);
+      setTimeout(() => setError(''), 3000);
     }
   };
 
-  // Function to handle rejecting an approved employee
   const handleRejectEmployee = async (userId) => {
     try {
       const token = localStorage.getItem('token');
@@ -115,55 +93,97 @@ const Employee = () => {
         return;
       }
 
-      // Call endpoint to set user as inactive
       const response = await axios.post(
         `${BASE_URL}/admin/approve-user`,
         { userId, approved: false },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.status === 'success') {
-        // Show success message
         setSuccessMessage('Employee rejected and moved to pending');
         
-        // Get the rejected employee data
         const rejectedEmployee = approvedEmployees.find(user => user.id === userId);
-        
-        // Move the employee to pending list if we have their data
         if (rejectedEmployee) {
           setPendingUsers([...pendingUsers, {...rejectedEmployee, isApproved: false}]);
         }
         
-        // Remove the employee from approved list
         setApprovedEmployees(approvedEmployees.filter(user => user.id !== userId));
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 3000);
+        setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reject employee');
-      console.error('Error rejecting employee:', err);
-      
-      // Clear error message after 3 seconds
-      setTimeout(() => {
-        setError('');
-      }, 3000);
+      setTimeout(() => setError(''), 3000);
     }
+  };
+
+  const openPasswordModal = (user) => {
+    setSelectedUser(user);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowPasswordModal(true);
+  };
+
+  const closePasswordModal = () => {
+    setShowPasswordModal(false);
+    setSelectedUser(null);
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      setError('Please enter both password fields');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('You are not authenticated');
+        return;
+      }
+
+      const response = await axios.put(
+        `${BASE_URL}/admin/update-password`,
+        { userId: selectedUser.id, newPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.status === 'success') {
+        setSuccessMessage('Password updated successfully');
+        closePasswordModal();
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update password');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const togglePasswordVisibility = (userId) => {
+    setShowPassword(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
   };
 
   const renderTabContent = () => {
     if (loading) {
-      return (
-        <div>
-          <TableSpinner />
-        </div>
-      );
+      return <div><TableSpinner /></div>;
     }
 
     if (activeTab === 'pending') {
@@ -171,9 +191,7 @@ const Employee = () => {
         <>
           <h2 className="text-xl font-semibold mb-4">Pending Approvals</h2>
           {pendingUsers.length === 0 ? (
-            <div className="text-gray-500 text-center py-4">
-              No pending user approvals
-            </div>
+            <div className="text-gray-500 text-center py-4">No pending user approvals</div>
           ) : (
             <div className="overflow-x-auto max-h-65 rounded-2xl">
               <table className="min-w-full">
@@ -181,6 +199,7 @@ const Employee = () => {
                   <tr className="bg-[#111827] text-gray-400 uppercase text-sm leading-normal">
                     <th className="py-3 px-6 text-left">Username</th>
                     <th className="py-3 px-6 text-left">Email</th>
+                    <th className="py-3 px-6 text-left">Password</th>
                     <th className="py-3 px-6 text-left">Role</th>
                     <th className="py-3 px-6 text-center">Status</th>
                     <th className="py-3 px-6 text-center">Actions</th>
@@ -191,6 +210,19 @@ const Employee = () => {
                     <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="py-3 px-6 text-left">{user.username}</td>
                       <td className="py-3 px-6 text-left">{user.email}</td>
+                      <td className="py-3 px-6 text-left">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono">
+                            {showPassword[user.id] ? user.password_hash : '••••••••'}
+                          </span>
+                          <button
+                            onClick={() => togglePasswordVisibility(user.id)}
+                            className="text-blue-500 hover:text-blue-700 text-xs"
+                          >
+                            {showPassword[user.id] ? '👁️' : '👁️‍🗨️'}
+                          </button>
+                        </div>
+                      </td>
                       <td className="py-3 px-6 text-left">{user.role}</td>
                       <td className="py-3 px-6 text-center">
                         <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">
@@ -204,6 +236,12 @@ const Employee = () => {
                             className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded text-xs"
                           >
                             Approve
+                          </button>
+                          <button
+                            onClick={() => openPasswordModal(user)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-xs"
+                          >
+                            Edit Password
                           </button>
                         </div>
                       </td>
@@ -220,9 +258,7 @@ const Employee = () => {
         <>
           <h2 className="text-xl font-semibold mb-4">Approved Employees</h2>
           {approvedEmployees.length === 0 ? (
-            <div className="text-gray-500 text-center py-4">
-              No approved employees found
-            </div>
+            <div className="text-gray-500 text-center py-4">No approved employees found</div>
           ) : (
             <div className="overflow-x-auto max-h-65 rounded-2xl">
               <table className="min-w-full bg-white">
@@ -230,6 +266,7 @@ const Employee = () => {
                   <tr className="bg-[#111827] text-gray-400 uppercase text-sm leading-normal">
                     <th className="py-3 px-6 text-left">Username</th>
                     <th className="py-3 px-6 text-left">Email</th>
+                    <th className="py-3 px-6 text-left">Password</th>
                     <th className="py-3 px-6 text-left">Role</th>
                     <th className="py-3 px-6 text-center">Status</th>
                     <th className="py-3 px-6 text-center">Actions</th>
@@ -240,6 +277,19 @@ const Employee = () => {
                     <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="py-3 px-6 text-left">{user.username}</td>
                       <td className="py-3 px-6 text-left">{user.email}</td>
+                      <td className="py-3 px-6 text-left">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono">
+                            {showPassword[user.id] ? user.password_hash : '••••••••'}
+                          </span>
+                          <button
+                            onClick={() => togglePasswordVisibility(user.id)}
+                            className="text-blue-500 hover:text-blue-700 text-xs"
+                          >
+                            {showPassword[user.id] ? '👁️' : '👁️‍🗨️'}
+                          </button>
+                        </div>
+                      </td>
                       <td className="py-3 px-6 text-left">{user.role}</td>
                       <td className="py-3 px-6 text-center">
                         <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">
@@ -247,12 +297,20 @@ const Employee = () => {
                         </span>
                       </td>
                       <td className="py-3 px-6 text-center">
-                        <button
-                          onClick={() => handleRejectEmployee(user.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs"
-                        >
-                          Reject
-                        </button>
+                        <div className="flex justify-center space-x-2">
+                          <button
+                            onClick={() => openPasswordModal(user)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-xs"
+                          >
+                            Edit Password
+                          </button>
+                          <button
+                            onClick={() => handleRejectEmployee(user.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-xs"
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -306,7 +364,61 @@ const Employee = () => {
           </button>
         </nav>
       </div>
+
       {renderTabContent()}
+
+      {/* Password Update Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-xl font-semibold mb-4">Update Password</h3>
+            <p className="text-gray-600 mb-4">
+              Updating password for: <strong>{selectedUser?.username}</strong>
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter new password"
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Confirm new password"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={closePasswordModal}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdatePassword}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

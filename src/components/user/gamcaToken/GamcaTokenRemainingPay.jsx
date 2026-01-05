@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAppContext } from '../../contexts/AppContext';
 
 const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
+    const { user } = useAppContext();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -11,7 +13,7 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         paid_cash: '',
         paid_in_bank: '',
         bank_title: '',
-        recorded_by: ''
+        recorded_by: user?.username || ''
     });
     const [gamcaTokenDetails, setGamcaTokenDetails] = useState(null);
     const [editingPayment, setEditingPayment] = useState(null);
@@ -34,6 +36,12 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
             fetchGamcaTokenDetails();
         }
     }, [gamcaTokenId]);
+
+    useEffect(() => {
+        if (user?.username) {
+            setNewPayment(prev => ({ ...prev, recorded_by: user.username }));
+        }
+    }, [user?.username]);
 
     const fetchPayments = async () => {
         try {
@@ -111,7 +119,7 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                     paid_cash: '',
                     paid_in_bank: '',
                     bank_title: '',
-                    recorded_by: ''
+                    recorded_by: user?.username || ''
                 });
                 setShowModal(false);
                 onPaymentSuccess?.(paymentData);
@@ -397,8 +405,8 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                                         <input
                                             type="text"
                                             value={editingPayment.recorded_by}
-                                            onChange={(e) => setEditingPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
-                                            className="w-full border rounded px-3 py-2"
+                                            readOnly
+                                            className="w-full border rounded px-3 py-2 bg-gray-100"
                                         />
                                     </div>
                                 </div>
@@ -491,9 +499,8 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                                 <input
                                     type="text"
                                     value={newPayment.recorded_by}
-                                    onChange={(e) => setNewPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
-                                    placeholder="Enter your name"
-                                    className="w-full border rounded px-3 py-2"
+                                    readOnly
+                                    className="w-full border rounded px-3 py-2 bg-gray-100"
                                 />
                             </div>
                         </div>

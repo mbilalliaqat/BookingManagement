@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ButtonSpinner from '../../ui/ButtonSpinner';
+import { useAppContext } from '../../contexts/AppContext';
 
 const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
+    const { user } = useAppContext();
     const [payments, setPayments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -16,7 +18,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
         payed_cash: '',
         paid_bank: '',
         bank_title: '',
-        recorded_by: ''
+        recorded_by: user?.username || ''
     });
 
     const BANK_OPTIONS = [
@@ -64,6 +66,12 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
             console.error('Error fetching visa details:', error);
         }
     };
+
+    useEffect(() => {
+        if (user?.username) {
+            setNewPayment(prev => ({ ...prev, recorded_by: user.username }));
+        }
+    }, [user?.username]);
 
     useEffect(() => {
         if (visaId) {
@@ -249,7 +257,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                     payed_cash: '',
                     paid_bank: '',
                     bank_title: '',
-                    recorded_by: ''
+                    recorded_by: user?.username || ''
                 });
                 
                 // Refresh the payment history
@@ -560,11 +568,9 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                             <input
                                 type="text"
                                 name="recorded_by"
-                                placeholder="Enter recorder name"
                                 value={newPayment.recorded_by}
-                                onChange={handleInputChange}
-                                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
+                                readOnly
+                                className="w-full p-2 border border-gray-300 rounded bg-gray-100"
                             />
                         </div>
                     </div>

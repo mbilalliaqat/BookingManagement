@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAppContext } from '../../contexts/AppContext';
 
 const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
+    const { user } = useAppContext();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -14,8 +16,19 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         payed_cash: '',
         paid_bank: '',
         bank_title: '',
-        recorded_by: ''
+        recorded_by: user?.username || ''
     });
+
+
+
+    useEffect(() => {
+        if (user?.username) {
+            setNewPayment(prev => ({ ...prev, recorded_by: user.username }));
+        }
+    }, [user?.username]);
+
+    
+    
     // Add state to store ticket details for bank account entry
     const [ticketDetails, setTicketDetails] = useState(null);
 
@@ -131,7 +144,7 @@ const addPayment = async () => {
                 payed_cash: '',
                 paid_bank: '',
                 bank_title: '',
-                recorded_by: ''
+                recorded_by: user?.username || ''
             });
             setShowModal(false);
 
@@ -529,6 +542,7 @@ const addAgentEntry = async () => {
                                     onChange={(e) => setNewPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
                                     placeholder="Enter your name"
                                     className="w-full border rounded px-3 py-2"
+                                    readOnly
                                 />
                             </div>
                         </div>

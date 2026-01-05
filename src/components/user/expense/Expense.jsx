@@ -74,7 +74,14 @@ const Expense = () => {
         { header: 'EMPLOYEE NAME', accessor: 'user_name' },
         { header: 'DATE', accessor: 'date' },
         { header: 'ENTRY', accessor: 'entry' },
-        { header: 'DETAIL', accessor: 'detail' },
+        {
+            header: 'DETAIL',
+            accessor: 'detail',
+            render: (value, row) => {
+                const detailParts = [row.detail, row.vendor_name, row.bank_title];
+                return detailParts.filter(Boolean).join(' / ');
+            }
+        },
         { header: 'WITHDRAW', accessor: 'withdraw' },
         { header: 'CASH OFFICE', accessor: 'cash_office' },
         { header: 'TOTAL AMOUNT', accessor: 'total_amount' },

@@ -10,7 +10,7 @@ import VenderNameModal from '../../ui/VenderNameModal';
 
 const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-const PASSENGER_TITLE_OPTIONS = ['Mr', 'Mrs', 'Ms', 'Dr'];
+const PASSENGER_TITLE_OPTIONS = ['Mr', 'Mrs', 'Ms', 'CH','INF'];
 const DOCUMENT_TYPE_OPTIONS = ['Passport', 'National ID'];
 
 const DEFAULT_PASSENGER_DETAIL = {

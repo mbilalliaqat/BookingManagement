@@ -21,7 +21,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         total_amount: '',
         selection: '',
         withdraw: '',
-        vendor_id: '',
+        vendor_name: '',
         cash_office: '',
         bank_title: ''
     });
@@ -33,7 +33,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         detail: '',
         total_amount: '',
         selection: '',
-        vendor_id: '',
+        vendor_name: '',
         cash_office: '',
         bank_title: '',
         general: ''
@@ -118,7 +118,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 total_amount: editEntry.total_amount || '',
                 selection: editEntry.selection || '',
                 withdraw: editEntry.withdraw || '',
-                vendor_id: editEntry.vendor_id || '',
+                vendor_name: editEntry.vendor_name || '',
                 cash_office: editEntry.cash_office || '',
                 bank_title: editEntry.bank_title || ''
             });
@@ -144,7 +144,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 total_amount: '',
                 selection: '',
                 withdraw: '',
-                vendor_id: '',
+                vendor_name: '',
                 bank_title: ''
             }));
         } else {

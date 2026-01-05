@@ -213,6 +213,7 @@ const Tickets = () => {
             render: (cellValue, row) => (
                 <div className="uppercase">
                     <div>{row?.booking_date || ''}</div>
+                    <div>{row?.entry || ''}</div>
                     <div>{row?.employee_name || ''}</div>
                 </div>
             )
@@ -265,16 +266,16 @@ const Tickets = () => {
                 </div>
             )
         },
-        {
-            header: 'PASSENGERS',
-            accessor: 'passengerCount',
-            render: (row, index) => {
-                const adults = index.adults === undefined ? 0 : index.adults;
-                const children = index.children === undefined ? 0 : index.children;
-                const infants = index.infants === undefined ? 0 : index.infants;
-                return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
-            }
-        },
+        // {
+        //     header: 'PASSENGERS',
+        //     accessor: 'passengerCount',
+        //     render: (row, index) => {
+        //         const adults = index.adults === undefined ? 0 : index.adults;
+        //         const children = index.children === undefined ? 0 : index.children;
+        //         const infants = index.infants === undefined ? 0 : index.infants;
+        //         return `Adult: ${adults}, Children: ${children}, Infants: ${infants}`;
+        //     }
+        // },
         {
             header: 'PASSENGER DETAILS',
             accessor: 'passenger_details',
@@ -385,9 +386,9 @@ const Tickets = () => {
             accessor: 'paid_cash_details',
             render: (cellValue, row) => (
                 <div>
-                    <div>Initial:{row.initial_paid_cash || '0'}</div>
+                    <div>In:{row.initial_paid_cash || '0'}</div>
 
-                    <div>Total: {row.paid_cash}</div>
+                    <div>To: {row.paid_cash}</div>
                 </div>
             )
         },
@@ -397,8 +398,8 @@ const Tickets = () => {
             render: (cellValue, row) => (
                 <div>
                     <div>{row?.bank_title || ''}</div>
-                    <div>Initial: {row.initial_paid_in_bank || row.paid_in_bank}</div>
-                    <div>Total: {row.paid_in_bank}</div>
+                    <div>In: {row.initial_paid_in_bank}</div>
+                    <div>To: {row.paid_in_bank}</div>
                 </div>
             )
         },
@@ -414,22 +415,22 @@ const Tickets = () => {
         },
         { header: 'PROFIT', accessor: 'profit' },
         {
-            header: 'REMAINING AMOUNT',
-            accessor: 'remaining_amount',
+            header: 'REMAINING',
+            accessor: 'remaining_details',
             render: (cellValue, row) => (
                 <div className="flex flex-col items-center">
-                    <span className="mb-1">{row?.remaining_amount || '0'}</span>
+                    <div>{row?.remaining_amount || '0'}</div>
                     <button
-                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50"
+                        className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-600 rounded hover:bg-green-50 mt-1"
                         onClick={() => handleRemainingPay(row)}
                         title="Add Payment"
                     >
                         <i className="fas fa-plus"></i> Pay
                     </button>
+                    <div>{row?.remaining_date || ''}</div>
                 </div>
             )
         },
-        { header: 'REMAINING DATE', accessor: 'remaining_date' },
     ];
 
     const actionColumns = user.role === 'admin' ? [{

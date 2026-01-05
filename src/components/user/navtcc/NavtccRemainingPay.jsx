@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAppContext } from '../../contexts/AppContext';
 
 const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
+    const { user } = useAppContext();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -13,7 +15,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
         payed_cash: '',
         paid_bank: '',
         bank_title: '',
-        recorded_by: ''
+        recorded_by: user?.username || ''
     });
     const [navtccDetails, setNavtccDetails] = useState(null);
 
@@ -32,6 +34,12 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
         fetchPayments();
         fetchNavtccDetails();
     }, [navtccId]);
+
+    useEffect(() => {
+        if (user?.username) {
+            setNewPayment(prev => ({ ...prev, recorded_by: user.username }));
+        }
+    }, [user?.username]);
 
     const fetchPayments = async () => {
         try {
@@ -122,7 +130,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                     payed_cash: '',
                     paid_bank: '',
                     bank_title: '',
-                    recorded_by: ''
+                    recorded_by: user?.username || ''
                 });
                 setShowModal(false);
 
@@ -447,8 +455,8 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                                                 type="text"
                                                 name="recorded_by"
                                                 value={editingPayment.recorded_by || ''}
-                                                onChange={handleEditChange}
-                                                className="w-full border rounded px-2 py-1"
+                                                readOnly
+                                                className="w-full border rounded px-2 py-1 bg-gray-100"
                                             />
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">
@@ -564,9 +572,8 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
                                 <input
                                     type="text"
                                     value={newPayment.recorded_by}
-                                    onChange={(e) => setNewPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
-                                    placeholder="Enter your name"
-                                    className="w-full border rounded px-3 py-2"
+                                    readOnly
+                                    className="w-full border rounded px-3 py-2 bg-gray-100"
                                 />
                             </div>
                         </div>
