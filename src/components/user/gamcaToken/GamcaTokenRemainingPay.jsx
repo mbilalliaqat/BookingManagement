@@ -495,7 +495,7 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Recorded By *</label>
+                                <label className="block text-sm font-medium mb-1">Employee Name*</label>
                                 <input
                                     type="text"
                                     value={newPayment.recorded_by}

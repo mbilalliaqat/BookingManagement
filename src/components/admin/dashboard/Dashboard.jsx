@@ -1218,7 +1218,7 @@ export default function Dashboard() {
           booking_date: safeLocaleDateString(protector.protector_date),
           timestamp: safeTimestamp(protector.createdAt),
           withdraw: parseFloat(protector.withdraw || 0),
-          passengerName: protector.name || null,
+          passengerName: [protector.name, protector.passport, protector.file_no].filter(Boolean).join(' / ') || null,
           profit: 0,
         }));
 

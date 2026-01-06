@@ -91,12 +91,14 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     // Update entry field when entry numbers change
     useEffect(() => {
-        setData(prev => ({
-            ...prev,
-            user_name: user?.username || '',
-            entry: `${entryNumber}/${totalEntries}`
-        }));
-    }, [entryNumber, totalEntries, user]);
+        if (!editEntry) {
+            setData(prev => ({
+                ...prev,
+                user_name: user?.username || '',
+                entry: `CE ${entryNumber}/${totalEntries}`
+            }));
+        }
+    }, [entryNumber, totalEntries, user, editEntry]);
 
     useEffect(() => {
         if (editEntry) {
@@ -112,7 +114,7 @@ const Expense_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             setData({
                 user_name: editEntry.user_name || user?.username || '',
-                entry: editEntry.entry || `${entryNumber}/${totalEntries}`,
+                entry: editEntry.entry || `CE ${entryNumber}/${totalEntries}`,
                 date: editEntry.date ? formatDate(editEntry.date) : '',
                 detail: editEntry.detail || '',
                 total_amount: editEntry.total_amount || '',

@@ -23,8 +23,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     withdraw: '',
     employee: user?.username || '',
     mcb_fee_6000_date: '',
-    ncb_fee_6700_date: '',
-    ncb_fee_500_date: '',
     protector_date: '',
     additional_charges: '',
     entry: '0/0',
@@ -41,8 +39,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     file_no: '',
     employee: '',
     mcb_fee_6000_date: '',
-    ncb_fee_6700_date: '',
-    ncb_fee_500_date: '',
     protector_date: '',
     additional_charges: '',
     general: '',
@@ -71,8 +67,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
     let fees = 0;
     if (main.mcb_fee_6000_date) fees += 6000;
-    if (main.ncb_fee_6700_date) fees += 6700;
-    if (main.ncb_fee_500_date) fees += 500;
+    if (main.protector_date) fees += 7200;
 
     const perExtra = additionalPeople.length * 13200;
     const withdraw = fees + extra + perExtra;
@@ -80,8 +75,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     console.log('WITHDRAW →', { fees, extra, perExtra, withdraw });
   }, [
     main.mcb_fee_6000_date,
-    main.ncb_fee_6700_date,
-    main.ncb_fee_500_date,
+    main.protector_date,
     main.additional_charges,
     additionalPeople.length,
   ]);
@@ -165,8 +159,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         withdraw: editEntry.withdraw || '',
         employee: editEntry.employee || user?.username || '',
         mcb_fee_6000_date: formatDateForInput(editEntry.mcb_fee_6000_date),
-        ncb_fee_6700_date: formatDateForInput(editEntry.ncb_fee_6700_date),
-        ncb_fee_500_date: formatDateForInput(editEntry.ncb_fee_500_date),
         protector_date: formatDateForInput(editEntry.protector_date),
         additional_charges: editEntry.additional_charges || '',
         entry: editEntry.entry || `PR ${entryNumber}/${totalEntries}`,
@@ -242,7 +234,7 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
       return true;
     };
     
-    ['mcb_fee_6000_date', 'ncb_fee_6700_date', 'ncb_fee_500_date', 'protector_date'].forEach((f) => 
+    ['mcb_fee_6000_date', 'protector_date'].forEach((f) => 
       checkDate(main[f], f)
     );
 
@@ -275,8 +267,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
       file_no: merged.file_no,
       additional_charges: parseInt(main.additional_charges) || 0,
       mcb_fee_6000_date: main.mcb_fee_6000_date || null,
-      ncb_fee_6700_date: main.ncb_fee_6700_date || null,
-      ncb_fee_500_date: main.ncb_fee_500_date || null,
       protector_date: main.protector_date || null,
     };
 
@@ -311,8 +301,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         withdraw: '',
         employee: user?.username || '',
         mcb_fee_6000_date: '',
-        ncb_fee_6700_date: '',
-        ncb_fee_500_date: '',
         protector_date: '',
         additional_charges: '',
         entry: `PR ${entryNumber + 1}/${totalEntries + 1}`,
@@ -396,8 +384,6 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
             {[
               { key: 'mcb_fee_6000_date', label: 'MCB FEE / 6000 DATE' },
-              { key: 'ncb_fee_6700_date', label: 'NCB FEE / 6700 DATE' },
-              { key: 'ncb_fee_500_date', label: 'NCB FEE / 500 DATE' },
               { key: 'protector_date', label: 'Protector Date' },
             ].map(({ key, label }) => (
               <div key={key}>

@@ -564,7 +564,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                         </div>
                         
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium mb-1 text-gray-700">Recorded By *</label>
+                            <label className="block text-sm font-medium mb-1 text-gray-700">Employee Name</label>
                             <input
                                 type="text"
                                 name="recorded_by"
