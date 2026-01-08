@@ -457,6 +457,20 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             await response.json();
 
             if (!editEntry) {
+                const detailParts = [
+                    values.agent_name ? `(AG,${values.agent_name})` : '',
+                    values.file_number,
+                    `${values.passengerFirstName} ${values.passengerLastName}`,
+                    values.embassy,
+                    values.professional
+                ];
+
+                if (!values.agent_name) {
+                    detailParts.splice(2, 0, values.reference);
+                }
+
+                const commonDetail = detailParts.filter(Boolean).join('/');
+
                 // Submit vendor data for each vendor
                 const parsedEntryNumber = parseInt(values.entry.replace('VS ', '').split('/')[0]);
                 await incrementFormEntry('visa', parsedEntryNumber);
@@ -465,7 +479,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
                             vender_name: vendor.vendor_name,
-                            detail: values.detail || `Visa Processing - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}- ${values.professional}`,
+                            detail: commonDetail,
                             credit: parseFloat(vendor.payable_amount) || 0,
                             date: new Date().toISOString().split('T')[0],
                             entry: values.entry,
@@ -486,7 +500,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     const agentData = {
                         agent_name: values.agent_name,
                         employee: values.employee_name,
-                        detail: values.detail || `Visa Processing - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
+                        detail: commonDetail,
                         receivable_amount: parseFloat(values.receivable_amount) || 0,
                         paid_cash: parseFloat(values.paid_cash) || 0,
                         paid_bank: parseFloat(values.paid_in_bank) || 0,
@@ -506,10 +520,23 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             }
 
             if (parseFloat(values.paid_in_bank) > 0 && values.bank_title) {
+                const detailParts = [
+                    values.agent_name ? `(AG,${values.agent_name})` : '',
+                    values.file_number,
+                    `${values.passengerFirstName} ${values.passengerLastName}`,
+                    values.embassy,
+                    values.professional
+                ];
+
+                if (!values.agent_name) {
+                    detailParts.splice(2, 0, values.reference);
+                }
+
+                const commonDetail = detailParts.filter(Boolean).join('/');
                 const bankData = {
                     bank_name: values.bank_title,
                     employee_name: values.employee_name,
-                    detail: values.detail || `Visa Sale - ${values.passengerFirstName} ${values.passengerLastName} - ${values.reference}`,
+                    detail: commonDetail,
                     credit: parseFloat(values.paid_in_bank),
                     debit: 0,
                     date: new Date().toISOString().split('T')[0],

@@ -160,12 +160,10 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
             };
 
             const commonDetail = [
-                serviceDetails.visa_type || '',
-                serviceDetails.customer_add || '',
-                formatDate(serviceDetails.booking_date),
+                serviceDetails.agent_name || '',
                 serviceDetails.specific_detail || '',
-                '(Remaining Payment)'
-            ].filter(Boolean).join(',');
+                '(RP)'
+            ].filter(Boolean).join('/');
 
             const agentData = {
                 agent_name: serviceDetails.agent_name,
@@ -198,19 +196,20 @@ const ServiceRemainingPay = ({ serviceId, onClose, onPaymentSuccess }) => {
 
     const addBankAccountEntry = async (bankAmount) => {
         try {
-            let customerInfo = 'N/A';
-            let referenceInfo = 'N/A';
+            let agent_name = 'N/A';
+            let specific_detail = 'N/A';
 
             if (serviceDetails) {
-                customerInfo = serviceDetails.customer_add || 'N/A';
-                referenceInfo = serviceDetails.reference || 'N/A';
+                agent_name = serviceDetails.agent_name || 'N/A';
+                specific_detail = serviceDetails.specific_detail || 'N/A';
             }
 
-            const detailString = `Customer: ${customerInfo}, Ref: ${referenceInfo}, Recorded by: ${newPayment.recorded_by}`;
+            const detailString = ` AG ${agent_name},/ ${specific_detail}`;
 
             const officeAccountData = {
                 bank_name: newPayment.bank_title,
-                entry: serviceDetails?.entry || `Service Remaining_Payment ${serviceId}`,
+                employee_name:newPayment.recorded_by,
+                entry: serviceDetails?.entry || `SR${serviceId}`,
                 date: newPayment.payment_date,
                 detail: detailString,
                 credit: bankAmount,

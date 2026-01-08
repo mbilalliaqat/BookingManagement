@@ -462,7 +462,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     const bankData = {
                         bank_name: values.paid_from_bank,
                         employee_name: values.user_name,
-                        detail: `Service Sale - ${values.customer_add} - ${values.specific_detail}`,
+                        detail: `AG (${values.agent_name}) - ${values.specific_detail}`,
                         credit: parseFloat(values.paid_in_bank),
                         debit: 0,
                         date: values.booking_date,
@@ -480,7 +480,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     if (vendor.vendor_name && parseFloat(vendor.payable_amount) > 0) {
                         const vendorData = {
                             vender_name: vendor.vendor_name,
-                            detail: `Service - ${values.specific_detail} - ${values.customer_add}`,
+                            detail: `AG (${values.agent_name}) - ${values.specific_detail}`,
                             credit: parseFloat(vendor.payable_amount) || 0,
                             date: values.booking_date,
                             entry: values.entry,
@@ -500,7 +500,7 @@ const Services_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     const agentData = {
                         agent_name: values.agent_name,
                         employee: values.user_name,
-                        detail: `Service - ${values.specific_detail} - ${values.customer_add}`,
+                        detail:`AG (${values.agent_name}) - ${values.specific_detail}`,
                         receivable_amount: parseFloat(values.receivable_amount) || 0,
                         paid_cash: parseFloat(values.paid_cash) || 0,
                         paid_bank: parseFloat(values.paid_in_bank) || 0,

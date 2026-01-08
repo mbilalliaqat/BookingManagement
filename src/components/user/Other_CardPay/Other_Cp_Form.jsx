@@ -199,11 +199,15 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
     const handleSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
         console.log('Submitting form with entry:', values.entry);
 
+        const agentName = values.agent_name || '';
+        const referenceToStore = values.agent_name ? '' : (values.reference || '');
+        const detail = `${agentName} / ${referenceToStore}`;
+
         const requestData = {
             date: values.date,
             entry: values.entry,
             employee: values.employee,
-            detail: values.detail,
+            detail: detail,
             card_payment: values.card_payment,
             card_amount: parseFloat(values.card_amount) || 0,
             receivable_amount: parseFloat(values.receivable_amount) || 0,
@@ -247,7 +251,7 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 await axios.post(`${BASE_URL}/accounts`, {
                     bank_name: values.paid_from_bank,
                     employee_name: values.employee,
-                    detail: `Other CP - ${values.detail}`,
+                    detail: detail,
                     credit: parseFloat(values.paid_in_bank),
                     debit: 0,
                     date: values.date,
@@ -260,7 +264,7 @@ const Other_Cp_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 await axios.post(`${BASE_URL}/agent`, {
                     agent_name: values.agent_name,
                     employee: values.employee,
-                    detail: `Other CP - ${values.detail}`,
+                    detail: detail,
                     receivable_amount: parseFloat(values.receivable_amount),
                     paid_cash: parseFloat(values.paid_cash),
                     paid_bank: parseFloat(values.paid_in_bank),

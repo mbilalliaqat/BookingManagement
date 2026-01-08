@@ -97,13 +97,44 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
             });
 
             if (response.status === 201) {
-                if (newPayment.bank_title && bankAmount > 0) {
-                    await addBankAccountEntry();
+                let passengerName = '';
+                let passportDetails = {};
+                try {
+                    if (typeof gamcaTokenDetails.passport_detail === 'string') {
+                        passportDetails = JSON.parse(gamcaTokenDetails.passport_detail);
+                    } else if (typeof gamcaTokenDetails.passport_detail === 'object' && gamcaTokenDetails.passport_detail !== null) {
+                        passportDetails = gamcaTokenDetails.passport_detail;
+                    }
+                    passengerName = `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim();
+                } catch (e) {
+                    console.error('Error parsing passport details:', e);
                 }
 
-                // Add agent entry for the remaining payment
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = String(date.getFullYear()).slice(-2);
+                    return `${day}-${month}-${year}`;
+                };
+
+                const referenceToStore = gamcaTokenDetails.agent_name ? '' : (gamcaTokenDetails.reference || '');
+                const detail = [
+                    gamcaTokenDetails.agent_name,
+                    passengerName,
+                    passportDetails.documentNo,
+                    referenceToStore,
+                    '(RP)'
+                ].filter(Boolean).join(' / ');
+
+
+                if (newPayment.bank_title && bankAmount > 0) {
+                    await addBankAccountEntry(detail);
+                }
+
                 if (gamcaTokenDetails && gamcaTokenDetails.agent_name) {
-                    await addAgentEntry();
+                    await addAgentEntry(detail);
                 }
 
                 setPayments([...payments, response.data.payment]);
@@ -132,7 +163,7 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         }
     };
 
-    const addAgentEntry = async () => {
+    const addAgentEntry = async (detail) => {
         try {
             console.log('Adding agent entry for gamca token remaining payment');
             console.log('GamcaTokenDetails:', gamcaTokenDetails);
@@ -145,41 +176,10 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
             const cashAmount = parseFloat(newPayment.paid_cash) || 0;
             const bankAmount = parseFloat(newPayment.paid_in_bank) || 0;
 
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '';
-                const date = new Date(dateStr);
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const year = String(date.getFullYear()).slice(-2);
-                return `${day}-${month}-${year}`;
-            };
-
-            let passengerName = '';
-            try {
-                let passportDetails = {};
-                if (typeof gamcaTokenDetails.passport_detail === 'string') {
-                    passportDetails = JSON.parse(gamcaTokenDetails.passport_detail);
-                } else if (typeof gamcaTokenDetails.passport_detail === 'object') {
-                    passportDetails = gamcaTokenDetails.passport_detail;
-                }
-                passengerName = `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim();
-            } catch (e) {
-                console.error('Error parsing passport details:', e);
-            }
-
-            const commonDetail = [
-                gamcaTokenDetails.country || '',
-                gamcaTokenDetails.visa_type || '',
-                gamcaTokenDetails.token_number || '',
-                formatDate(gamcaTokenDetails.booking_date),
-                passengerName,
-                '(Remaining Payment)'
-            ].filter(Boolean).join(',');
-
             const agentData = {
                 agent_name: gamcaTokenDetails.agent_name,
                 employee: newPayment.recorded_by,
-                detail: commonDetail,
+                detail: detail,
                 receivable_amount: 0,
                 paid_cash: cashAmount,
                 paid_bank: bankAmount,
@@ -205,23 +205,13 @@ const GamcaTokenRemainingPay = ({ gamcaTokenId, onPaymentSuccess }) => {
         }
     };
 
-    const addBankAccountEntry = async () => {
+    const addBankAccountEntry = async (detail) => {
         try {
-            let customerInfo = 'N/A';
-            let referenceInfo = 'N/A';
-
-            if (gamcaTokenDetails) {
-                customerInfo = gamcaTokenDetails.customer_add || 'N/A';
-                referenceInfo = gamcaTokenDetails.reference || 'N/A';
-            }
-
-            const detailString = `Customer: ${customerInfo}, Ref: ${referenceInfo}, Recorded by: ${newPayment.recorded_by}`;
-
             const officeAccountData = {
                 bank_name: newPayment.bank_title,
                 entry: `GamcaToken Remaining_Payment ${gamcaTokenId}`,
                 date: newPayment.payment_date,
-                detail: detailString,
+                detail: detail,
                 credit: parseFloat(newPayment.paid_in_bank) || 0,
                 debit: 0,
             };

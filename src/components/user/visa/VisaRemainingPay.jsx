@@ -10,7 +10,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
     const [error, setError] = useState(null);
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [visaDetails, setVisaDetails] = useState(null); // Add visa details state
+    const [visaDetails, setVisaDetails] = useState(null);
     const [editingPayment, setEditingPayment] = useState(null);
     const [isDeleting, setIsDeleting] = useState(null);
     const [newPayment, setNewPayment] = useState({
@@ -32,7 +32,6 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
 
     const BASE_URL = import.meta.env.VITE_LIVE_API_BASE_URL;
 
-    // Fixed: Fetch payments using the correct endpoint
     const fetchPayments = async () => {
         try {
             setIsLoading(true);
@@ -46,7 +45,6 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
         }
     };
 
-    // Add function to fetch visa details for bank account entry
     const fetchVisaDetails = async () => {
         try {
             const response = await axios.get(`${BASE_URL}/visa-processing`);
@@ -76,7 +74,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
     useEffect(() => {
         if (visaId) {
             fetchPayments();
-            fetchVisaDetails(); // Fetch visa details for bank account entry
+            fetchVisaDetails();
         }
     }, [visaId]);
 
@@ -98,15 +96,6 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
             const cashAmount = parseFloat(newPayment.payed_cash) || 0;
             const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '';
-                const date = new Date(dateStr);
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const year = String(date.getFullYear()).slice(-2);
-                return `${day}-${month}-${year}`;
-            };
-
             let passengerName = '';
             try {
                 let passportDetails = {};
@@ -120,14 +109,22 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                 console.error('Error parsing passport details:', e);
             }
 
-            const commonDetail = [
-                visaDetails.embassy || '',
-                visaDetails.visa_number || '',
-                formatDate(visaDetails.embassy_send_date),
-                formatDate(visaDetails.embassy_return_date || ''),
-                passengerName,
-                '(Remaining Payment)'
-            ].filter(Boolean).join(',');
+            const detailParts = [];
+            if (visaDetails.agent_name) {
+                detailParts.push(`(AG,${visaDetails.agent_name})`);
+            }
+            detailParts.push(`File No ${visaDetails.file_number || ''}`);
+            detailParts.push(passengerName);
+
+            if (!visaDetails.agent_name) {
+                detailParts.push(visaDetails.reference || '');
+            }
+
+            detailParts.push(visaDetails.embassy || '');
+            detailParts.push(visaDetails.professional || '');
+
+            let commonDetail = detailParts.filter(part => part).join(' / ');
+            commonDetail = `${commonDetail} (RP)`;
 
             const agentData = {
                 agent_name: visaDetails.agent_name,
@@ -158,18 +155,42 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
         }
     };
 
-    // Add bank account entry function (similar to RemainingPay.jsx)
     const addBankAccountEntry = async () => {
         try {
-            let customerInfo = 'N/A';
-            let referenceInfo = 'N/A';
-            
-            if (visaDetails) {
-                customerInfo = visaDetails.customer_add || 'N/A';
-                referenceInfo = visaDetails.reference || 'N/A';
+            if (!visaDetails) {
+                console.error('No visa details available for bank account entry');
+                return;
             }
-            
-            const detailString = `Customer: ${customerInfo}, Ref: ${referenceInfo}, Recorded by: ${newPayment.recorded_by}`;
+
+            let passengerName = '';
+            try {
+                let passportDetails = {};
+                if (typeof visaDetails.passport_detail === 'string') {
+                    passportDetails = JSON.parse(visaDetails.passport_detail);
+                } else if (typeof visaDetails.passport_detail === 'object') {
+                    passportDetails = visaDetails.passport_detail;
+                }
+                passengerName = `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim();
+            } catch (e) {
+                console.error('Error parsing passport details:', e);
+            }
+
+            const detailParts = [];
+            if (visaDetails.agent_name) {
+                detailParts.push(`(AG,${visaDetails.agent_name})`);
+            }
+            detailParts.push(`File No ${visaDetails.file_number || ''}`);
+            detailParts.push(passengerName);
+
+            if (!visaDetails.agent_name) {
+                detailParts.push(visaDetails.reference || '');
+            }
+
+            detailParts.push(visaDetails.embassy || '');
+            detailParts.push(visaDetails.professional || '');
+
+            let detailString = detailParts.filter(part => part).join(' / ');
+            detailString = `${detailString} (PR)`;
             
             const officeAccountData = {
                 bank_name: newPayment.bank_title,
@@ -198,7 +219,6 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
         setIsSubmitting(true);
         setError(null);
 
-        // Validation - ensure at least one payment method has a value
         const cashAmount = parseFloat(newPayment.payed_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
@@ -209,31 +229,27 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
         }
         
         try {
-            // FIXED: Send data with correct field names that backend expects
             const paymentData = {
                 payment_date: newPayment.payment_date,
-                payed_cash: cashAmount, // Ensure this matches backend expectations
-                paid_bank: bankAmount,  // Ensure this matches backend expectations
+                payed_cash: cashAmount,
+                paid_bank: bankAmount,
                 bank_title: newPayment.bank_title || null,
                 recorded_by: newPayment.recorded_by,
             };
 
-            console.log('Sending payment data:', paymentData); // Debug log
+            console.log('Sending payment data:', paymentData);
 
             const response = await axios.post(`${BASE_URL}/visa-processing/${visaId}/payments`, paymentData);
             
             if (response.status === 201) {
-                // Add bank account entry if bank payment is made
                 if (newPayment.bank_title && bankAmount > 0) {
                     await addBankAccountEntry();
                 }
 
-                // Add agent entry for the remaining payment
                 if (visaDetails && visaDetails.agent_name) {
                     await addAgentEntry();
                 }
 
-                // Dispatch the paymentUpdated event to trigger dashboard refresh
                 window.dispatchEvent(new CustomEvent('paymentUpdated', {
                     detail: {
                         visaId: visaId,
@@ -244,7 +260,6 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                     }
                 }));
 
-                // FIXED: Pass the correct data structure to parent component
                 onPaymentSuccess({
                     visaId: visaId,
                     cash_amount: cashAmount,
@@ -260,39 +275,136 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                     recorded_by: user?.username || ''
                 });
                 
-                // Refresh the payment history
                 fetchPayments();
             }
             
         } catch (error) {
             console.error('Error adding payment:', error);
-            console.error('Error response:', error.response?.data); // Debug log
+            console.error('Error response:', error.response?.data);
             setError(error.response?.data?.message || 'Failed to add payment.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    // Function to handle payment deletion
-    const deletePayment = async (paymentId) => {
-        if (!confirm('Are you sure you want to delete this payment? This will also update the visa amounts.')) return;
-        setIsDeleting(paymentId);
+    // NEW: Function to delete related agent entries
+    const deleteRelatedAgentEntry = async (payment) => {
         try {
+            if (!visaDetails) {
+                console.log('No visa details available for agent entry deletion');
+                return;
+            }
+
+            // Construct the entry pattern to search for
+            const entryPattern = `${visaDetails.entry || ''} (RP)`;
+            
+            console.log('Searching for agent entry with pattern:', entryPattern);
+
+            // Fetch all agent entries
+            const agentResponse = await axios.get(`${BASE_URL}/agent`);
+            const agentEntries = agentResponse.data.agents || [];
+
+            // Find matching agent entry by entry field and date
+            const matchingEntry = agentEntries.find(entry => 
+                entry.entry === entryPattern &&
+                entry.date === payment.payment_date &&
+                entry.agent_name === visaDetails.agent_name
+            );
+
+            if (matchingEntry) {
+                console.log('Found matching agent entry:', matchingEntry);
+                await axios.delete(`${BASE_URL}/agent/${matchingEntry.id}`, {
+                    data: { user_name: user.name }
+                });
+                console.log('Related agent entry deleted successfully');
+            } else {
+                console.log('No matching agent entry found for deletion');
+            }
+        } catch (error) {
+            console.error('Error deleting related agent entry:', error);
+            // Don't throw error, just log it
+        }
+    };
+
+    // NEW: Function to delete related office account entries
+    const deleteRelatedOfficeAccountEntry = async (payment) => {
+        try {
+            if (!visaDetails || !payment.bank_title) {
+                console.log('No visa details or bank title available for office account deletion');
+                return;
+            }
+
+            console.log('Searching for office account entry');
+
+            // Fetch all office account entries for the specific bank
+            const accountResponse = await axios.get(`${BASE_URL}/accounts/${payment.bank_title}`);
+            const accountEntries = accountResponse.data || [];
+
+            // Find matching office account entry by entry field, date, and bank
+            const matchingEntry = accountEntries.find(entry => 
+                entry.entry === visaDetails.entry &&
+                entry.date === payment.payment_date &&
+                entry.bank_name === payment.bank_title &&
+                entry.detail && entry.detail.includes('(PR)')
+            );
+
+            if (matchingEntry) {
+                console.log('Found matching office account entry:', matchingEntry);
+                await axios.delete(`${BASE_URL}/accounts/${matchingEntry.id}`, {
+                    data: { user_name: user.name }
+                });
+                console.log('Related office account entry deleted successfully');
+            } else {
+                console.log('No matching office account entry found for deletion');
+            }
+        } catch (error) {
+            console.error('Error deleting related office account entry:', error);
+            // Don't throw error, just log it
+        }
+    };
+
+    // UPDATED: Delete payment function with cascading deletes
+    const deletePayment = async (paymentId) => {
+        if (!confirm('Are you sure you want to delete this payment? This will also delete related entries from Agent and Office Accounts tables.')) return;
+        
+        setIsDeleting(paymentId);
+        
+        try {
+            // Find the payment details before deletion
+            const paymentToDelete = payments.find(p => p.id === paymentId);
+            
+            if (!paymentToDelete) {
+                throw new Error('Payment not found');
+            }
+
+            console.log('Deleting payment:', paymentToDelete);
+
+            // Step 1: Delete related agent entry (if agent exists)
+            if (visaDetails && visaDetails.agent_name) {
+                await deleteRelatedAgentEntry(paymentToDelete);
+            }
+
+            // Step 2: Delete related office account entry (if bank payment was made)
+            if (paymentToDelete.paid_bank && parseFloat(paymentToDelete.paid_bank) > 0) {
+                await deleteRelatedOfficeAccountEntry(paymentToDelete);
+            }
+
+            // Step 3: Delete the visa payment record
             await axios.delete(`${BASE_URL}/visa-processing/payment/${paymentId}`);
-            // Refresh payments
+
+            // Refresh payments and notify dashboard
             await fetchPayments();
-            // Notify others to refresh dashboard
             window.dispatchEvent(new CustomEvent('paymentUpdated', { detail: { visaId } }));
-            alert('Payment deleted successfully');
+            
+            alert('Payment and related entries deleted successfully');
         } catch (error) {
             console.error('Error deleting payment:', error);
-            alert('Failed to delete payment. Please try again.');
+            alert('Failed to delete payment. Please check the console for details and try again.');
         } finally {
             setIsDeleting(null);
         }
     };
 
-    // Function to handle payment updates
     const updatePayment = async (paymentId) => {
         if (!editingPayment.payment_date || !editingPayment.recorded_by) return;
 
@@ -407,7 +519,6 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                             )}
                         </tbody>
 
-                        {/* Edit Payment Modal */}
                         {editingPayment && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                                 <div className="bg-white rounded-lg p-6 w-96">

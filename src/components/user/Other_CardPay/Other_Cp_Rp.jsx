@@ -168,8 +168,8 @@ const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
 
             const commonDetail = [
                 otherCpDetails.detail || '',
-                formatDate(otherCpDetails.date),
-                '(Remaining Payment)'
+               
+                '(RP)'
             ].filter(Boolean).join(',');
 
             const agentData = {
@@ -231,7 +231,7 @@ const Other_Cp_Rp = ({ otherCpId, onClose, onPaymentSuccess }) => {
                 entryInfo = otherCpDetails.entry || 'N/A';
             }
 
-            const detailString = `Detail: ${detailInfo}, Entry: ${entryInfo}, Recorded by: ${newPayment.recorded_by}`;
+            const detailString = `Detail: ${detailInfo}, `;
 
             const officeAccountData = {
                 bank_name: newPayment.bank_title,

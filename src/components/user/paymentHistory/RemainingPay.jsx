@@ -27,8 +27,8 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         }
     }, [user?.username]);
 
-    
-    
+
+
     // Add state to store ticket details for bank account entry
     const [ticketDetails, setTicketDetails] = useState(null);
 
@@ -84,176 +84,180 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         }
     };
 
-     // Replace the entire addPayment function in RemainingPay.jsx with this updated version:
+    // Replace the entire addPayment function in RemainingPay.jsx with this updated version:
 
-const addPayment = async () => {
-    if (isSubmitting) return;
-    if (!newPayment.payment_date || !newPayment.recorded_by) return;
-
-    const cashAmount = parseFloat(newPayment.payed_cash) || 0;
-    const bankAmount = parseFloat(newPayment.paid_bank) || 0;
-
-    if (cashAmount === 0 && bankAmount === 0) {
-        alert('Please Enter either cash paid & Paid Bank');
-        return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-        // First, add the payment record
-        const response = await axios.post(`${BASE_URL}/ticket_payments`, {
-            ticket_id: ticketId,
-            payment_date: newPayment.payment_date,
-            payment_amount: cashAmount,
-            paid_bank: bankAmount,
-            bank_title: newPayment.bank_title || null,
-            recorded_by: newPayment.recorded_by
-        });
-
-        if (response.status === 201) {
-            // Add bank account entry if bank payment is made
-            if (newPayment.bank_title && bankAmount > 0) {
-                await addBankAccountEntry();
-            }
-
-            // Add agent entry for the remaining payment
-            if (ticketDetails && ticketDetails.agent_name) {
-                await addAgentEntry();
-            }
-
-            setPayments([...payments, response.data.payment]);
-
-            // Create payment data to pass to parent for dashboard update
-            const paymentData = {
-                ticketId: ticketId,
-                cashAmount: cashAmount,
-                bankAmount: bankAmount,
-                paymentDate: newPayment.payment_date,
-                recordedBy: newPayment.recorded_by
-            };
-
-            // Dispatch the paymentUpdated event to trigger dashboard refresh
-            window.dispatchEvent(new CustomEvent('paymentUpdated', {
-                detail: paymentData
-            }));
-
-            setNewPayment({
-                payment_date: new Date().toISOString().split('T')[0],
-                remaining_amount: '',
-                payed_cash: '',
-                paid_bank: '',
-                bank_title: '',
-                recorded_by: user?.username || ''
-            });
-            setShowModal(false);
-
-            // Pass payment data to parent component
-            onPaymentSuccess?.(paymentData);
-        }
-    } catch (error) {
-        console.error('Error adding payment:', error);
-        alert('Failed to add payment. Please try again.');
-    } finally {
-        setIsSubmitting(false);
-    }
-};
-
-// Add this new function after the addPayment function:
-
-const addAgentEntry = async () => {
-    try {
-        console.log('Adding agent entry for remaining payment');
-        console.log('TicketDetails:', ticketDetails);
-
-        if (!ticketDetails) {
-            console.error('No ticket details available for agent entry');
-            return;
-        }
+    const addPayment = async () => {
+        if (isSubmitting) return;
+        if (!newPayment.payment_date || !newPayment.recorded_by) return;
 
         const cashAmount = parseFloat(newPayment.payed_cash) || 0;
         const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
-        // Format the detail string similar to ticket form
-        const formatDate = (dateStr) => {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = String(date.getFullYear()).slice(-2);
-            return `${day}-${month}-${year}`;
-        };
+        if (cashAmount === 0 && bankAmount === 0) {
+            alert('Please Enter either cash paid & Paid Bank');
+            return;
+        }
 
-        // Parse passenger details to get first passenger name
-        let passengerName = '';
+        setIsSubmitting(true);
+
         try {
-            let passengerDetails = [];
-            if (typeof ticketDetails.passport_detail === 'string') {
-                passengerDetails = JSON.parse(ticketDetails.passport_detail);
-            } else if (Array.isArray(ticketDetails.passport_detail)) {
-                passengerDetails = ticketDetails.passport_detail;
+            // First, add the payment record
+            const response = await axios.post(`${BASE_URL}/ticket_payments`, {
+                ticket_id: ticketId,
+                payment_date: newPayment.payment_date,
+                payment_amount: cashAmount,
+                paid_bank: bankAmount,
+                bank_title: newPayment.bank_title || null,
+                recorded_by: newPayment.recorded_by
+            });
+
+            if (response.status === 201) {
+                // Add bank account entry if bank payment is made
+                if (newPayment.bank_title && bankAmount > 0) {
+                    await addBankAccountEntry();
+                }
+
+                // Add agent entry for the remaining payment
+                if (ticketDetails && ticketDetails.agent_name) {
+                    await addAgentEntry();
+                }
+
+                setPayments([...payments, response.data.payment]);
+
+                // Create payment data to pass to parent for dashboard update
+                const paymentData = {
+                    ticketId: ticketId,
+                    cashAmount: cashAmount,
+                    bankAmount: bankAmount,
+                    paymentDate: newPayment.payment_date,
+                    recordedBy: newPayment.recorded_by
+                };
+
+                // Dispatch the paymentUpdated event to trigger dashboard refresh
+                window.dispatchEvent(new CustomEvent('paymentUpdated', {
+                    detail: paymentData
+                }));
+
+                setNewPayment({
+                    payment_date: new Date().toISOString().split('T')[0],
+                    remaining_amount: '',
+                    payed_cash: '',
+                    paid_bank: '',
+                    bank_title: '',
+                    recorded_by: user?.username || ''
+                });
+                setShowModal(false);
+
+                // Pass payment data to parent component
+                onPaymentSuccess?.(paymentData);
             }
-            
-            if (passengerDetails.length > 0) {
-                const firstPassenger = passengerDetails[0];
-                passengerName = `${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+        } catch (error) {
+            console.error('Error adding payment:', error);
+            alert('Failed to add payment. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Add this new function after the addPayment function:
+
+    const addAgentEntry = async () => {
+        try {
+            console.log('Adding agent entry for remaining payment');
+            console.log('TicketDetails:', ticketDetails);
+
+            if (!ticketDetails) {
+                console.error('No ticket details available for agent entry');
+                return;
             }
-        } catch (e) {
-            console.error('Error parsing passenger details:', e);
+
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+
+            // Format the detail string similar to ticket form
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            };
+
+            // Parse passenger details to get first passenger name
+            let passengerName = '';
+            try {
+                let passengerDetails = [];
+                if (typeof ticketDetails.passport_detail === 'string') {
+                    passengerDetails = JSON.parse(ticketDetails.passport_detail);
+                } else if (Array.isArray(ticketDetails.passport_detail)) {
+                    passengerDetails = ticketDetails.passport_detail;
+                }
+
+                if (passengerDetails.length > 0) {
+                    const firstPassenger = passengerDetails[0];
+                    passengerName = `${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
+                }
+            } catch (e) {
+                console.error('Error parsing passenger details:', e);
+            }
+
+            const commonDetailParts = [
+                passengerName,
+                ticketDetails.sector || '',
+                ticketDetails.airline || '',
+                ticketDetails.prn || '',
+                formatDate(ticketDetails.depart_date),
+                formatDate(ticketDetails.return_date || ''),
+                '(RP)'
+            ];
+
+            if (!ticketDetails.agent_name && ticketDetails.reference) {
+                commonDetailParts.push(ticketDetails.reference);
+            }
+
+            const commonDetail = commonDetailParts.filter(Boolean).join(',');
+
+            const agentData = {
+                agent_name: ticketDetails.agent_name,
+                employee: newPayment.recorded_by,
+                detail: commonDetail,
+                receivable_amount: 0, // No new receivable amount for remaining payment
+                paid_cash: cashAmount,
+                paid_bank: bankAmount,
+                credit: 0, // No new credit
+                debit: cashAmount + bankAmount, // This reduces the agent's balance
+                date: newPayment.payment_date,
+                entry: `${ticketDetails.entry || ''} (RP)`, // RP = Remaining Payment
+                bank_title: newPayment.bank_title || null
+            };
+
+            console.log('Submitting agent data:', agentData);
+
+            const agentResponse = await axios.post(`${BASE_URL}/agent`, agentData);
+
+            if (agentResponse.status === 200 || agentResponse.status === 201) {
+                console.log('Agent entry added successfully');
+            } else {
+                console.error('Agent submission failed:', agentResponse.status);
+            }
+        } catch (agentError) {
+            console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
+            // Don't alert here as payment was successful, just log the error
+            console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
+    };
 
-        const commonDetail = [
-            ticketDetails.sector || '',
-            ticketDetails.airline || '',
-            formatDate(ticketDetails.depart_date),
-            formatDate(ticketDetails.return_date || ''),
-            passengerName,
-            '(Remaining Payment)'
-        ].filter(Boolean).join(',');
+    // CLEAN VERSION - Without excessive console logs
 
-        const agentData = {
-            agent_name: ticketDetails.agent_name,
-            employee: newPayment.recorded_by,
-            detail: commonDetail,
-            receivable_amount: 0, // No new receivable amount for remaining payment
-            paid_cash: cashAmount,
-            paid_bank: bankAmount,
-            credit: 0, // No new credit
-            debit: cashAmount + bankAmount, // This reduces the agent's balance
-            date: newPayment.payment_date,
-            entry: `${ticketDetails.entry || ''} (RP)`, // RP = Remaining Payment
-            bank_title: newPayment.bank_title || null
-        };
-
-        console.log('Submitting agent data:', agentData);
-
-        const agentResponse = await axios.post(`${BASE_URL}/agent`, agentData);
-        
-        if (agentResponse.status === 200 || agentResponse.status === 201) {
-            console.log('Agent entry added successfully');
-        } else {
-            console.error('Agent submission failed:', agentResponse.status);
-        }
-    } catch (agentError) {
-        console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
-        // Don't alert here as payment was successful, just log the error
-        console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
-    }
-};
-
-    // Updated addBankAccountEntry function
+    // 1. addBankAccountEntry function
     const addBankAccountEntry = async () => {
         try {
-            // Debug: Log the ticketDetails to see what we're getting
-            console.log('TicketDetails in addBankAccountEntry:', ticketDetails);
-            console.log('TicketId:', ticketId);
-
             const formatDate = (dateStr) => {
                 if (!dateStr) return 'N/A';
                 return new Date(dateStr).toISOString().split('T')[0];
             };
 
-            // If ticketDetails is not available, fetch it from the tickets list
             let detailString = 'N/A';
 
             const createDetailString = (ticket) => {
@@ -270,21 +274,27 @@ const addAgentEntry = async () => {
                     console.error('Error parsing passport_detail:', e);
                 }
 
-                return [
+                const detailParts = [
                     passengerName,
-                    ticket.reference || '',
                     ticket.agent_name || '',
                     ticket.sector || 'N/A',
                     ticket.airline || 'N/A',
+                    ticket.prn || '',
                     formatDate(ticket.depart_date),
-                    formatDate(ticket.return_date)
-                ].filter(Boolean).join(', ');
+                    formatDate(ticket.return_date),
+                    '(RP)'
+                ];
+
+                if (!ticket.agent_name) {
+                    detailParts.push(ticket.reference || '');
+                }
+
+                return detailParts.filter(Boolean).join(', ');
             };
 
             if (ticketDetails) {
                 detailString = createDetailString(ticketDetails);
             } else {
-                // Fallback if ticketDetails is not available
                 try {
                     const response = await axios.get(`${BASE_URL}/ticket`);
                     if (response.data && response.data.ticket) {
@@ -298,21 +308,26 @@ const addAgentEntry = async () => {
                 }
             }
 
+            const entryWithSuffix = ticketDetails?.entry
+                ? `${ticketDetails.entry} (RP)`
+                : `Ticket Remaining_Payment ${ticketId}`;
+
             const officeAccountData = {
                 bank_name: newPayment.bank_title,
-                entry: ticketDetails?.entry || `Ticket Remaining_Payment ${ticketId}`,
+                entry: entryWithSuffix,
                 date: newPayment.payment_date,
                 detail: detailString,
                 credit: parseFloat(newPayment.paid_bank) || 0,
                 debit: 0,
+                employee_name: newPayment.recorded_by
             };
 
             const officeAccountResponse = await axios.post(`${BASE_URL}/accounts`, officeAccountData);
 
-            if (officeAccountResponse.status !== 200 && officeAccountResponse.status !== 201) {
-                console.error('Office Account submission failed:', officeAccountResponse.status);
-            } else {
+            if (officeAccountResponse.status === 200 || officeAccountResponse.status === 201) {
                 console.log('Bank account entry added successfully');
+            } else {
+                console.error('Office Account submission failed:', officeAccountResponse.status);
             }
         } catch (officeAccountError) {
             console.error('Error submitting Office Account data:', officeAccountError.response?.data || officeAccountError.message);
@@ -320,25 +335,152 @@ const addAgentEntry = async () => {
         }
     };
 
-    // Function to handle payment deletion
+    // 2. deletePayment function
     const deletePayment = async (paymentId) => {
-        if (!confirm('Are you sure you want to delete this payment? This will also update the ticket amounts.')) {
+        if (!confirm('Are you sure you want to delete this payment? This will also delete the corresponding agent and bank account entries.')) {
             return;
         }
 
         setIsDeleting(paymentId);
         try {
+            const paymentToDelete = payments.find(p => p.id === paymentId);
+            if (!paymentToDelete) {
+                console.error("Payment to delete not found in state.");
+                alert("Could not find payment to delete. Please refresh.");
+                setIsDeleting(null);
+                return;
+            }
+
+            // Step 1: Delete agent entry
+            if (ticketDetails && ticketDetails.agent_name && paymentToDelete) {
+                try {
+                    const agentResponse = await axios.get(`${BASE_URL}/agent`);
+
+                    if (agentResponse.data && agentResponse.data.agents) {
+                        const allAgentEntries = agentResponse.data.agents;
+                        const entryToDelete = `${ticketDetails.entry || ''} (RP)`;
+
+                        const normalizeDate = (dateStr) => {
+                            if (!dateStr) return '';
+                            return new Date(dateStr).toISOString().split('T')[0];
+                        };
+
+                        const dateToDelete = normalizeDate(paymentToDelete.payment_date);
+                        const cashToDelete = parseFloat(paymentToDelete.payed_cash) || 0;
+                        const bankToDelete = parseFloat(paymentToDelete.paid_bank) || 0;
+
+                        const agentEntryToDelete = allAgentEntries.find(entry => {
+                            const entryDate = normalizeDate(entry.date);
+                            const entryCash = parseFloat(entry.paid_cash) || 0;
+                            const entryBank = parseFloat(entry.paid_bank) || 0;
+
+                            return (
+                                entry.agent_name === ticketDetails.agent_name &&
+                                entry.entry === entryToDelete &&
+                                entryDate === dateToDelete &&
+                                entryCash === cashToDelete &&
+                                entryBank === bankToDelete
+                            );
+                        });
+
+                        if (agentEntryToDelete) {
+                            await axios.delete(`${BASE_URL}/agent/${agentEntryToDelete.id}`, {
+                                data: { user_name: user?.name || user?.username }
+                            });
+                            console.log('Agent entry deleted successfully');
+                        } else {
+                            console.warn('Could not find matching agent entry');
+                            if (!confirm('Could not find matching agent entry. Continue deleting payment?')) {
+                                setIsDeleting(null);
+                                return;
+                            }
+                        }
+                    }
+                } catch (agentError) {
+                    console.error('Error deleting agent entry:', agentError);
+                    if (!confirm('Failed to delete agent entry. Continue deleting payment?')) {
+                        setIsDeleting(null);
+                        return;
+                    }
+                }
+            }
+
+            // Step 2: Delete bank account entry
+            if (paymentToDelete.bank_title && parseFloat(paymentToDelete.paid_bank) > 0) {
+                try {
+                    const accountsResponse = await axios.get(`${BASE_URL}/accounts/${paymentToDelete.bank_title}`);
+
+                    if (accountsResponse.data && Array.isArray(accountsResponse.data)) {
+                        const normalizeDate = (dateStr) => {
+                            if (!dateStr) return '';
+                            return new Date(dateStr).toISOString().split('T')[0];
+                        };
+
+                        const dateToMatch = normalizeDate(paymentToDelete.payment_date);
+                        const amountToMatch = parseFloat(paymentToDelete.paid_bank);
+                        const entryToMatch = ticketDetails?.entry
+                            ? `${ticketDetails.entry} (RP)`
+                            : `Ticket Remaining_Payment ${ticketId}`;
+
+                        let bankEntryToDelete = null;
+
+                        for (const entry of accountsResponse.data) {
+                            const entryDate = normalizeDate(entry.date);
+                            const entryCredit = parseFloat(entry.credit) || 0;
+
+                            const dateMatches = entryDate === dateToMatch;
+                            const amountMatches = Math.abs(entryCredit - amountToMatch) < 0.01;
+                            const entryMatches = entry.entry === entryToMatch;
+
+                            if (dateMatches && amountMatches && entryMatches) {
+                                bankEntryToDelete = entry;
+                                break;
+                            }
+                        }
+
+                        if (bankEntryToDelete) {
+                            const bankDeleteResponse = await axios.delete(
+                                `${BASE_URL}/accounts/${bankEntryToDelete.id}`,
+                                { data: { user_name: user?.name || user?.username } }
+                            );
+
+                            if (bankDeleteResponse.status === 200) {
+                                console.log('Bank account entry deleted successfully');
+                            }
+                        } else {
+                            console.warn('Could not find matching bank account entry');
+                            if (!confirm('Could not find matching bank account entry. Continue deleting payment?')) {
+                                setIsDeleting(null);
+                                return;
+                            }
+                        }
+                    }
+                } catch (bankError) {
+                    console.error('Error deleting bank account entry:', bankError);
+                    if (!confirm('Failed to delete bank account entry. Continue deleting payment?')) {
+                        setIsDeleting(null);
+                        return;
+                    }
+                }
+            }
+
+            // Step 3: Delete payment record
             await axios.delete(`${BASE_URL}/ticket_payments/${paymentId}`);
+            console.log('Payment record deleted successfully');
 
             // Refresh payments list
             await fetchPayments();
 
-            // Dispatch event to refresh dashboard
-            window.dispatchEvent(new CustomEvent('paymentUpdated', {
-                detail: { ticketId }
-            }));
+            // Dispatch events to refresh other components
+            window.dispatchEvent(new CustomEvent('paymentUpdated', { detail: { ticketId } }));
 
-            alert('Payment deleted successfully');
+            if (paymentToDelete.bank_title) {
+                window.dispatchEvent(new CustomEvent('bankAccountUpdated', {
+                    detail: { bankName: paymentToDelete.bank_title }
+                }));
+            }
+
+            alert('Payment and associated entries deleted successfully');
         } catch (error) {
             console.error('Error deleting payment:', error);
             alert('Failed to delete payment. Please try again.');
@@ -438,7 +580,7 @@ const addAgentEntry = async () => {
                                                 entry
                                             )}
                                         </td>
-                                        
+
                                         <td className="border border-gray-300 px-4 py-2">{ticketDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
                                         <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
                                         <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
@@ -558,8 +700,8 @@ const addAgentEntry = async () => {
                                 onClick={addPayment}
                                 disabled={!newPayment.payment_date || !newPayment.recorded_by}
                                 className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${isSubmitting
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-blue-500 hover:bg-blue-600'
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-500 hover:bg-blue-600'
                                     }`}
                             >
                                 {isSubmitting ? (

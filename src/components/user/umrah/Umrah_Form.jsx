@@ -668,21 +668,31 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                          const year = String(date.getFullYear()).slice(-2);
                     return `${day}-${month}-${year}`;
                   };
-                const commonDetail = [
+                const passengerCount = values.passengers.length;
+                   const passengerCountDisplay = passengerCount > 0 ? `(${passengerCount})` : null;
+                const commonDetailParts = [
+                    values.agentName ? `(AG,${values.agentName})` : '',
+                    passengerCountDisplay,
+                     `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`,
                     values.packageDetail || '',
+                    `ad: ${values.customerAdd || ''}`,
                     values.sector || '',
                     values.airline || '',
                      formatDate(values.depart_date),
                     formatDate(values.return_date || ''),
-                    
-                    `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`.trim()
-                ].join(',');
+                ]
+
+                if (!values.agentName) {
+                    commonDetailParts.push(values.reference.trim());
+                }
+
+                const commonDetail = commonDetailParts.filter(Boolean).join('/');
 
                 for (const vendor of values.vendors) {
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
                             vender_name: vendor.vendor_name,
-                            detail:vendor.vendor_detail || commonDetail,
+                            detail:commonDetail,
                             vendor_detail: vendor.vendor_detail || '',
                             credit: parseFloat(vendor.payable_amount) || 0,
                             date: new Date().toISOString().split('T')[0],
@@ -720,13 +730,12 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 if (!agentResponse.ok) console.error('Agent submission failed:', agentResponse.status);
 
                 if (values.bank_title && (parseFloat(values.paidInBank) || 0) > 0) {
-                    const officeAccountDetail = `Customer: ${values.customerAdd}, Ref: ${values.reference || 'N/A'}, Agent: ${values.agentName || 'N/A'}`;
                     const officeAccountData = {
                         bank_name: values.bank_title,
                         employee_name: values.userName,
                         entry: entryValueToSubmit,
                         date: new Date().toISOString().split('T')[0],
-                        detail: officeAccountDetail,
+                        detail: commonDetail,
                         credit: parseFloat(values.paidInBank) || 0,
                         debit: 0,
                     };
@@ -740,6 +749,33 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     }
                 }
             } else {
+                 const formatDate = (dateStr) => {
+                         if (!dateStr) return '';
+                         const date = new Date(dateStr);
+                           const day = String(date.getDate()).padStart(2, '0');
+                       const month = String(date.getMonth() + 1).padStart(2, '0');
+                         const year = String(date.getFullYear()).slice(-2);
+                    return `${day}-${month}-${year}`;
+                  };
+                const passengerCount = values.passengers.length;
+                   const passengerCountDisplay = passengerCount > 0 ? `(${passengerCount})` : null;
+                const commonDetailParts = [
+                    values.agentName ? `(AG,${values.agentName})` : '',
+                    passengerCountDisplay,
+                     `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`,
+                    values.packageDetail || '',
+                    `ad: ${values.customerAdd || ''}`,
+                    values.sector || '',
+                    values.airline || '',
+                     formatDate(values.depart_date),
+                    formatDate(values.return_date || ''),
+                ]
+
+                if (!values.agentName) {
+                    commonDetailParts.push(values.reference.trim());
+                }
+
+                const commonDetail = commonDetailParts.filter(Boolean).join('/');
                 const newCash = parseFloat(values.paidCash) || 0;
                 const newBank = parseFloat(values.paidInBank) || 0;
                 const oldCash = parseFloat(originalPayments.paidCash) || 0;
@@ -752,7 +788,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     const agentData = {
                         agent_name: values.agentName,
                         employee: values.userName,
-                        detail: `Additional payment for Umrah ${editEntry.entry}`,
+                        detail: commonDetail,
                         receivable_amount: 0,
                         paid_cash: cash_diff > 0 ? cash_diff : 0,
                         paid_bank: bank_diff > 0 ? bank_diff : 0,
@@ -775,7 +811,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                         employee_name: values.userName,
                         entry: editEntry.entry,
                         date: new Date().toISOString().split('T')[0],
-                        detail: `Customer: ${values.customerAdd}, Ref: ${values.reference || 'N/A'}`,
+                        detail: commonDetail,
                         credit: bank_diff,
                         debit: 0,
                     };

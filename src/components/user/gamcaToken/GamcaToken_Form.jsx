@@ -219,6 +219,11 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             issueCountry: values.documentIssueCountry,
         });
 
+        const passengerName = `${values.passengerFirstName} ${values.passengerLastName}`.trim();
+        const passportNumber = values.documentNo || '';
+        const agentName = values.agent_name || '';
+        const referenceToStore = values.agent_name ? '' : (values.reference || '');
+        const detail = `${agentName} / ${passengerName} / ${passportNumber} / ${referenceToStore}`;
 
         const requestData = {
             employee_name: values.employee_name,
@@ -267,7 +272,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                     date: values.booking_date,
                     entry: `BD ${bankEntryNumber}/${bankTotalEntries}`,
                     employee: values.employee_name,
-                    detail: `Gamca Sale - ${values.passengerFirstName} - ${values.passengerLastName}`,
+                    detail: detail,
                     credit: 0,
                     debit: parseFloat(values.card_amount) || 0,
                 };
@@ -301,7 +306,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 await axios.post(`${BASE_URL}/accounts`, {
                     bank_name: values.paid_from_bank,
                     employee_name: values.employee_name,
-                    detail: `Gamca Sale - ${values.customer_add} - ${values.reference}`,
+                    detail: detail,
                     credit: parseFloat(values.paid_in_bank),
                     debit: 0,
                     date: new Date().toISOString().split('T')[0],
@@ -314,7 +319,7 @@ const GamcaToken_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 await axios.post(`${BASE_URL}/agent`, {
                     agent_name: values.agent_name,
                     employee: values.employee_name,
-                    detail: `GAMCA - ${values.reference} - ${values.customer_add}`,
+                    detail: detail,
                     receivable_amount: parseFloat(values.receivable_amount),
                     paid_cash: parseFloat(values.paid_cash),
                     paid_bank: parseFloat(values.paid_in_bank),

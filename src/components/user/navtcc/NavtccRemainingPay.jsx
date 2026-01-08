@@ -103,12 +103,43 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
             });
 
             if (response.status === 201) {
+                let passengerName = '';
+                let passportDetails = {};
+                try {
+                    if (typeof navtccDetails.passport_detail === 'string') {
+                        passportDetails = JSON.parse(navtccDetails.passport_detail);
+                    } else if (typeof navtccDetails.passport_detail === 'object' && navtccDetails.passport_detail !== null) {
+                        passportDetails = navtccDetails.passport_detail;
+                    }
+                    passengerName = `${passportDetails.firstName || ''} ${passportDetails.lastName || ''}`.trim();
+                } catch (e) {
+                    console.error('Error parsing passport details:', e);
+                }
+
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = String(date.getFullYear()).slice(-2);
+                    return `${day}-${month}-${year}`;
+                };
+
+                const referenceToStore = navtccDetails.agent_name ? '' : (navtccDetails.reference || '');
+                const detail = [
+                    navtccDetails.agent_name,
+                    passengerName,
+                    passportDetails.documentNo,
+                    referenceToStore,
+                    '(RP)'
+                ].filter(Boolean).join(' / ');
+
                 if (newPayment.bank_title && bankAmount > 0) {
-                    await addBankAccountEntry();
+                    await addBankAccountEntry(detail);
                 }
 
                 if (navtccDetails && navtccDetails.agent_name) {
-                    await addAgentEntry();
+                    await addAgentEntry(detail);
                 }
 
                 setPayments([...payments, response.data.payment]);
@@ -144,7 +175,7 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    const addAgentEntry = async () => {
+    const addAgentEntry = async (detail) => {
         try {
             console.log('Adding agent entry for remaining payment');
             console.log('NavtccDetails:', navtccDetails);
@@ -157,42 +188,10 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
             const cashAmount = parseFloat(newPayment.payed_cash) || 0;
             const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '';
-                const date = new Date(dateStr);
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const year = String(date.getFullYear()).slice(-2);
-                return `${day}-${month}-${year}`;
-            };
-
-            // Parse passport details to get passenger name
-            let passportDetails = {};
-            try {
-                if (typeof navtccDetails.passport_detail === 'string') {
-                    passportDetails = JSON.parse(navtccDetails.passport_detail);
-                } else if (typeof navtccDetails.passport_detail === 'object' && navtccDetails.passport_detail !== null) {
-                    passportDetails = navtccDetails.passport_detail;
-                }
-            } catch (e) {
-                console.error("Error parsing passport details:", e);
-            }
-
-            const passengerName = [
-                passportDetails.firstName || '',
-                passportDetails.lastName || ''
-            ].filter(Boolean).join(' ') || 'N/A';
-
-            const commonDetail = [
-                passengerName,
-                formatDate(navtccDetails.booking_date),
-                '(Remaining Payment)'
-            ].filter(Boolean).join(',');
-
             const agentData = {
                 agent_name: navtccDetails.agent_name,
                 employee: newPayment.recorded_by,
-                detail: commonDetail,
+                detail: detail,
                 receivable_amount: 0,
                 paid_cash: cashAmount,
                 paid_bank: bankAmount,
@@ -216,79 +215,14 @@ const NavtccRemainingPay = ({ navtccId, onClose, onPaymentSuccess }) => {
             console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
             console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
-    };
-
-    const addBankAccountEntry = async () => {
+    }
+    const addBankAccountEntry = async (detail) => {
         try {
-            console.log('NavtccDetails in addBankAccountEntry:', navtccDetails);
-            console.log('NavtccId:', navtccId);
-
-            let detailInfo = 'N/A';
-            let entryInfo = 'N/A';
-
-            if (!navtccDetails) {
-                try {
-                    const response = await axios.get(`${BASE_URL}/navtcc`);
-                    console.log('All navtcc response:', response.data);
-
-                    if (response.data && response.data.navtcc) {
-                        const specificEntry = response.data.navtcc.find(entry => entry.id === navtccId);
-                        console.log('Found specific entry:', specificEntry);
-
-                        if (specificEntry) {
-                            // Parse passport details
-                            let passportDetails = {};
-                            try {
-                                if (typeof specificEntry.passport_detail === 'string') {
-                                    passportDetails = JSON.parse(specificEntry.passport_detail);
-                                } else if (typeof specificEntry.passport_detail === 'object') {
-                                    passportDetails = specificEntry.passport_detail;
-                                }
-                            } catch (e) {
-                                console.error("Error parsing passport details:", e);
-                            }
-
-                            const passengerName = [
-                                passportDetails.firstName || '',
-                                passportDetails.lastName || ''
-                            ].filter(Boolean).join(' ') || 'N/A';
-
-                            detailInfo = passengerName;
-                            entryInfo = specificEntry.entry || 'N/A';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching navtcc for bank entry:', error);
-                }
-            } else {
-                // Parse passport details
-                let passportDetails = {};
-                try {
-                    if (typeof navtccDetails.passport_detail === 'string') {
-                        passportDetails = JSON.parse(navtccDetails.passport_detail);
-                    } else if (typeof navtccDetails.passport_detail === 'object') {
-                        passportDetails = navtccDetails.passport_detail;
-                    }
-                } catch (e) {
-                    console.error("Error parsing passport details:", e);
-                }
-
-                const passengerName = [
-                    passportDetails.firstName || '',
-                    passportDetails.lastName || ''
-                ].filter(Boolean).join(' ') || 'N/A';
-
-                detailInfo = passengerName;
-                entryInfo = navtccDetails.entry || 'N/A';
-            }
-
-            const detailString = `Detail: ${detailInfo}, Entry: ${entryInfo}, Recorded by: ${newPayment.recorded_by}`;
-
             const officeAccountData = {
                 bank_name: newPayment.bank_title,
                 entry: navtccDetails?.entry || `NAVTCC Remaining_Payment ${navtccId}`,
                 date: newPayment.payment_date,
-                detail: detailString,
+                detail: detail,
                 credit: parseFloat(newPayment.paid_bank) || 0,
                 debit: 0,
             };

@@ -722,21 +722,28 @@ console.log('airline_select value:', values.airline_select);
                                  const year = String(date.getFullYear()).slice(-2);
                                return `${day}-${month}-${year}`;
                              };
-                const commonDetail = [
-                     values.agent_name ? `(AG,${values.agent_name})` : '',
+                const commonDetailParts = [
+                    values.agent_name ? `(AG,${values.agent_name})` : '',
+                    `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`,
                     values.sector || '',
-                     values.airline || '',
+                    values.airline || '',
+                    values.prn || '',
                     formatDate(values.depart_date),
                     formatDate(values.return_date || ''),
-                    `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''}`.trim()
-                ].join(',');
+                ];
+
+                if (!values.agent_name) {
+                    commonDetailParts.push(values.reference.trim());
+                }
+
+                const commonDetail = commonDetailParts.join('/');
 
                 // Submit vendor data for each vendor
                 for (const vendor of values.vendors) {
                     if (vendor.vendor_name && vendor.payable_amount) {
                         const vendorData = {
                             vender_name: vendor.vendor_name,
-                            detail: vendor.vendor_detail || commonDetail,
+                            detail:commonDetail,
                             vendor_detail: vendor.vendor_detail || '',
                             credit: parseFloat(vendor.payable_amount) || 0,
                             date: new Date().toISOString().split('T')[0],
@@ -774,12 +781,13 @@ console.log('airline_select value:', values.airline_select);
                 if (!agentResponse.ok) console.error('Agent submission failed:', agentResponse.status);
 
                 if (values.bank_title && (parseFloat(values.paid_in_bank) || 0) > 0) {
-                  const officeAccountDetail = `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''},  ${values.reference || ''},  ${values.agent_name || ''},  ${values.sector || 'N/A'},  ${values.airline || 'N/A'},  ${values.depart_date || 'N/A'}, ${values.return_date || 'N/A'}`;                    const officeAccountData = {
+                //   const officeAccountDetail = `${values.passengers[0]?.firstName || ''} ${values.passengers[0]?.lastName || ''},  ${values.reference || ''},  ${values.agent_name || ''},  ${values.sector || 'N/A'},  ${values.airline || 'N/A'},  ${values.depart_date || 'N/A'}, ${values.return_date || 'N/A'}`;                    
+                  const officeAccountData = {
                         bank_name: values.bank_title,
                         employee_name: values.employee_name,
                         entry: entryValueToSubmit,
                         date: new Date().toISOString().split('T')[0],
-                        detail: officeAccountDetail,
+                        detail: commonDetail,
                         credit: parseFloat(values.paid_in_bank) || 0,
                         debit: 0,
                     };

@@ -158,31 +158,39 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                 return `${day}-${month}-${year}`;
             };
 
-            let passengerName = '';
+            let passengerDetails = [];
             try {
-                let passengerDetails = [];
                 if (typeof umrahDetails.passportDetail === 'string') {
                     passengerDetails = JSON.parse(umrahDetails.passportDetail);
                 } else if (Array.isArray(umrahDetails.passportDetail)) {
                     passengerDetails = umrahDetails.passportDetail;
                 }
-
-                if (passengerDetails.length > 0) {
-                    const firstPassenger = passengerDetails[0];
-                    passengerName = `${firstPassenger.firstName || ''} ${firstPassenger.lastName || ''}`.trim();
-                }
             } catch (e) {
                 console.error('Error parsing passenger details:', e);
             }
 
-            const commonDetail = [
+            const passengerCount = passengerDetails.length;
+            const passengerCountDisplay = passengerCount > 0 ? `(${passengerCount})` : null;
+            const firstPassengerName = passengerDetails.length > 0 ? `${passengerDetails[0]?.firstName || ''} ${passengerDetails[0]?.lastName || ''}`.trim() : '';
+
+            const commonDetailParts = [
+                umrahDetails.agent_name ? `(AG,${umrahDetails.agent_name})` : '',
+                passengerCountDisplay,
+                firstPassengerName,
+                umrahDetails.packageDetail || '',
+                `ad: ${umrahDetails.customerAdd || ''}`,
                 umrahDetails.sector || '',
                 umrahDetails.airline || umrahDetails.airline_select || '',
                 formatDate(umrahDetails.depart_date),
                 formatDate(umrahDetails.return_date || ''),
-                passengerName,
-                '(Remaining Payment)'
-            ].filter(Boolean).join(',');
+                '(RP)'
+            ];
+
+            if (!umrahDetails.agent_name) {
+                commonDetailParts.push(umrahDetails.reference ? umrahDetails.reference.trim() : '');
+            }
+
+            const commonDetail = commonDetailParts.filter(Boolean).join('/');
 
             const agentData = {
                 agent_name: umrahDetails.agent_name,
@@ -212,78 +220,295 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
     };
+    // Replace the deletePayment function in UmrahRemainingPay.jsx with this:
 
-    const addBankAccountEntry = async () => {
-        try {
-            let customerInfo = 'N/A';
-            let referenceInfo = 'N/A';
+    // Replace the deletePayment function in UmrahRemainingPay.jsx with this updated version:
 
-            if (!umrahDetails) {
-                try {
-                    const response = await axios.get(`${BASE_URL}/umrah`);
-                    if (response.data && response.data.umrahBookings) {
-                        const specificUmrah = response.data.umrahBookings.find(umrah => umrah.id === umrahId);
-                        if (specificUmrah) {
-                            customerInfo = specificUmrah.customerAdd || 'N/A';
-                            referenceInfo = specificUmrah.reference || 'N/A';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching umrah for bank entry:', error);
-                }
-            } else {
-                customerInfo = umrahDetails.customerAdd || 'N/A';
-                referenceInfo = umrahDetails.reference || 'N/A';
-            }
-
-            const detailString = `Customer: ${customerInfo}, Ref: ${referenceInfo}, Recorded by: ${newPayment.recorded_by}`;
-
-            const officeAccountData = {
-                bank_name: newPayment.bank_title,
-                entry: umrahDetails?.entry || `Umrah Remaining_Payment ${umrahId}`,
-                date: newPayment.payment_date,
-                detail: detailString,
-                credit: parseFloat(newPayment.paid_bank) || 0,
-                debit: 0,
-            };
-
-            const officeAccountResponse = await axios.post(`${BASE_URL}/accounts`, officeAccountData);
-
-            if (officeAccountResponse.status !== 200 && officeAccountResponse.status !== 201) {
-                console.error('Office Account submission failed:', officeAccountResponse.status);
-            } else {
-                console.log('Bank account entry added successfully');
-            }
-        } catch (officeAccountError) {
-            console.error('Error submitting Office Account data:', officeAccountError.response?.data || officeAccountError.message);
-            alert('Payment added successfully, but failed to create bank account entry. Please add manually if needed.');
-        }
-    };
-
-    // Function to handle payment deletion
     const deletePayment = async (paymentId) => {
-        if (!confirm('Are you sure you want to delete this payment? This will also update the umrah amounts.')) {
+        if (!confirm('Are you sure you want to delete this payment? This will also delete the corresponding agent and bank account entries.')) {
             return;
         }
 
         setIsDeleting(paymentId);
         try {
+            const paymentToDelete = payments.find(p => p.id === paymentId);
+            if (!paymentToDelete) {
+                console.error("Payment to delete not found in state.");
+                alert("Could not find payment to delete. Please refresh.");
+                setIsDeleting(null);
+                return;
+            }
+
+            console.log('=== STARTING DELETION PROCESS ===');
+            console.log('Payment to delete:', paymentToDelete);
+            console.log('Umrah details:', umrahDetails);
+
+            // Step 1: Delete the corresponding agent entry
+            if (umrahDetails && umrahDetails.agent_name && paymentToDelete) {
+                try {
+                    const agentResponse = await axios.get(`${BASE_URL}/agent`);
+
+                    if (agentResponse.data && agentResponse.data.agents) {
+                        const allAgentEntries = agentResponse.data.agents;
+                        const entryToDelete = `${umrahDetails.entry || ''} (RP)`;
+
+                        const normalizeDate = (dateStr) => {
+                            if (!dateStr) return '';
+                            return new Date(dateStr).toISOString().split('T')[0];
+                        };
+
+                        const dateToDelete = normalizeDate(paymentToDelete.payment_date);
+                        const cashToDelete = parseFloat(paymentToDelete.payed_cash) || 0;
+                        const bankToDelete = parseFloat(paymentToDelete.paid_bank) || 0;
+
+                        console.log('🔍 Looking for agent entry with:');
+                        console.log('  Agent name:', umrahDetails.agent_name);
+                        console.log('  Entry:', entryToDelete);
+                        console.log('  Date:', dateToDelete);
+                        console.log('  Cash:', cashToDelete);
+                        console.log('  Bank:', bankToDelete);
+
+                        // Find the matching agent entry
+                        const agentEntryToDelete = allAgentEntries.find(entry => {
+                            const entryDate = normalizeDate(entry.date);
+                            const entryCash = parseFloat(entry.paid_cash) || 0;
+                            const entryBank = parseFloat(entry.paid_bank) || 0;
+
+                            const agentMatches = entry.agent_name === umrahDetails.agent_name;
+                            const entryMatches = entry.entry === entryToDelete;
+                            const dateMatches = entryDate === dateToDelete;
+                            const cashMatches = entryCash === cashToDelete;
+                            const bankMatches = entryBank === bankToDelete;
+
+                            // Log each entry being checked
+                            if (entry.agent_name === umrahDetails.agent_name) {
+                                console.log(`\n📋 Checking agent entry ID ${entry.id}:`);
+                                console.log('  Entry:', entry.entry, entryMatches ? '✓' : '✗');
+                                console.log('  Date:', entryDate, dateMatches ? '✓' : '✗');
+                                console.log('  Cash:', entryCash, cashMatches ? '✓' : '✗');
+                                console.log('  Bank:', entryBank, bankMatches ? '✓' : '✗');
+                            }
+
+                            return agentMatches && entryMatches && dateMatches && cashMatches && bankMatches;
+                        });
+
+                        if (agentEntryToDelete) {
+                            console.log('✓ Found agent entry to delete:', agentEntryToDelete.id);
+                            await axios.delete(`${BASE_URL}/agent/${agentEntryToDelete.id}`, {
+                                data: { user_name: user?.name || user?.username }
+                            });
+                            console.log('✓ Agent entry deleted successfully');
+                        } else {
+                            console.warn('✗ Could not find matching agent entry');
+                            console.log('All agent entries for this agent:');
+                            allAgentEntries
+                                .filter(e => e.agent_name === umrahDetails.agent_name)
+                                .forEach(e => console.log({
+                                    id: e.id,
+                                    entry: e.entry,
+                                    date: normalizeDate(e.date),
+                                    cash: e.paid_cash,
+                                    bank: e.paid_bank
+                                }));
+
+                            if (!confirm('Could not find matching agent entry. Continue deleting payment?')) {
+                                setIsDeleting(null);
+                                return;
+                            }
+                        }
+                    }
+                } catch (agentError) {
+                    console.error('Error deleting agent entry:', agentError);
+                    if (!confirm('Failed to delete agent entry. Continue deleting payment?')) {
+                        setIsDeleting(null);
+                        return;
+                    }
+                }
+            }
+
+            // Step 2: Delete the bank account entry if it exists
+            if (paymentToDelete.bank_title && parseFloat(paymentToDelete.paid_bank) > 0) {
+                try {
+                    console.log('\n=== ATTEMPTING BANK ACCOUNT DELETION ===');
+                    console.log('Bank title:', paymentToDelete.bank_title);
+
+                    const accountsResponse = await axios.get(`${BASE_URL}/accounts/${paymentToDelete.bank_title}`);
+                    console.log('Fetched accounts:', accountsResponse.data?.length || 0, 'entries');
+
+                    if (accountsResponse.data && Array.isArray(accountsResponse.data)) {
+                        const normalizeDate = (dateStr) => {
+                            if (!dateStr) return '';
+                            return new Date(dateStr).toISOString().split('T')[0];
+                        };
+
+                        const dateToMatch = normalizeDate(paymentToDelete.payment_date);
+                        const amountToMatch = parseFloat(paymentToDelete.paid_bank);
+                        const entryToMatch = umrahDetails?.entry || `Umrah Remaining_Payment ${umrahId}`;
+
+                        console.log('🔍 Looking for bank entry with:');
+                        console.log('  Entry:', entryToMatch);
+                        console.log('  Date:', dateToMatch);
+                        console.log('  Credit:', amountToMatch);
+
+                        let bankEntryToDelete = null;
+
+                        for (const entry of accountsResponse.data) {
+                            const entryDate = normalizeDate(entry.date);
+                            const entryCredit = parseFloat(entry.credit) || 0;
+
+                            const dateMatches = entryDate === dateToMatch;
+                            const amountMatches = Math.abs(entryCredit - amountToMatch) < 0.01;
+                            const entryMatches = entry.entry === entryToMatch;
+
+                            console.log(`\n📋 Bank entry ID ${entry.id}:`);
+                            console.log('  Entry:', entry.entry, entryMatches ? '✓' : '✗');
+                            console.log('  Date:', entryDate, dateMatches ? '✓' : '✗');
+                            console.log('  Credit:', entryCredit, amountMatches ? '✓' : '✗');
+
+                            if (dateMatches && amountMatches && entryMatches) {
+                                bankEntryToDelete = entry;
+                                console.log('  ✅ MATCH FOUND!');
+                                break;
+                            }
+                        }
+
+                        if (bankEntryToDelete) {
+                            console.log('✓ Deleting bank entry ID:', bankEntryToDelete.id);
+                            const bankDeleteResponse = await axios.delete(
+                                `${BASE_URL}/accounts/${bankEntryToDelete.id}`,
+                                { data: { user_name: user?.name || user?.username } }
+                            );
+
+                            if (bankDeleteResponse.status === 200) {
+                                console.log('✓ Bank account entry deleted successfully');
+                            }
+                        } else {
+                            console.warn('✗ Could not find matching bank account entry');
+                            if (!confirm('Could not find matching bank account entry. Continue deleting payment?')) {
+                                setIsDeleting(null);
+                                return;
+                            }
+                        }
+                    }
+                } catch (bankError) {
+                    console.error('Error deleting bank account entry:', bankError);
+                    if (!confirm('Failed to delete bank account entry. Continue deleting payment?')) {
+                        setIsDeleting(null);
+                        return;
+                    }
+                }
+            }
+
+            // Step 3: Delete the payment record - FIXED ENDPOINT
+            console.log('\n=== DELETING PAYMENT RECORD ===');
+            console.log('Payment ID:', paymentId);
+
+            // Try the correct endpoint based on your Umrah.jsx
             await axios.delete(`${BASE_URL}/umrah/payment/${paymentId}`);
+            console.log('✓ Payment record deleted successfully');
 
             // Refresh payments list
             await fetchPayments();
 
-            // Dispatch event to refresh dashboard
+            // Dispatch events to refresh other components
             window.dispatchEvent(new CustomEvent('paymentUpdated', {
                 detail: { umrahId }
             }));
 
-            alert('Payment deleted successfully');
+            if (paymentToDelete.bank_title) {
+                window.dispatchEvent(new CustomEvent('bankAccountUpdated', {
+                    detail: { bankName: paymentToDelete.bank_title }
+                }));
+            }
+
+            console.log('=== DELETION COMPLETED ===\n');
+            alert('Payment and associated entries deleted successfully');
         } catch (error) {
-            console.error('Error deleting payment:', error);
-            alert('Failed to delete payment. Please try again.');
+            console.error('=== DELETION FAILED ===');
+            console.error('Error:', error);
+            console.error('Error details:', error.response?.data);
+            alert('Failed to delete payment. Check console for details.');
         } finally {
             setIsDeleting(null);
+        }
+    };
+
+    // Also update the addBankAccountEntry function to NOT include (RP) in entry
+    // Replace the addBankAccountEntry function with this:
+
+    const addBankAccountEntry = async () => {
+        try {
+            if (!umrahDetails) {
+                console.error('No umrah details available for bank entry');
+                alert('Could not find booking details to create bank entry. Please try again.');
+                return;
+            }
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            };
+
+            let passengerDetails = [];
+            try {
+                if (typeof umrahDetails.passportDetail === 'string') {
+                    passengerDetails = JSON.parse(umrahDetails.passportDetail);
+                } else if (Array.isArray(umrahDetails.passportDetail)) {
+                    passengerDetails = umrahDetails.passportDetail;
+                }
+            } catch (e) {
+                console.error('Error parsing passenger details for bank entry:', e);
+            }
+
+            const passengerCount = passengerDetails.length;
+            const passengerCountDisplay = passengerCount > 0 ? `(${passengerCount})` : null;
+            const firstPassengerName = passengerDetails.length > 0 ? `${passengerDetails[0]?.firstName || ''} ${passengerDetails[0]?.lastName || ''}`.trim() : '';
+
+            const commonDetailParts = [
+                umrahDetails.agent_name ? `(AG,${umrahDetails.agent_name})` : '',
+                passengerCountDisplay,
+                firstPassengerName,
+                umrahDetails.packageDetail || '',
+                `ad: ${umrahDetails.customerAdd || ''}`,
+                umrahDetails.sector || '',
+                umrahDetails.airline || umrahDetails.airline_select || '',
+                formatDate(umrahDetails.depart_date),
+                formatDate(umrahDetails.return_date || ''),
+                '(RP)'
+            ];
+
+            if (!umrahDetails.agent_name) {
+                commonDetailParts.push(umrahDetails.reference ? umrahDetails.reference.trim() : '');
+            }
+
+            const commonDetail = commonDetailParts.filter(Boolean).join('/');
+
+            const officeAccountData = {
+                bank_name: newPayment.bank_title,
+                entry: umrahDetails?.entry || `Umrah Remaining_Payment ${umrahId}`, // NO (RP) suffix here
+                date: newPayment.payment_date,
+                detail: commonDetail,
+                credit: parseFloat(newPayment.paid_bank) || 0,
+                debit: 0,
+                employee_name: newPayment.recorded_by
+            };
+
+            console.log('Adding bank account entry:', officeAccountData);
+
+            const officeAccountResponse = await axios.post(`${BASE_URL}/accounts`, officeAccountData);
+
+            if (officeAccountResponse.status === 200 || officeAccountResponse.status === 201) {
+                console.log('Bank account entry added successfully');
+            } else {
+                console.error('Office Account submission failed:', officeAccountResponse.status);
+            }
+        } catch (officeAccountError) {
+            console.error('Error submitting Office Account data:', officeAccountError.response?.data || officeAccountError.message);
+            alert('Payment added successfully, but failed to create bank account entry. Please add manually if needed.');
         }
     };
 

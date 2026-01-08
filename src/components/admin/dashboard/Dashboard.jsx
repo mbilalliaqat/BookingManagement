@@ -579,6 +579,8 @@ export default function Dashboard() {
             agentName,
             passengerCountDisplay,
             firstPassengerName,
+            umrah.packageDetail || '',
+            `ad: ${umrah.customerAdd || ''}`,
             umrah.sector || '',
             umrah.airline || '',
             departDateStr,
@@ -656,6 +658,8 @@ export default function Dashboard() {
               agentName,
               passengerCountDisplay,
               firstPassengerName,
+              originalUmrah.packageDetail || '',
+              `ad: ${originalUmrah.customerAdd || ''}`,
               originalUmrah.sector || '',
               originalUmrah.airline || '',
               departDateStr,
@@ -718,6 +722,7 @@ export default function Dashboard() {
             firstPassengerName,
             ticket.sector,
             ticket.airline,
+            ticket.prn,
             departDateStr,
             returnDateStr
           ].filter(item => item && item !== '--').join('/');
@@ -796,6 +801,7 @@ export default function Dashboard() {
               firstPassengerName,
               originalTicket.sector,
               originalTicket.airline,
+              originalTicket.prn,
               departDateStr,
               returnDateStr
             ].filter(item => item && item !== '--').join('/');
@@ -833,7 +839,7 @@ export default function Dashboard() {
             passengerName,
             visa.reference,
             visa.embassy,
-            visa.status
+            visa.professional
           ].filter(Boolean).join(' / ');
 
           return {
@@ -888,7 +894,7 @@ export default function Dashboard() {
               passengerNameFromDetails,
               originalVisa.reference,
               originalVisa.embassy,
-              originalVisa.status
+              originalVisa.professional
             ].filter(Boolean).join(' / ');
 
             passengerName = passengerNameDetails || passengerNameFromDetails || originalVisa.customer_add || null;
@@ -1027,8 +1033,6 @@ export default function Dashboard() {
             const agentName = originalOcp.agent_name ? `(AG,${originalOcp.agent_name})` : '';
             passengerNameDetails = [
               agentName,
-              originalOcp.category,
-              originalOcp.destination,
               originalOcp.detail,
               originalOcp.reference,
             ].filter(Boolean).join(' / ');
@@ -1078,8 +1082,6 @@ export default function Dashboard() {
             const agentName = originalService.agent_name ? `(AG,${originalService.agent_name})` : '';
             passengerNameDetails = [
               agentName,
-              originalService.category,
-              originalService.destination,
               originalService.detail,
               originalService.reference,
             ].filter(Boolean).join(' / ');
@@ -1318,7 +1320,7 @@ export default function Dashboard() {
         const combinedBookingsRaw = [
           ...umrahBookings, ...umrahPaymentEntries, ...ticketBookings, ...ticketPaymentEntries, ...visaBookings, ...visaPaymentEntries,
           ...gamcaTokenBookings, ...gamcaTokenPaymentEntries, ...servicesBookings, ...servicePaymentEntries, ...navtccBookings, ...navtccPaymentEntries,
-          ...otherCpBookings, ...otherCpPaymentEntries, ...protectorBookings, ...expensesBookings, ...refundedBookings, ...venderBookings, ...eNumberBookings,
+          ...otherCpBookings, ...otherCpPaymentEntries, ...protectorBookings, ...expensesBookings, ...refundedBookings,...eNumberBookings,
         ];
 
         const sortedForRunningTotal = combinedBookingsRaw.sort((a, b) => safeTimestamp(a.timestamp) - safeTimestamp(b.timestamp));
