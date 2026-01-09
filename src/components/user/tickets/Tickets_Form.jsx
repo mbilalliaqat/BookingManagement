@@ -691,7 +691,7 @@ const Tickets_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 remaining_date: values.remaining_date || null,
                 payable_to_vendor: totalPayableToVendor,
                 vendor_name: values.vendors.map(v => v.vendor_name).join(', '),
-                vendors_detail: JSON.stringify(values.vendors),
+                vendor_detail: JSON.stringify(values.vendors),
                 profit: parseFloat(values.profit) || 0,
                 remaining_amount: parseFloat(values.remaining_amount) || 0,
                 booking_date: values.booking_date || null,

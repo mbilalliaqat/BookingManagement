@@ -13,6 +13,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
     const [visaDetails, setVisaDetails] = useState(null);
     const [editingPayment, setEditingPayment] = useState(null);
     const [isDeleting, setIsDeleting] = useState(null);
+    const [currentRemainingAmount, setCurrentRemainingAmount] = useState(0);
     const [newPayment, setNewPayment] = useState({
         payment_date: new Date().toISOString().slice(0, 10),
         payed_cash: '',
@@ -55,6 +56,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                 
                 if (specificVisa) {
                     setVisaDetails(specificVisa);
+                    setCurrentRemainingAmount(parseFloat(specificVisa.remaining_amount) || 0);
                     console.log('Fetched visaDetails:', specificVisa);
                 } else {
                     console.log('Visa not found with ID:', visaId);
@@ -77,6 +79,19 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
             fetchVisaDetails();
         }
     }, [visaId]);
+
+    useEffect(() => {
+        if (visaDetails) {
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+            const totalPayment = cashAmount + bankAmount;
+            
+            const originalRemaining = parseFloat(visaDetails.remaining_amount) || 0;
+            const updatedRemaining = originalRemaining - totalPayment;
+            
+            setCurrentRemainingAmount(updatedRemaining);
+        }
+    }, [visaDetails, newPayment.payed_cash, newPayment.paid_bank]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -227,6 +242,12 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
             setIsSubmitting(false);
             return;
         }
+
+        if (currentRemainingAmount < 0) {
+            alert('Payment amount exceeds remaining amount. Please adjust the payment.');
+            setIsSubmitting(false);
+            return;
+        }
         
         try {
             const paymentData = {
@@ -287,7 +308,6 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
         }
     };
 
-    // NEW: Function to delete related agent entries
     const deleteRelatedAgentEntry = async (payment) => {
         try {
             if (!visaDetails) {
@@ -295,16 +315,13 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                 return;
             }
 
-            // Construct the entry pattern to search for
             const entryPattern = `${visaDetails.entry || ''} (RP)`;
             
             console.log('Searching for agent entry with pattern:', entryPattern);
 
-            // Fetch all agent entries
             const agentResponse = await axios.get(`${BASE_URL}/agent`);
             const agentEntries = agentResponse.data.agents || [];
 
-            // Find matching agent entry by entry field and date
             const matchingEntry = agentEntries.find(entry => 
                 entry.entry === entryPattern &&
                 entry.date === payment.payment_date &&
@@ -322,11 +339,9 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
             }
         } catch (error) {
             console.error('Error deleting related agent entry:', error);
-            // Don't throw error, just log it
         }
     };
 
-    // NEW: Function to delete related office account entries
     const deleteRelatedOfficeAccountEntry = async (payment) => {
         try {
             if (!visaDetails || !payment.bank_title) {
@@ -336,11 +351,9 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
 
             console.log('Searching for office account entry');
 
-            // Fetch all office account entries for the specific bank
             const accountResponse = await axios.get(`${BASE_URL}/accounts/${payment.bank_title}`);
             const accountEntries = accountResponse.data || [];
 
-            // Find matching office account entry by entry field, date, and bank
             const matchingEntry = accountEntries.find(entry => 
                 entry.entry === visaDetails.entry &&
                 entry.date === payment.payment_date &&
@@ -359,18 +372,15 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
             }
         } catch (error) {
             console.error('Error deleting related office account entry:', error);
-            // Don't throw error, just log it
         }
     };
 
-    // UPDATED: Delete payment function with cascading deletes
     const deletePayment = async (paymentId) => {
         if (!confirm('Are you sure you want to delete this payment? This will also delete related entries from Agent and Office Accounts tables.')) return;
         
         setIsDeleting(paymentId);
         
         try {
-            // Find the payment details before deletion
             const paymentToDelete = payments.find(p => p.id === paymentId);
             
             if (!paymentToDelete) {
@@ -379,20 +389,16 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
 
             console.log('Deleting payment:', paymentToDelete);
 
-            // Step 1: Delete related agent entry (if agent exists)
             if (visaDetails && visaDetails.agent_name) {
                 await deleteRelatedAgentEntry(paymentToDelete);
             }
 
-            // Step 2: Delete related office account entry (if bank payment was made)
             if (paymentToDelete.paid_bank && parseFloat(paymentToDelete.paid_bank) > 0) {
                 await deleteRelatedOfficeAccountEntry(paymentToDelete);
             }
 
-            // Step 3: Delete the visa payment record
             await axios.delete(`${BASE_URL}/visa-processing/payment/${paymentId}`);
 
-            // Refresh payments and notify dashboard
             await fetchPayments();
             window.dispatchEvent(new CustomEvent('paymentUpdated', { detail: { visaId } }));
             
@@ -437,6 +443,7 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
 
     const totalCashPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.payed_cash || 0), 0);
     const totalBankPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.paid_bank || 0), 0);
+    const isOverpayment = currentRemainingAmount < 0;
 
     return (
         <div className="p-4">
@@ -518,91 +525,91 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                                 ))
                             )}
                         </tbody>
-
-                        {editingPayment && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                                <div className="bg-white rounded-lg p-6 w-96">
-                                    <h3 className="text-lg font-semibold mb-4">Edit Payment</h3>
-
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Payment Date</label>
-                                            <input
-                                                type="date"
-                                                value={editingPayment.payment_date}
-                                                onChange={(e) => setEditingPayment(prev => ({ ...prev, payment_date: e.target.value }))}
-                                                className="w-full border rounded px-3 py-2"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Cash Paid</label>
-                                            <input
-                                                type="number"
-                                                value={editingPayment.payed_cash}
-                                                onChange={(e) => setEditingPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
-                                                className="w-full border rounded px-3 py-2"
-                                                step="0.01"
-                                                min="0"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Paid Bank</label>
-                                            <input
-                                                type="number"
-                                                value={editingPayment.paid_bank}
-                                                onChange={(e) => setEditingPayment(prev => ({ ...prev, paid_bank: e.target.value }))}
-                                                className="w-full border rounded px-3 py-2"
-                                                step="0.01"
-                                                min="0"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Bank Title</label>
-                                            <select
-                                                value={editingPayment.bank_title || ''}
-                                                onChange={(e) => setEditingPayment(prev => ({ ...prev, bank_title: e.target.value }))}
-                                                className="w-full border rounded px-3 py-2"
-                                            >
-                                                <option value="">Select Bank (optional)</option>
-                                                {BANK_OPTIONS.map(option => (
-                                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1">Recorded By</label>
-                                            <input
-                                                type="text"
-                                                value={editingPayment.recorded_by}
-                                                onChange={(e) => setEditingPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
-                                                className="w-full border rounded px-3 py-2"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-end space-x-3 mt-6">
-                                        <button
-                                            onClick={() => setEditingPayment(null)}
-                                            className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-100"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => updatePayment(editingPayment.id)}
-                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                        >
-                                            Update Payment
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </table>
                 </div>
+
+                {editingPayment && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="bg-white rounded-lg p-6 w-96">
+                            <h3 className="text-lg font-semibold mb-4">Edit Payment</h3>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Payment Date</label>
+                                    <input
+                                        type="date"
+                                        value={editingPayment.payment_date}
+                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, payment_date: e.target.value }))}
+                                        className="w-full border rounded px-3 py-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Cash Paid</label>
+                                    <input
+                                        type="number"
+                                        value={editingPayment.payed_cash}
+                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
+                                        className="w-full border rounded px-3 py-2"
+                                        step="0.01"
+                                        min="0"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Paid Bank</label>
+                                    <input
+                                        type="number"
+                                        value={editingPayment.paid_bank}
+                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, paid_bank: e.target.value }))}
+                                        className="w-full border rounded px-3 py-2"
+                                        step="0.01"
+                                        min="0"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Bank Title</label>
+                                    <select
+                                        value={editingPayment.bank_title || ''}
+                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, bank_title: e.target.value }))}
+                                        className="w-full border rounded px-3 py-2"
+                                    >
+                                        <option value="">Select Bank (optional)</option>
+                                        {BANK_OPTIONS.map(option => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Recorded By</label>
+                                    <input
+                                        type="text"
+                                        value={editingPayment.recorded_by}
+                                        onChange={(e) => setEditingPayment(prev => ({ ...prev, recorded_by: e.target.value }))}
+                                        className="w-full border rounded px-3 py-2"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                    onClick={() => setEditingPayment(null)}
+                                    className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => updatePayment(editingPayment.id)}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                    Update Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="mb-4">
@@ -684,26 +691,50 @@ const VisaRemainingPay = ({ visaId, onPaymentSuccess }) => {
                                 className="w-full p-2 border border-gray-300 rounded bg-gray-100"
                             />
                         </div>
+
+                        {/* Remaining Amount Display */}
+                        <div className={`md:col-span-2 p-4 rounded-lg border-2 ${
+                            isOverpayment 
+                                ? 'bg-red-50 border-red-500' 
+                                : currentRemainingAmount === 0 
+                                    ? 'bg-green-50 border-green-500'
+                                    : 'bg-blue-50 border-blue-500'
+                        }`}>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-700">
+                                    Updated Remaining Amount:
+                                </span>
+                                <span className={`text-lg font-bold ${
+                                    isOverpayment 
+                                        ? 'text-red-600' 
+                                        : currentRemainingAmount === 0 
+                                            ? 'text-green-600'
+                                            : 'text-blue-600'
+                                }`}>{currentRemainingAmount.toFixed(2)}</span>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <button
-                        type="submit"
-                        disabled={isSubmitting || !newPayment.recorded_by}
-                        className={`mt-4 w-full font-semibold rounded-md shadow px-4 py-2 transition-colors duration-200 flex items-center justify-center ${
-                            isSubmitting || !newPayment.recorded_by
-                                ? 'bg-gray-400 cursor-not-allowed text-white' 
-                                : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <ButtonSpinner />
-                                <span className="ml-2">Processing...</span>
-                            </>
-                        ) : (
-                            'Submit Payment'
-                        )}
-                    </button>
+
+                    <div className="mt-6 flex justify-end space-x-3">
+                        <button
+                            type="button"
+                            onClick={() => setShowPaymentForm(false)}
+                            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || isOverpayment}
+                            className={`inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                                isOverpayment
+                                    ? 'bg-red-400 cursor-not-allowed'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                            }`}
+                        >
+                            {isSubmitting ? <ButtonSpinner /> : 'Add Payment'}
+                        </button>
+                    </div>
                 </form>
             )}
         </div>

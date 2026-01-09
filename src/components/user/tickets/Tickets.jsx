@@ -64,6 +64,25 @@ const Tickets = () => {
                     parsedPassengerDetails = [];
                 }
 
+                let parsedVendorDetails = [];
+                try {
+                    if (typeof ticket.vendor_detail === 'string') {
+                        const parsed = JSON.parse(ticket.vendor_detail);
+                        if (Array.isArray(parsed)) {
+                            parsedVendorDetails = parsed;
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                            parsedVendorDetails = [parsed];
+                        }
+                    } else if (Array.isArray(ticket.vendor_detail)) {
+                        parsedVendorDetails = ticket.vendor_detail;
+                    } else if (typeof ticket.vendor_detail === 'object' && ticket.vendor_detail !== null) {
+                        parsedVendorDetails = [ticket.vendor_detail];
+                    }
+                } catch (e) {
+                    console.error("Error parsing vendor details:", e);
+                    parsedVendorDetails = [];
+                }
+
                 let totalCashPaid = parseFloat(ticket.paid_cash || 0);
                 let totalBankPaid = parseFloat(ticket.paid_in_bank || 0);
 
@@ -94,6 +113,7 @@ const Tickets = () => {
                         : '',
                     booking_date_raw: ticket.booking_date, // Store raw date for filtering
                     allPassengerDetails: parsedPassengerDetails,
+                    allVendorDetails: parsedVendorDetails,
                 };
             });
             setEntries(formattedData.reverse());
@@ -129,6 +149,25 @@ const Tickets = () => {
                 parsedPassengerDetails = [];
             }
 
+            let parsedVendorDetails = [];
+            try {
+                if (typeof updatedTicket.vendor_detail === 'string') {
+                    const parsed = JSON.parse(updatedTicket.vendor_detail);
+                    if (Array.isArray(parsed)) {
+                        parsedVendorDetails = parsed;
+                    } else if (typeof parsed === 'object' && parsed !== null) {
+                        parsedVendorDetails = [parsed];
+                    }
+                } else if (Array.isArray(updatedTicket.vendor_detail)) {
+                    parsedVendorDetails = updatedTicket.vendor_detail;
+                } else if (typeof updatedTicket.vendor_detail === 'object' && updatedTicket.vendor_detail !== null) {
+                    parsedVendorDetails = [updatedTicket.vendor_detail];
+                }
+            } catch (e) {
+                console.error("Error parsing vendor details:", e);
+                parsedVendorDetails = [];
+            }
+
             const formattedTicket = {
                 ...updatedTicket,
                 serialNo: entries[entryIndex].serialNo,
@@ -149,6 +188,7 @@ const Tickets = () => {
                     : '',
                 booking_date_raw: updatedTicket.booking_date,
                 allPassengerDetails: parsedPassengerDetails,
+                allVendorDetails: parsedVendorDetails,
             };
 
             const updatedEntries = [...entries];
@@ -407,9 +447,21 @@ const Tickets = () => {
             header: 'VENDOR & PAYABLE',
             accessor: 'vendor_payable',
             render: (cellValue, row) => (
-                <div>
-                    <div>{row?.vendor_name || ''}</div>
-                    <div>{row?.payable_to_vendor || ''}</div>
+                <div className="flex flex-col space-y-1">
+                    {row.allVendorDetails && row.allVendorDetails.length > 0 ? (
+                        row.allVendorDetails.map((vendor, idx) => (
+                            <div key={idx} className="">
+                                <p className="font-semibold text-gray-800 uppercase">{vendor.vendor_name}</p>
+                                <p>{vendor.payable_amount}</p>
+                                <p>{vendor.vendor_detail}</p>
+                            </div>
+                        ))
+                    ) : (
+                        <div>
+                            <div>{row?.vendor_name || ''}</div>
+                            <div>{row?.payable_to_vendor || ''}</div>
+                        </div>
+                    )}
                 </div>
             )
         },

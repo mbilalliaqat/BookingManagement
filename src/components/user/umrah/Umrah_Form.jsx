@@ -638,7 +638,7 @@ const Umrah_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
                 paidInBank: parseFloat(values.paidInBank) || 0,
                 payableToVendor: totalPayableToVendor,
                 vendorName: values.vendors.map(v => v.vendor_name).join(', '),
-                vendors_detail: JSON.stringify(values.vendors),
+                vendor_detail: JSON.stringify(values.vendors),
                 profit: parseFloat(values.profit) || 0,
                 remainingAmount: parseFloat(values.remainingAmount) || 0,
                 booking_date: values.booking_date || null,

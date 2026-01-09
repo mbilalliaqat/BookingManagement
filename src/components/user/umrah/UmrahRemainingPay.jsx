@@ -19,6 +19,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
     const [umrahDetails, setUmrahDetails] = useState(null);
     const [editingPayment, setEditingPayment] = useState(null);
     const [isDeleting, setIsDeleting] = useState(null);
+    const [currentRemainingAmount, setCurrentRemainingAmount] = useState(0);
 
     const BANK_OPTIONS = [
         { value: "UBL M.A.R", label: "UBL M.A.R" },
@@ -42,6 +43,19 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
         fetchUmrahDetails();
     }, [umrahId]);
 
+    useEffect(() => {
+        if (umrahDetails) {
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+            const totalPayment = cashAmount + bankAmount;
+            
+            const originalRemaining = parseFloat(umrahDetails.remainingAmount) || 0;
+            const updatedRemaining = originalRemaining - totalPayment;
+            
+            setCurrentRemainingAmount(updatedRemaining);
+        }
+    }, [umrahDetails, newPayment.payed_cash, newPayment.paid_bank]);
+
     const fetchPayments = async () => {
         try {
             setLoading(true);
@@ -62,6 +76,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                 const specificUmrah = response.data.umrahBookings.find(umrah => umrah.id === umrahId);
                 if (specificUmrah) {
                     setUmrahDetails(specificUmrah);
+                    setCurrentRemainingAmount(parseFloat(specificUmrah.remainingAmount) || 0);
                 }
             }
         } catch (error) {
@@ -81,6 +96,11 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             return;
         }
 
+        if (currentRemainingAmount < 0) {
+            alert('Payment amount exceeds remaining amount. Please adjust the payment.');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -94,12 +114,10 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             });
 
             if (response.status === 201) {
-                // Add bank account entry if bank payment exists
                 if (newPayment.bank_title && bankAmount > 0) {
                     await addBankAccountEntry();
                 }
 
-                // Add agent entry if agent is assigned
                 if (umrahDetails && umrahDetails.agent_name) {
                     await addAgentEntry();
                 }
@@ -220,9 +238,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
     };
-    // Replace the deletePayment function in UmrahRemainingPay.jsx with this:
-
-    // Replace the deletePayment function in UmrahRemainingPay.jsx with this updated version:
 
     const deletePayment = async (paymentId) => {
         if (!confirm('Are you sure you want to delete this payment? This will also delete the corresponding agent and bank account entries.')) {
@@ -243,7 +258,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             console.log('Payment to delete:', paymentToDelete);
             console.log('Umrah details:', umrahDetails);
 
-            // Step 1: Delete the corresponding agent entry
             if (umrahDetails && umrahDetails.agent_name && paymentToDelete) {
                 try {
                     const agentResponse = await axios.get(`${BASE_URL}/agent`);
@@ -268,7 +282,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                         console.log('  Cash:', cashToDelete);
                         console.log('  Bank:', bankToDelete);
 
-                        // Find the matching agent entry
                         const agentEntryToDelete = allAgentEntries.find(entry => {
                             const entryDate = normalizeDate(entry.date);
                             const entryCash = parseFloat(entry.paid_cash) || 0;
@@ -280,7 +293,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                             const cashMatches = entryCash === cashToDelete;
                             const bankMatches = entryBank === bankToDelete;
 
-                            // Log each entry being checked
                             if (entry.agent_name === umrahDetails.agent_name) {
                                 console.log(`\n📋 Checking agent entry ID ${entry.id}:`);
                                 console.log('  Entry:', entry.entry, entryMatches ? '✓' : '✗');
@@ -326,7 +338,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                 }
             }
 
-            // Step 2: Delete the bank account entry if it exists
             if (paymentToDelete.bank_title && parseFloat(paymentToDelete.paid_bank) > 0) {
                 try {
                     console.log('\n=== ATTEMPTING BANK ACCOUNT DELETION ===');
@@ -399,18 +410,14 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                 }
             }
 
-            // Step 3: Delete the payment record - FIXED ENDPOINT
             console.log('\n=== DELETING PAYMENT RECORD ===');
             console.log('Payment ID:', paymentId);
 
-            // Try the correct endpoint based on your Umrah.jsx
             await axios.delete(`${BASE_URL}/umrah/payment/${paymentId}`);
             console.log('✓ Payment record deleted successfully');
 
-            // Refresh payments list
             await fetchPayments();
 
-            // Dispatch events to refresh other components
             window.dispatchEvent(new CustomEvent('paymentUpdated', {
                 detail: { umrahId }
             }));
@@ -432,9 +439,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
             setIsDeleting(null);
         }
     };
-
-    // Also update the addBankAccountEntry function to NOT include (RP) in entry
-    // Replace the addBankAccountEntry function with this:
 
     const addBankAccountEntry = async () => {
         try {
@@ -489,7 +493,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
 
             const officeAccountData = {
                 bank_name: newPayment.bank_title,
-                entry: umrahDetails?.entry || `Umrah Remaining_Payment ${umrahId}`, // NO (RP) suffix here
+                entry: umrahDetails?.entry || `Umrah Remaining_Payment ${umrahId}`,
                 date: newPayment.payment_date,
                 detail: commonDetail,
                 credit: parseFloat(newPayment.paid_bank) || 0,
@@ -512,7 +516,6 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    // Function to handle payment updates
     const updatePayment = async (paymentId) => {
         if (!editingPayment.payment_date || !editingPayment.recorded_by) return;
 
@@ -533,11 +536,9 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                 recorded_by: editingPayment.recorded_by
             });
 
-            // Refresh payments list
             await fetchPayments();
             setEditingPayment(null);
 
-            // Dispatch event to refresh dashboard
             window.dispatchEvent(new CustomEvent('paymentUpdated', {
                 detail: { umrahId }
             }));
@@ -550,6 +551,7 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
     };
 
     const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.payed_cash || 0), 0);
+    const isOverpayment = currentRemainingAmount < 0;
 
     if (loading) {
         return <div className="flex justify-center p-4">Loading payments...</div>;
@@ -728,7 +730,8 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                             <div>
                                 <label className="block text-sm font-medium mb-1">Cash Paid</label>
                                 <input
-                                    type="text"
+                                    type="number"
+                                    step="0.01"
                                     value={newPayment.payed_cash}
                                     onChange={(e) => setNewPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
                                     placeholder="Enter cash amount paid"
@@ -739,7 +742,8 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                             <div>
                                 <label className="block text-sm font-medium mb-1">Paid Bank</label>
                                 <input
-                                    type="text"
+                                    type="number"
+                                    step="0.01"
                                     value={newPayment.paid_bank}
                                     onChange={(e) => setNewPayment(prev => ({ ...prev, paid_bank: e.target.value }))}
                                     placeholder="Enter paid bank amount"
@@ -774,19 +778,70 @@ const UmrahRemainingPay = ({ umrahId, onClose, onPaymentSuccess }) => {
                                     className="w-full border rounded px-3 py-2 bg-gray-100"
                                 />
                             </div>
+
+                            {/* Remaining Amount Display */}
+                            <div className={`p-4 rounded-lg border-2 ${
+                                isOverpayment 
+                                    ? 'bg-red-50 border-red-500' 
+                                    : currentRemainingAmount === 0 
+                                        ? 'bg-green-50 border-green-500'
+                                        : 'bg-blue-50 border-blue-500'
+                            }`}>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-700">
+                                        Updated Remaining Amount:
+                                    </span>
+                                    <span className={`text-lg font-bold ${
+                                        isOverpayment 
+                                            ? 'text-red-600' 
+                                            : currentRemainingAmount === 0 
+                                                ? 'text-green-600'
+                                                : 'text-blue-600'
+                                    }`}>
+                                        {currentRemainingAmount.toFixed(2)}
+                                    </span>
+                                </div>
+                                {isOverpayment && (
+                                    <div className="mt-2 text-xs text-red-600 flex items-center">
+                                        <i className="fas fa-exclamation-triangle mr-1"></i>
+                                        <span>Payment exceeds remaining amount!</span>
+                                    </div>
+                                )}
+                                {currentRemainingAmount === 0 && (parseFloat(newPayment.payed_cash) || 0) + (parseFloat(newPayment.paid_bank) || 0) > 0 && (
+                                    <div className="mt-2 text-xs text-green-600 flex items-center">
+                                        <i className="fas fa-check-circle mr-1"></i>
+                                        <span>Payment will settle the remaining amount!</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex justify-end space-x-3 mt-6">
                             <button
-                                onClick={() => setShowModal(false)}
+                                onClick={() => {
+                                    setShowModal(false);
+                                    setNewPayment({
+                                        payment_date: new Date().toISOString().split('T')[0],
+                                        remaining_amount: '',
+                                        payed_cash: '',
+                                        paid_bank: '',
+                                        bank_title: '',
+                                        recorded_by: user?.username || ''
+                                    });
+                                }}
                                 className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-100"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={addPayment}
-                                disabled={!newPayment.payment_date || !newPayment.recorded_by}
-                                className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}>
+                                disabled={!newPayment.payment_date || !newPayment.recorded_by || isOverpayment || isSubmitting}
+                                className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${
+                                    isSubmitting || isOverpayment || !newPayment.payment_date || !newPayment.recorded_by
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-500 hover:bg-blue-600'
+                                }`}
+                            >
                                 {isSubmitting ? (
                                     <>
                                         <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

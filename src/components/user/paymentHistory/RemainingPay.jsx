@@ -19,18 +19,17 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         recorded_by: user?.username || ''
     });
 
+    // Add state to store ticket details for bank account entry
+    const [ticketDetails, setTicketDetails] = useState(null);
 
+    // Calculate current remaining amount dynamically
+    const [currentRemainingAmount, setCurrentRemainingAmount] = useState(0);
 
     useEffect(() => {
         if (user?.username) {
             setNewPayment(prev => ({ ...prev, recorded_by: user.username }));
         }
     }, [user?.username]);
-
-
-
-    // Add state to store ticket details for bank account entry
-    const [ticketDetails, setTicketDetails] = useState(null);
 
     const BANK_OPTIONS = [
         { value: "UBL M.A.R", label: "UBL M.A.R" },
@@ -45,8 +44,22 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
 
     useEffect(() => {
         fetchPayments();
-        fetchTicketDetails(); // Fetch ticket details when component mounts
+        fetchTicketDetails();
     }, [ticketId]);
+
+    // Update remaining amount when ticket details or new payment values change
+    useEffect(() => {
+        if (ticketDetails) {
+            const cashAmount = parseFloat(newPayment.payed_cash) || 0;
+            const bankAmount = parseFloat(newPayment.paid_bank) || 0;
+            const totalPayment = cashAmount + bankAmount;
+            
+            const originalRemaining = parseFloat(ticketDetails.remaining_amount) || 0;
+            const updatedRemaining = originalRemaining - totalPayment;
+            
+            setCurrentRemainingAmount(updatedRemaining);
+        }
+    }, [ticketDetails, newPayment.payed_cash, newPayment.paid_bank]);
 
     const fetchPayments = async () => {
         try {
@@ -61,19 +74,17 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    // Update the fetchTicketDetails function
     const fetchTicketDetails = async () => {
         try {
-            // Fetch all tickets first
             const response = await axios.get(`${BASE_URL}/ticket`);
             console.log('Fetch tickets response:', response.data);
 
             if (response.data && response.data.ticket) {
-                // Find the specific ticket by ID from the array
                 const specificTicket = response.data.ticket.find(ticket => ticket.id === ticketId);
 
                 if (specificTicket) {
                     setTicketDetails(specificTicket);
+                    setCurrentRemainingAmount(parseFloat(specificTicket.remaining_amount) || 0);
                     console.log('Fetched ticketDetails:', specificTicket);
                 } else {
                     console.log('Ticket not found with ID:', ticketId);
@@ -83,8 +94,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
             console.error('Error fetching ticket details:', error);
         }
     };
-
-    // Replace the entire addPayment function in RemainingPay.jsx with this updated version:
 
     const addPayment = async () => {
         if (isSubmitting) return;
@@ -98,10 +107,15 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
             return;
         }
 
+        // Check for overpayment
+        if (currentRemainingAmount < 0) {
+            alert('Payment amount exceeds remaining amount. Please adjust the payment.');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            // First, add the payment record
             const response = await axios.post(`${BASE_URL}/ticket_payments`, {
                 ticket_id: ticketId,
                 payment_date: newPayment.payment_date,
@@ -112,19 +126,16 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
             });
 
             if (response.status === 201) {
-                // Add bank account entry if bank payment is made
                 if (newPayment.bank_title && bankAmount > 0) {
                     await addBankAccountEntry();
                 }
 
-                // Add agent entry for the remaining payment
                 if (ticketDetails && ticketDetails.agent_name) {
                     await addAgentEntry();
                 }
 
                 setPayments([...payments, response.data.payment]);
 
-                // Create payment data to pass to parent for dashboard update
                 const paymentData = {
                     ticketId: ticketId,
                     cashAmount: cashAmount,
@@ -133,7 +144,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                     recordedBy: newPayment.recorded_by
                 };
 
-                // Dispatch the paymentUpdated event to trigger dashboard refresh
                 window.dispatchEvent(new CustomEvent('paymentUpdated', {
                     detail: paymentData
                 }));
@@ -148,7 +158,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                 });
                 setShowModal(false);
 
-                // Pass payment data to parent component
                 onPaymentSuccess?.(paymentData);
             }
         } catch (error) {
@@ -158,8 +167,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
             setIsSubmitting(false);
         }
     };
-
-    // Add this new function after the addPayment function:
 
     const addAgentEntry = async () => {
         try {
@@ -174,7 +181,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
             const cashAmount = parseFloat(newPayment.payed_cash) || 0;
             const bankAmount = parseFloat(newPayment.paid_bank) || 0;
 
-            // Format the detail string similar to ticket form
             const formatDate = (dateStr) => {
                 if (!dateStr) return '';
                 const date = new Date(dateStr);
@@ -184,7 +190,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                 return `${day}-${month}-${year}`;
             };
 
-            // Parse passenger details to get first passenger name
             let passengerName = '';
             try {
                 let passengerDetails = [];
@@ -222,13 +227,13 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                 agent_name: ticketDetails.agent_name,
                 employee: newPayment.recorded_by,
                 detail: commonDetail,
-                receivable_amount: 0, // No new receivable amount for remaining payment
+                receivable_amount: 0,
                 paid_cash: cashAmount,
                 paid_bank: bankAmount,
-                credit: 0, // No new credit
-                debit: cashAmount + bankAmount, // This reduces the agent's balance
+                credit: 0,
+                debit: cashAmount + bankAmount,
                 date: newPayment.payment_date,
-                entry: `${ticketDetails.entry || ''} (RP)`, // RP = Remaining Payment
+                entry: `${ticketDetails.entry || ''} (RP)`,
                 bank_title: newPayment.bank_title || null
             };
 
@@ -243,14 +248,10 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
             }
         } catch (agentError) {
             console.error('Error submitting Agent data:', agentError.response?.data || agentError.message);
-            // Don't alert here as payment was successful, just log the error
             console.error('Payment added successfully, but failed to create agent entry. Please add manually if needed.');
         }
     };
 
-    // CLEAN VERSION - Without excessive console logs
-
-    // 1. addBankAccountEntry function
     const addBankAccountEntry = async () => {
         try {
             const formatDate = (dateStr) => {
@@ -335,7 +336,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    // 2. deletePayment function
     const deletePayment = async (paymentId) => {
         if (!confirm('Are you sure you want to delete this payment? This will also delete the corresponding agent and bank account entries.')) {
             return;
@@ -351,7 +351,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                 return;
             }
 
-            // Step 1: Delete agent entry
             if (ticketDetails && ticketDetails.agent_name && paymentToDelete) {
                 try {
                     const agentResponse = await axios.get(`${BASE_URL}/agent`);
@@ -405,7 +404,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                 }
             }
 
-            // Step 2: Delete bank account entry
             if (paymentToDelete.bank_title && parseFloat(paymentToDelete.paid_bank) > 0) {
                 try {
                     const accountsResponse = await axios.get(`${BASE_URL}/accounts/${paymentToDelete.bank_title}`);
@@ -464,14 +462,11 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                 }
             }
 
-            // Step 3: Delete payment record
             await axios.delete(`${BASE_URL}/ticket_payments/${paymentId}`);
             console.log('Payment record deleted successfully');
 
-            // Refresh payments list
             await fetchPayments();
 
-            // Dispatch events to refresh other components
             window.dispatchEvent(new CustomEvent('paymentUpdated', { detail: { ticketId } }));
 
             if (paymentToDelete.bank_title) {
@@ -489,7 +484,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
         }
     };
 
-    // Function to handle payment updates
     const updatePayment = async (paymentId) => {
         if (!editingPayment.payment_date || !editingPayment.recorded_by) return;
 
@@ -510,11 +504,9 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                 recorded_by: editingPayment.recorded_by
             });
 
-            // Refresh payments list
             await fetchPayments();
             setEditingPayment(null);
 
-            // Dispatch event to refresh dashboard
             window.dispatchEvent(new CustomEvent('paymentUpdated', {
                 detail: { ticketId }
             }));
@@ -527,6 +519,9 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
     };
 
     const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.payed_cash || 0), 0);
+
+    // Check if payment would cause overpayment
+    const isOverpayment = currentRemainingAmount < 0;
 
     if (loading) {
         return <div className="flex justify-center p-4">Loading payments...</div>;
@@ -580,7 +575,6 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                                                 entry
                                             )}
                                         </td>
-
                                         <td className="border border-gray-300 px-4 py-2">{ticketDetails?.receivable_amount ?? payment.receivable_amount ?? '0'}</td>
                                         <td className="border border-gray-300 px-4 py-2">{payment.payed_cash || '0'}</td>
                                         <td className="border border-gray-300 px-4 py-2">{payment.bank_title || ''}</td>
@@ -639,7 +633,8 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                             <div>
                                 <label className="block text-sm font-medium mb-1">Cash Paid</label>
                                 <input
-                                    type="text"
+                                    type="number"
+                                    step="0.01"
                                     value={newPayment.payed_cash}
                                     onChange={(e) => setNewPayment(prev => ({ ...prev, payed_cash: e.target.value }))}
                                     placeholder="Enter cash amount paid"
@@ -650,7 +645,8 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                             <div>
                                 <label className="block text-sm font-medium mb-1">Paid Bank</label>
                                 <input
-                                    type="text"
+                                    type="number"
+                                    step="0.01"
                                     value={newPayment.paid_bank}
                                     onChange={(e) => setNewPayment(prev => ({ ...prev, paid_bank: e.target.value }))}
                                     placeholder="Enter paid bank amount"
@@ -687,22 +683,69 @@ const RemainingPay = ({ ticketId, onClose, onPaymentSuccess }) => {
                                     readOnly
                                 />
                             </div>
+
+                            {/* Remaining Amount Display */}
+                            <div className={`p-4 rounded-lg border-2 ${
+                                isOverpayment 
+                                    ? 'bg-red-50 border-red-500' 
+                                    : currentRemainingAmount === 0 
+                                        ? 'bg-green-50 border-green-500'
+                                        : 'bg-blue-50 border-blue-500'
+                            }`}>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-700">
+                                        Updated Remaining Amount:
+                                    </span>
+                                    <span className={`text-lg font-bold ${
+                                        isOverpayment 
+                                            ? 'text-red-600' 
+                                            : currentRemainingAmount === 0 
+                                                ? 'text-green-600'
+                                                : 'text-blue-600'
+                                    }`}>
+                                        {currentRemainingAmount.toFixed(2)}
+                                    </span>
+                                </div>
+                                {isOverpayment && (
+                                    <div className="mt-2 text-xs text-red-600 flex items-center">
+                                        <i className="fas fa-exclamation-triangle mr-1"></i>
+                                        <span>Payment exceeds remaining amount!</span>
+                                    </div>
+                                )}
+                                {currentRemainingAmount === 0 && (parseFloat(newPayment.payed_cash) || 0) + (parseFloat(newPayment.paid_bank) || 0) > 0 && (
+                                    <div className="mt-2 text-xs text-green-600 flex items-center">
+                                        <i className="fas fa-check-circle mr-1"></i>
+                                        <span>Payment will settle the remaining amount!</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex justify-end space-x-3 mt-6">
                             <button
-                                onClick={() => setShowModal(false)}
+                                onClick={() => {
+                                    setShowModal(false);
+                                    setNewPayment({
+                                        payment_date: new Date().toISOString().split('T')[0],
+                                        remaining_amount: '',
+                                        payed_cash: '',
+                                        paid_bank: '',
+                                        bank_title: '',
+                                        recorded_by: user?.username || ''
+                                    });
+                                }}
                                 className="px-4 py-2 text-gray-600 border rounded hover:bg-gray-100"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={addPayment}
-                                disabled={!newPayment.payment_date || !newPayment.recorded_by}
-                                className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${isSubmitting
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 hover:bg-blue-600'
-                                    }`}
+                                disabled={!newPayment.payment_date || !newPayment.recorded_by || isOverpayment || isSubmitting}
+                                className={`px-4 py-2 text-white rounded flex items-center justify-center min-w-[120px] ${
+                                    isSubmitting || isOverpayment || !newPayment.payment_date || !newPayment.recorded_by
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-500 hover:bg-blue-600'
+                                }`}
                             >
                                 {isSubmitting ? (
                                     <>

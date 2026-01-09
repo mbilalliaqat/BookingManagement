@@ -227,6 +227,9 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             STATUS_OPTIONS.map(opt => opt.value),
             'Invalid status'
         ),
+        visa_number: Yup.string()
+            .matches(/^[0-9]{10}$/, 'Visa number must be exactly 10 digits')
+            .required('Visa Number is required'),
         vendors: Yup.array().of(
             Yup.object().shape({
                 vendor_name: Yup.string().notRequired('Vendor name is required'),
