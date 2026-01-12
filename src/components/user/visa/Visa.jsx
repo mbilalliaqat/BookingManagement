@@ -232,7 +232,22 @@ const Visa = () => {
             )
         },
         { header: 'AGENT NAME', accessor: 'agent_name' },
-        { header: 'VENDOR NAME', accessor: 'vendor_name' },
+         {
+            header: 'VENDOR & PAYABLE',
+            accessor: 'vendor_payable',
+            render: (cellValue, row) => (
+                <div className="flex flex-col space-y-1">
+                    {
+                        
+                        <div>
+                            <div>{row?.vendor_name || ''}</div>
+                            <div>{row?.payable_to_vendor || ''}</div>
+                        </div>
+                    
+                    }
+                </div>
+            )
+        },
     ];
 
     const passportColumns = [

@@ -61,18 +61,35 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
 
   const splitPeople = (str) => (str ? str.split(SEPARATOR).filter(Boolean) : []);
 
-  /* CALCULATE WITHDRAW */
+  /* CALCULATE WITHDRAW - Updated to calculate based on dates */
   useEffect(() => {
     const extra = parseInt(main.additional_charges) || 0;
 
     let fees = 0;
+    // Add 6000 if MCB FEE date is filled
     if (main.mcb_fee_6000_date) fees += 6000;
+    // Add 7200 if Protector date is filled
     if (main.protector_date) fees += 7200;
 
-    const perExtra = additionalPeople.length * 13200;
+    // Calculate fees for additional people based on which dates are filled
+    let perPersonFee = 0;
+    if (main.mcb_fee_6000_date) perPersonFee += 6000;
+    if (main.protector_date) perPersonFee += 7200;
+    
+    const perExtra = additionalPeople.length * perPersonFee;
+    
     const withdraw = fees + extra + perExtra;
     setMain((p) => ({ ...p, withdraw: withdraw.toString() }));
-    console.log('WITHDRAW →', { fees, extra, perExtra, withdraw });
+    
+    console.log('WITHDRAW CALCULATION →', { 
+      mcb_fee: main.mcb_fee_6000_date ? 6000 : 0,
+      protector_fee: main.protector_date ? 7200 : 0,
+      additional_charges: extra,
+      per_person_fee: perPersonFee,
+      additional_people_count: additionalPeople.length,
+      additional_people_total: perExtra,
+      total_withdraw: withdraw 
+    });
   }, [
     main.mcb_fee_6000_date,
     main.protector_date,
@@ -373,13 +390,27 @@ const Protector_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
             ))}
 
             <div>
-              <label className="block font-medium mb-1">Withdraw</label>
+              <label className="block font-medium mb-1">Withdraw (Auto-calculated)</label>
               <input
                 type="text"
                 value={main.withdraw}
                 readOnly
-                className="w-full border border-gray-300 rounded-md px-3 py-1 bg-gray-100"
+                className="w-full border border-gray-300 rounded-md px-3 py-1 bg-gray-100 font-semibold"
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {main.mcb_fee_6000_date && <div>MCB Fee: 6000</div>}
+                {main.protector_date && <div>Protector: 7200</div>}
+                {additionalPeople.length > 0 && (
+                  <div>
+                    Additional People: {additionalPeople.length} × {
+                      (main.mcb_fee_6000_date ? 6000 : 0) + (main.protector_date ? 7200 : 0)
+                    } = {
+                      additionalPeople.length * ((main.mcb_fee_6000_date ? 6000 : 0) + (main.protector_date ? 7200 : 0))
+                    }
+                  </div>
+                )}
+                {main.additional_charges && <div>Extra Charges: {main.additional_charges}</div>}
+              </div>
             </div>
 
             {[

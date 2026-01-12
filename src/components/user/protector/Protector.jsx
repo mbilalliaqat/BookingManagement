@@ -76,8 +76,8 @@ const Protector = () => {
         { header: 'REFERENCE', accessor: 'reference' },
         { header: 'WITHDRAW', accessor: 'withdraw' },
         { header: 'MCB FEE / 6000 DATE', accessor: 'mcb_fee_6000_date' },
-        { header: 'NCB FEE / 6700 DATE', accessor: 'ncb_fee_6700_date' },
-        { header: 'NCB FEE / 500 DATE', accessor: 'ncb_fee_500_date' },
+        // { header: 'NCB FEE / 6700 DATE', accessor: 'ncb_fee_6700_date' },
+        // { header: 'NCB FEE / 500 DATE', accessor: 'ncb_fee_500_date' },
         { header: 'Protector DATE', accessor: 'protector_date' },
         { header: 'ADDITIONAL CHARGES', accessor: 'additional_charges' },
 

@@ -450,9 +450,9 @@ const Tickets = () => {
                 <div className="flex flex-col space-y-1">
                     {row.allVendorDetails && row.allVendorDetails.length > 0 ? (
                         row.allVendorDetails.map((vendor, idx) => (
-                            <div key={idx} className="">
+                            <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
                                 <p className="font-semibold text-gray-800 uppercase">{vendor.vendor_name}</p>
-                                <p>{vendor.payable_amount}</p>
+                                <p>Payable: {vendor.payable_amount}</p>
                                 <p>{vendor.vendor_detail}</p>
                             </div>
                         ))

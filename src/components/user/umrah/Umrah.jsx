@@ -67,6 +67,25 @@ const Umrah = () => {
                     parsedPassengerDetails = [];
                 }
 
+                let parsedVendorDetails = [];
+                try {
+                    if (typeof booking.vendor_detail === 'string') {
+                        const parsed = JSON.parse(booking.vendor_detail);
+                        if (Array.isArray(parsed)) {
+                            parsedVendorDetails = parsed;
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                            parsedVendorDetails = [parsed];
+                        }
+                    } else if (Array.isArray(booking.vendor_detail)) {
+                        parsedVendorDetails = booking.vendor_detail;
+                    } else if (typeof booking.vendor_detail === 'object' && booking.vendor_detail !== null) {
+                        parsedVendorDetails = [booking.vendor_detail];
+                    }
+                } catch (e) {
+                    console.error("Error parsing vendor details:", e);
+                    parsedVendorDetails = [];
+                }
+
                 // Calculate total payments
                 const initialCash = booking.initial_paid_cash !== undefined
                     ? parseFloat(booking.initial_paid_cash)
@@ -87,6 +106,7 @@ const Umrah = () => {
                     createdAt: new Date(booking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
                     booking_date_raw: booking.booking_date, // Store raw date for filtering
                     allPassengerDetails: parsedPassengerDetails,
+                    allVendorDetails: parsedVendorDetails,
                     passportDetail: booking.passportDetail
                 };
             });
@@ -123,6 +143,25 @@ const Umrah = () => {
                 parsedPassengerDetails = [];
             }
 
+            let parsedVendorDetails = [];
+            try {
+                if (typeof updatedBooking.vendor_detail === 'string') {
+                    const parsed = JSON.parse(updatedBooking.vendor_detail);
+                    if (Array.isArray(parsed)) {
+                        parsedVendorDetails = parsed;
+                    } else if (typeof parsed === 'object' && parsed !== null) {
+                        parsedVendorDetails = [parsed];
+                    }
+                } else if (Array.isArray(updatedBooking.vendor_detail)) {
+                    parsedVendorDetails = updatedBooking.vendor_detail;
+                } else if (typeof updatedBooking.vendor_detail === 'object' && updatedBooking.vendor_detail !== null) {
+                    parsedVendorDetails = [updatedBooking.vendor_detail];
+                }
+            } catch (e) {
+                console.error("Error parsing vendor details:", e);
+                parsedVendorDetails = [];
+            }
+
             const formattedBooking = {
                 ...updatedBooking,
                 serialNo: entries[entryIndex].serialNo,
@@ -132,6 +171,7 @@ const Umrah = () => {
                 createdAt: new Date(updatedBooking.createdAt).toLocaleDateString('en-GB', { timeZone: 'UTC' }),
                 booking_date_raw: updatedBooking.booking_date,
                 allPassengerDetails: parsedPassengerDetails,
+                allVendorDetails: parsedVendorDetails,
             };
 
             const updatedEntries = [...entries];
@@ -414,9 +454,21 @@ useEffect(() => {
             header: 'VENDOR & PAYABLE',
             accessor: 'vendor_payable',
             render: (cellValue, row) => (
-                <div>
-                    <div>{row?.vendorName || ''}</div>
-                    <div>{row?.payableToVendor || ''}</div>
+                <div className="flex flex-col space-y-1">
+                    {row.allVendorDetails && row.allVendorDetails.length > 0 ? (
+                        row.allVendorDetails.map((vendor, idx) => (
+                            <div key={idx} className="border-b border-gray-200 last:border-b-0 pb-1 pt-1">
+                                <p className="font-semibold text-gray-800 uppercase">{vendor.vendor_name}</p>
+                                <p>Payable: {vendor.payable_amount}</p>
+                                <p>{vendor.vendor_detail}</p>
+                            </div>
+                        ))
+                    ) : (
+                        <div>
+                            <div>{row?.vendorName || ''}</div>
+                            <div>{row?.payableToVendor || ''}</div>
+                        </div>
+                    )}
                 </div>
             )
         },

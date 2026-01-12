@@ -140,7 +140,7 @@ const VendorSelectionFields = ({ values, setFieldValue, vendorNames, setIsVendor
                                         name={`vendors[${index}].payable_amount`}
                                         placeholder="Enter payable amount"
                                         className="flex-1 border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                                        disabled={editEntry}
+                                         disabled={editEntry}
                                     />
                                     {values.vendors.length > 1 && (
                                         <button
@@ -229,7 +229,7 @@ const VisaProcessing_Form = ({ onCancel, onSubmitSuccess, editEntry }) => {
         ),
         visa_number: Yup.string()
             .matches(/^[0-9]{10}$/, 'Visa number must be exactly 10 digits')
-            .required('Visa Number is required'),
+            .notRequired('Visa Number is required'),
         vendors: Yup.array().of(
             Yup.object().shape({
                 vendor_name: Yup.string().notRequired('Vendor name is required'),
